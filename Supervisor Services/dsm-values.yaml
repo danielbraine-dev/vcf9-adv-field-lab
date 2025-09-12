@@ -1,0 +1,29 @@
+# imagePullSecret can be removed as anonymous image pull is currently supported by the default image repository
+imagePullSecret: registry-creds
+# imagePullSecretGeneration can be removed as anonymous image pull is currently supported by the default image repository
+imagePullSecretGeneration:
+  create:
+    password: password
+    server: artifactory repo url
+    username: username
+image:
+  name: projects.packages.broadcom.com/dsm-consumption-operator/consumption-operator
+  tag: 9.0.0.0.24665381
+dsm:
+  authSecretName: dsm-auth-creds
+  authSecretGeneration:
+    create:
+      endpoint: dsm provider endpoint
+      user: dsm user
+      password: dsm password
+      rootCA: dsm root CA multiline string
+  allowedInfrastructurePolicies: []
+  allowedBackupLocations: []
+  applyToNamespaces:
+    backupLocations: []
+    infrastructurePolicies: []
+    selector:
+      matchAnnotations: {}
+  adminNamespace: ""
+  isSupervisor: false
+consumptionClusterName: ""

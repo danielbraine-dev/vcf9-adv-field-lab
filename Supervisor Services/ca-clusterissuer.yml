@@ -1,0 +1,30 @@
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  name: ca-clusterissuer.vsphere.vmware.com
+spec:
+  displayName: CA Cluster Issuer
+  shortDescription: CA Cluster Issuer can sign CSRs from any namespace.
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  name: ca-clusterissuer.vsphere.vmware.com.0.0.2
+spec:
+  refName: ca-clusterissuer.vsphere.vmware.com
+  version: 0.0.2
+  releasedAt: 2023-03-01T12:00:00Z
+  template: # type of App CR
+    spec:
+      fetch:
+      # An imgpkg bundle is an OCI image that contains Kubernetes configurations.
+      # Refer to carvel-imgpkg/README for steps of building a bundle.
+      - imgpkgBundle:
+          image: projects.registry.vmware.com/vsphere/ca-clusterissuer-bundle:v0.0.2 
+      template:
+        - ytt:
+            paths:
+              - config/
+      deploy:
+        - kapp: {}

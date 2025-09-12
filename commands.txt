@@ -1,0 +1,28 @@
+sudo sed -i '0,/multiverse/s/multiverse/multiverse\ main\ restricted\ universe/' /etc/apt/sources.list.d/ubuntu.sources
+sudo apt update -y
+sudo apt install git -y
+sudo snap install curl
+sudo snap install kubectl --classic
+curl -LO https://packages.broadcom.com/artifactory/vcf-distro/vcf-cli/linux/amd64/v9.0.0/vcf-cli.tar.gz
+tar -xvf vcf-cli.tar.gz
+sudo install vcf-cli-linux_amd64 /usr/local/bin/vcf
+curl -fsSLO https://github.com/kubernetes-sigs/krew/releases/latest/download/krew-linux_amd64.tar.gz
+tar -xvzf krew-linux_amd64.tar.gz
+./krew-linux_amd64 install krew
+echo export PATH=\"\${KREW_ROOT:-\$HOME/.krew}/bin:\$PATH\" >> ~/.bashrc
+kubectl krew install ctx
+kubectl krew install ns
+echo alias k=kubectl >> ~/.bashrc
+echo 'alias kctx="kubectl ctx"' >> ~/.bashrc
+echo 'alias kns="kubectl ns"' >> ~/.bashrc
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+echo "complete -o default -F __start_kubectl k" >> ~/.bashrc
+git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+~/.fzf/install --all
+sudo apt -y remove vim-common
+sudo apt clean
+sudo apt purge
+sudo apt -y update
+sudo apt -y install vim
+vcf context create sup-wld --endpoint 10.1.0.2 -u administrator@wld.sso --insecure-skip-tls-verify --type k8s --auth-type basic
+vcf context use sup-wld

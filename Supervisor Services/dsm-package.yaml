@@ -1,0 +1,32 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  name: consumption-operator.dsm.vsphere.vmware.com.9.0.0+vmware.0.24665381
+spec:
+  refName: consumption-operator.dsm.vsphere.vmware.com
+  version: 9.0.0+vmware.0.24665381
+  releasedAt: "2025-03-27T08:18:50Z"
+  template:
+    spec:
+      fetch:
+      - imgpkgBundle:
+          image: projects.packages.broadcom.com/dsm-consumption-operator/dsm-consumption-operator-supervisor:9.0.0.0.24665381
+      template:
+      - ytt:
+          ignoreUnknownComments: true
+          paths:
+          - config/
+      - kbld:
+          paths:
+          - .imgpkg/images.yml
+          - '-'
+      deploy:
+      - kapp: {}
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  name: consumption-operator.dsm.vsphere.vmware.com
+spec:
+  displayName: Data Services Manager Consumption Operator
+  shortDescription: DSM

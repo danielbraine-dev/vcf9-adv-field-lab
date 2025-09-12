@@ -1,0 +1,78 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  name: nsx-management-proxy.nsx.vmware.com.0.2.2
+  annotations:
+    appplatform.vmware.com/use-system-vpc: "true"
+spec:
+  refName: nsx-management-proxy.nsx.vmware.com
+  version: 0.2.2
+  licenses:
+  - "VMware's End User License Agreement"
+  template:
+    spec:
+      deploy:
+      - kapp: {}
+      fetch:
+      - imgpkgBundle:
+          image: projects.packages.broadcom.com/antreainterworking/nsx-management-proxy-bundle:0.2.2
+      template:
+      - ytt:
+          paths:
+          - config/
+      - kbld:
+          paths:
+          - .imgpkg/images.yml
+          - "-"
+  valuesSchema:
+    openAPIv3:
+      title: nsx-management-proxy.nsx.vmware.com.0.2.2 values schema
+      additionalProperties: false
+      properties:
+        adminPort:
+          default: 10002
+          title: Proxy Admin Port
+          type: integer
+        nsxManagers:
+          default: []
+          items:
+            default: ""
+            type: string
+          title: NSX Manager IPs
+          type: array
+        podPriority:
+          default: -1000000
+          title: Proxy Pod Scheduling Priority
+          type: integer
+        serviceRESTAPIPort:
+          default: 10081
+          title: Service LoadBalancer Port for NSX REST API
+          type: integer
+        serviceRPCPort:
+          default: 10082
+          title: Service LoadBalancer Port for NSX-RPC
+          type: integer
+        namespace:
+          default: "nsx-management-proxy"
+          title: The namespace in which to deploy NSX Management Proxy
+          type: String
+        loadBalancerIP:
+          default: ""
+          title: LoadBalancer IP
+          type: String
+      type: object
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  name: nsx-management-proxy.nsx.vmware.com
+spec:
+  displayName: "NSX Management Proxy"
+  longDescription: "NSX Management Proxy provides connectivity to NSX API and NSX-RPC entrypoints for Antrea-NSX adapters in TKG with supervisor."
+  shortDescription: "NSX Management Proxy provides connectivity to NSX API for workload clusters"
+  providerName: VMware
+  maintainers:
+    - name: "Zhengsheng Zhou"
+    - name: "Kumar Atish"
+  categories:
+    - "proxy"

@@ -1,0 +1,113 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  name: supervisor-management-proxy.vmware.com.0.3.0
+  annotations:
+    appplatform.vmware.com/use-system-vpc: "true"
+    appplatform.vmware.com/required_capability: Load_Balancer_Supported
+    appplatform.vmware.com/vcenter-version-constraints: '>=9.0.0'
+spec:
+  refName: supervisor-management-proxy.vmware.com
+  version: 0.3.0
+  licenses:
+  - "VMware's End User License Agreement"
+  template:
+    spec:
+      deploy:
+      - kapp: {}
+      fetch:
+      - imgpkgBundle:
+          image: projects.packages.broadcom.com/antreainterworking/supervisor-management-proxy-bundle:0.3.0
+      template:
+      - ytt:
+          paths:
+          - config/
+      - kbld:
+          paths:
+          - .imgpkg/images.yml
+          - "-"
+  valuesSchema:
+    openAPIv3:
+      title: supervisor-management-proxy.vmware.com.0.3.0 values schema
+      additionalProperties: false
+      properties:
+        mgmtProxyPodPriority:
+          title: Proxy Pod Scheduling Priority
+          type: integer
+          default: -1000000
+        nsxRESTAPIPort:
+          title: Service LoadBalancer Port for NSX REST API
+          type: integer
+          default: 10091
+        nsxRPCPort:
+          title: Service LoadBalancer Port for NSX-RPC
+          type: integer
+          default: 10092
+        mgmtProxyAdminPort:
+          title: Proxy Admin Port
+          type: integer
+          default: 10003
+        nsxManagers:
+          title: NSX Manager IPs
+          type: array
+          items:
+            type: string
+            default: ""
+          default: []
+        namespace:
+          title: The namespace in which to deploy Supervisor Management Proxy
+          type: string
+          default: supervisor-management-proxy
+        nsxSvcLoadBalancerIP:
+          title: LoadBalancer IP
+          type: string
+          default: ""
+        vCenterUUID:
+          default: ""
+          title: UUID of vCenter
+          type: String
+        supervisorUUID:
+          default: ""
+          title: UUID of Supervisor Cluster
+          type: String
+        metricsHTTPRemoteEndpoint:
+          title: HTTP remote endpoint configuration for pushing workload metrics
+          type: object
+          additionalProperties: false
+          nullable: true
+          properties:
+            host:
+              type: string
+              description: Remote endpoint Hostname or IP address
+              default: ""
+            port:
+              type: integer
+              description: Remote endpoint port
+              default: 443
+              minimum: 1
+              maximum: 65535
+            tlsClientSecretName:
+              type: string
+              description: Name of the secret which contains the TLS configuration required to push metrics to remote endpoint.
+              default: ""
+            tlsClientSecretNamespace:
+              type: string
+              description: Namespace from which SecretImport needs to import the secret containing the TLS configuration required to push metrics to remote endpoint.
+              default: "vmware-system-monitoring"
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  name: supervisor-management-proxy.vmware.com
+spec:
+  displayName: "Supervisor Management Proxy"
+  longDescription: "Supervisor Management Proxy connects Antrea-NSX adapters in TKG to NSX API and NSX-RPC entrypoints providing supervisor access and publishing workload cluster metrics to a remote endpoint."
+  shortDescription: "Supervisor Management Proxy provides connectivity to NSX API and metrics remote endpoint for workload clusters"
+  providerName: VMware
+  maintainers:
+    - name: "Zhengsheng Zhou"
+    - name: "Kumar Atish"
+    - name: "Rahav Vembuli"
+    - name: "Dimple Raja Vamsi"
+  categories:
+    - "proxy"
