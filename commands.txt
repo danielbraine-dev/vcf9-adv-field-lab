@@ -6,16 +6,16 @@ sudo apt install -y kubecolor
 curl -LO https://packages.broadcom.com/artifactory/vcf-distro/vcf-cli/linux/amd64/v9.0.0/vcf-cli.tar.gz
 tar -xvf vcf-cli.tar.gz
 sudo install vcf-cli-linux_amd64 /usr/local/bin/vcf
-curl -fsSLO https://github.com/kubernetes-sigs/krew/releases/latest/download/krew-linux_amd64.tar.gz
-tar -xvzf krew-linux_amd64.tar.gz
-./krew-linux_amd64 install krew
-echo export PATH=\"\${KREW_ROOT:-\$HOME/.krew}/bin:\$PATH\" >> ~/.bashrc
+#curl -fsSLO https://github.com/kubernetes-sigs/krew/releases/latest/download/krew-linux_amd64.tar.gz
+#tar -xvzf krew-linux_amd64.tar.gz
+#./krew-linux_amd64 install krew
+#export PATH=\"\${KREW_ROOT:-\$HOME/.krew}/bin:\$PATH\"
+#echo export PATH=\"\${KREW_ROOT:-\$HOME/.krew}/bin:\$PATH\" >> ~/.bashrc
 #kubectl krew install ctx
-kubectl krew install ns
-source ~/.bashrc
+#kubectl krew install ns
 echo alias k=kubectl >> ~/.bashrc
-echo 'alias kctx="kubectl ctx"' >> ~/.bashrc
-echo 'alias kns="kubectl ns"' >> ~/.bashrc
+echo alias kctx=kubectx >> ~/.bashrc
+echo alias kns=kubens >> ~/.bashrc
 echo "source <(kubectl completion bash)" >> ~/.bashrc
 echo "complete -o default -F __start_kubectl k" >> ~/.bashrc
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
@@ -25,3 +25,4 @@ sudo apt clean
 sudo apt purge
 sudo apt -y update
 sudo apt -y install vim
+source ~/.bashrc
