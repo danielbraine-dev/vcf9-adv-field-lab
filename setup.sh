@@ -21,4 +21,12 @@ while IFS= read -r command; do
     fi
 done < "$COMMANDS_FILE"
 
+echo "Creating Supervisor context..."
+vcf context create sup-wld --endpoint 10.1.0.2 -u administrator@wld.sso --insecure-skip-tls-verify --type k8s --auth-type basic
+
+echo "Setting sup-wld context as current..."
+vcf context use sup-wld
+
+source ~/.bashrc
+
 echo "All commands processed. Restart the Terminal now!!!"
