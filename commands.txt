@@ -10,9 +10,9 @@ curl -fsSLO https://github.com/kubernetes-sigs/krew/releases/latest/download/kre
 tar -xvzf krew-linux_amd64.tar.gz
 ./krew-linux_amd64 install krew
 echo export PATH=\"\${KREW_ROOT:-\$HOME/.krew}/bin:\$PATH\" >> ~/.bashrc
-source ~/.bashrc
 #kubectl krew install ctx
-#kubectl krew install ns
+kubectl krew install ns
+source ~/.bashrc
 echo alias k=kubectl >> ~/.bashrc
 echo 'alias kctx="kubectl ctx"' >> ~/.bashrc
 echo 'alias kns="kubectl ns"' >> ~/.bashrc
