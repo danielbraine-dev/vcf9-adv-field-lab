@@ -5,7 +5,7 @@ tar -xvf vcf-cli.tar.gz
 sudo install vcf-cli-linux_amd64 /usr/local/bin/vcf
 curl -fsSLO https://github.com/kubernetes-sigs/krew/releases/latest/download/krew-linux_amd64.tar.gz
 tar -xvzf krew-linux_amd64.tar.gz
-./krew-linux_amd64 install krew
+sudo install krew-linux_amd64 /usr/local/bin/krew
 echo export PATH=\"\${KREW_ROOT:-\$HOME/.krew}/bin:\$PATH\" >> ~/.bashrc
 kubectl krew install ctx
 kubectl krew install ns
