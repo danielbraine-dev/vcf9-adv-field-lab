@@ -10,3 +10,8 @@ git clone https://github.com/bstein-vmware/vcf9-adv-deploy-lab-setup.git && \
 cd vcf9-adv-deploy-lab-setup && \
 chmod +x setup.sh && \
 ./setup.sh
+
+
+Relax the Pod Security on the default namespace:
+vcf context use vks-cluster-qxml:kubernetes-cluster-qxml
+kubectl label --overwrite namespace default pod-security.kubernetes.io/enforce=privileged
