@@ -18,3 +18,4 @@ sudo apt purge
 sudo apt -y update
 sudo apt -y install vim
 source ~/.bashrc
+./dns_fix.sh
