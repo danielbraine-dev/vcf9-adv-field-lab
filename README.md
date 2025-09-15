@@ -8,5 +8,5 @@ sudo apt install git -y && \
 cd ~/Downloads && \
 git clone https://github.com/bstein-vmware/vcf9-adv-deploy-lab-setup.git && \
 cd vcf9-adv-deploy-lab-setup && \
-chmod +x setup.sh dns_fix.sh && \
+chmod +x setup.sh && \
 ./setup.sh

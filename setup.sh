@@ -22,6 +22,7 @@ while IFS= read -r command; do
 done < "$COMMANDS_FILE"
 
 echo "Applying DNS fix..."
+chmod +x dns_fix.sh
 ./dns_fix.sh
 
 echo "Creating Supervisor context..."
