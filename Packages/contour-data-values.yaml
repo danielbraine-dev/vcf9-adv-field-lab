@@ -1,0 +1,76 @@
+certificates:
+  caDuration: 8760h
+  caRenewBefore: 720h
+  leafDuration: 720h
+  leafRenewBefore: 360h
+contour:
+  disableGRPCRoutes: true
+  listenIPFamily: IPv6
+  logLevel: info
+  pspNames: vmware-system-restricted
+  replicas: 2
+  resources:
+    contour:
+      limits:
+        cpu: ""
+        memory: ""
+      requests:
+        cpu: ""
+        memory: ""
+  service:
+    ipFamilies: []
+    ipFamilyPolicy: ""
+  useProxyProtocol: false
+enableSupervisorServiceRbac: false
+envoy:
+  bootstrap:
+    overloadManager:
+      downstreamMaxConnections: 0
+      maxHeap: 0
+  hostNetwork: false
+  hostPorts:
+    enable: true
+    http: 80
+    https: 443
+  listenIPFamily: IPv6
+  logLevel: info
+  pspNames: ""
+  service:
+    aws:
+      LBType: classic
+    disableWait: false
+    externalTrafficPolicy: ""
+    ipFamilies: []
+    ipFamilyPolicy: ""
+    loadBalancerIP: ""
+    loadBalancerTLSTermination: false
+    nodePorts:
+      http: 0
+      https: 0
+    type: "LoadBalancer"
+  terminationGracePeriodSeconds: 300
+  workload:
+    replicas: 2
+    resources:
+      envoy:
+        limits:
+          cpu: ""
+          memory: ""
+        requests:
+          cpu: ""
+          memory: ""
+      shutdownManager:
+        limits:
+          cpu: ""
+          memory: ""
+        requests:
+          cpu: ""
+          memory: ""
+    type: DaemonSet
+infrastructure_provider: vsphere
+kubernetes_distribution: ""
+kubernetes_version: 0.0.0
+namespace: tanzu-system-ingress
+priorityClassName: ""
+registry_secret_names:
+  - contour-reg-creds
