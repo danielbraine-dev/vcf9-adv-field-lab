@@ -4,7 +4,9 @@ SSH_USER="root"
 SSH_HOST="router"
 DNS_FIX="echo net.ipv4.tcp_l3mdev_accept=1 >> /etc/sysctl.d/kubernetes.conf
 echo net.ipv4.udp_l3mdev_accept=1 >> /etc/sysctl.d/kubernetes.conf
-sysctl --system"
+sysctl --system
+iptables-save > /etc/systemd/scripts/ip4save
+systemctl restart iptables"
 
 # Execute the command on the remote server
 ssh "$SSH_USER@$SSH_HOST" "$DNS_FIX"
