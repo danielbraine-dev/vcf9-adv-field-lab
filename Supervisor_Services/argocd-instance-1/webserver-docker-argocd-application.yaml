@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: websever-docker
+spec:
+  destination:
+    namespace: demo-namespace-vkrcg
+    server: https://10.1.0.2:443
+  source:
+    path: .
+    repoURL: https://github.com/bstein-vmware/webserver-docker.git
+    targetRevision: HEAD
+    directory:
+      recurse: true
+  sources: []
+  project: default
+
