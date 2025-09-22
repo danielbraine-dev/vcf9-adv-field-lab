@@ -1,0 +1,1 @@
+helm install --generate-name oci://projects.packages.broadcom.com/ako/helm-charts/ako --version 1.13.2 -f ./ako-values.yaml --namespace=avi-system

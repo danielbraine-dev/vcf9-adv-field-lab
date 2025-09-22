@@ -1,0 +1,10 @@
+curl -k -u 'admin:VMware123!VMware123!' --location --request PUT 'https://nsx-wld01-a.site-a.vcf.lab/policy/api/v1/infra/alb-onboarding-workflow' \
+--header 'X-Allow-Overwrite: True' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+"owned_by": "LCM",
+"cluster_ip": "10.1.1.8",
+"infra_admin_username" : "admin",
+"infra_admin_password" : "VMware123!VMware123!",
+"default_cert": true
+}'
