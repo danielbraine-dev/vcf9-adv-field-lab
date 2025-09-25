@@ -24,20 +24,17 @@ terraform {
 
 # --- NSX-T (active) ---
 provider "nsxt" {
-  host                 = var.nsx_host
-  username             = var.nsx_username
-  password             = var.nsx_password
-  allow_unverified_ssl = var.nsx_allow_unverified_ssl
-  # If you use Global Manager / alt enforcement points, set below accordingly.
-  # global_manager     = false
-  # enforcement_point  = "default"
+  host                 = nsx-wld01-a.site-a.vcf.lab
+  username             = admin
+  password             = VMware123!VMware123!
+  allow_unverified_ssl = true
 }
 
 # --- vSphere (placeholder) ---
 provider "vsphere" {
-  user                 = var.vsphere_user
-  password             = var.vsphere_password
-  vsphere_server       = var.vsphere_server
+  user                 = administrator@wld.sso
+  password             = VMware123!VMware123!
+  vsphere_server       = vc-wld01-a.site-a.vcf.lab
   allow_unverified_ssl = true
 }
 
