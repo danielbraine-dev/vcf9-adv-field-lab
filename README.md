@@ -6,7 +6,7 @@ sudo sed -i '0,/multiverse/s/multiverse/multiverse\ main\ restricted\ universe/'
 sudo apt update -y && \
 sudo apt install git -y && \
 cd ~/Downloads && \
-git clone https://github.com/bstein-vmware/vcf9-adv-deploy-lab-setup.git && \
+git clone https://github.com/danielbraine-dev/vcf9-adv-deploy-lab-setup.git && \
 cd vcf9-adv-deploy-lab-setup && \
 chmod +x setup.sh && \
 ./setup.sh
