@@ -1,4 +1,5 @@
 sudo snap install curl
+sudo snap install helm --classic
 sudo apt install -y kubectl
 sudo apt install -y kubectx
 sudo apt install -y kubecolor
