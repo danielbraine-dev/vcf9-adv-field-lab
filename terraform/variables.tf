@@ -24,8 +24,16 @@ variable "vcfa_endpoint"   { type = string, default = "" }
 variable "vcfa_token"      { type = string, sensitive = true, default = "" }
 
 ############################
-# NSX object paths
+# NSX object paths and Tags
 ############################
+variable "nsx_tag_scope" {
+  default = "creation"
+}
+
+variable "nsx_tag" {
+  default = "terraform-jumpstart"
+}
+
 variable "t0_path" {
   description = "Policy path to the Tier-0 gateway to attach the T1 to"
   type        = string
