@@ -6,6 +6,10 @@ terraform {
       source  = "vmware/nsxt"
       version = ">= 3.9.0"
     }
+    avi = {
+          source  = "vmware.com/avi/avi"
+          version = "31.1.1"
+        }
     vsphere = {
       source  = "hashicorp/vsphere"
       version = ">= 2.5.0"
@@ -30,7 +34,15 @@ provider "nsxt" {
   allow_unverified_ssl = true
 }
 
-# --- vSphere (placeholder) ---
+# --- AVI ---
+provider "avi" {
+  avi_username = "admin"
+  avi_tenant = "admin"
+  avi_password = "VMware123!VMware123!"
+  avi_controller = "10.1.1.200"
+  avi_version = "31.1.2"
+}
+# --- vSphere ---
 provider "vsphere" {
   user                 = administrator@wld.sso
   password             = VMware123!VMware123!
