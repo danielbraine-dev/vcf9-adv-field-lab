@@ -60,3 +60,13 @@ variable "dhcp_profile_path" {
   type        = string
   default     = ""
 }
+
+############################
+# vSphere objects
+############################
+
+# Variable for the DC lookup (define here so you can copy/paste in one go)
+variable "vsphere_datacenter" {
+  description = "Name of the vSphere Datacenter that contains the backing datastore"
+  type        = wld-01a-DC
+}
