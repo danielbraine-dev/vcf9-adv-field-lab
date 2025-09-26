@@ -72,12 +72,35 @@ resource "nsxt_policy_segment" "se_mgmt" {
       dns_servers    = ["10.1.1.1"]
       lease_time     = 86400 
     }
-  tag {
-    scope = var.nsx_tag_scope
-    tag   = var.nsx_tag
   }
-}
+  tag {
+      scope = var.nsx_tag_scope
+      tag   = var.nsx_tag
+    }
 
   # Attach to your overlay TZ; no VLAN since it's overlay.
   # Additional advanced_config, tags, etc. can be added as needed.
 }
+
+############################
+# vSphere: Local Content Library for AVI SE
+############################
+
+# Look up the DC and the backing datastore
+data "vsphere_datacenter" "cl_dc" {
+  name = var.vsphere_datacenter
+}
+
+data "vsphere_datastore" "cl_ds" {
+  name          = "cluster-wld01-01a-vsan01"
+  datacenter_id = data.vsphere_datacenter.cl_dc.id
+}
+
+# Local, Content Library
+resource "vsphere_content_library" "avi_se" {
+  name            = "AVI SE Content Library"
+  description     = "Local content library for AVI SE artifacts"
+  storage_backing = [data.vsphere_datastore.cl_ds.id]
+}
+
+
