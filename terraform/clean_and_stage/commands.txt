@@ -1,0 +1,42 @@
+# base tooling
+sudo snap install curl
+sudo snap install helm --classic
+sudo apt update -y
+sudo apt install -y jq unzip bash-completion
+
+# k8s client bits (installed now, used later)
+sudo apt install -y kubectl kubectx kubecolor
+
+# terraform
+wget -O - https://apt.releases.hashicorp.com/gpg \
+ | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com \
+$(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" \
+ | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update -y && sudo apt install -y terraform
+
+# VCF CLI
+curl -LO https://packages.broadcom.com/artifactory/vcf-distro/vcf-cli/linux/amd64/v9.0.0/vcf-cli.tar.gz
+tar -xvf vcf-cli.tar.gz
+sudo install vcf-cli-linux_amd64 /usr/local/bin/vcf
+
+# quality of life
+echo 'alias k=kubectl' >> ~/.bashrc
+echo 'alias kctx=kubectx' >> ~/.bashrc
+echo 'alias kns=kubens' >> ~/.bashrc
+echo 'source <(kubectl completion bash)' >> ~/.bashrc
+echo 'complete -o default -F __start_kubectl k' >> ~/.bashrc
+
+# fzf
+git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+~/.fzf/install --all
+
+# vim tidy-up (optional)
+sudo apt -y remove vim-common || true
+sudo apt clean
+sudo apt purge -y || true
+sudo apt -y update
+sudo apt -y install vim
+
+# load new shell goodies in future shells
+source ~/.bashrc || true
