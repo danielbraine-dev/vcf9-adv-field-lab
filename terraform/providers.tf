@@ -61,7 +61,7 @@ provider "vsphere" {
 # }
 
 # --- VCF-A (placeholder) ---
-# provider "vcfa" {
-#   endpoint = var.vcfa_endpoint
-#   token    = var.vcfa_token
-# }
+provider "vcfa" {
+   endpoint = var.vcfa_endpoint
+   token    = var.vcfa_token
+ }
