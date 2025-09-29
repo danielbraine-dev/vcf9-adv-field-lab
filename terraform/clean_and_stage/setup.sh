@@ -229,7 +229,20 @@ terraform -chdir="${ROOT_DIR}" apply -auto-approve \
   -target=avi_systemconfiguration.this \
   -target=nsxt_policy_certificate.avi_portal
 
+log "PASS A — NSXCloud + vCenter (no IPAM/DNS yet)"
+terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+  -var="attach_ipam_now=false" \
+  -target=avi_cloud.nsx_t_cloud \
+  -target=avi_vcenterserver.vc_01
 
+log "PASS B — Discover networks, create IPAM/DNS, attach to Cloud, create SE Group"
+terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+  -var="attach_ipam_now=true" \
+  -target=data.avi_network.vip \
+  -target=avi_ipamdnsproviderprofile.internal \
+  -target=avi_cloud.nsx_t_cloud \
+  -target=avi_serviceenginegroup.default
+  
 log "Onboarding Avi to NSX (ALB onboarding)…"
 bash "${ROOT_DIR}/scripts/nsx_onboard_alb.sh"
 
