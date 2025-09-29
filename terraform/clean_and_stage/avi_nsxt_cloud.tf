@@ -192,3 +192,14 @@ output "avi_vcenter_uuid" {
   description = "UUID of the registered vCenter in Avi"
 }
 
+output "avi_ipam_profile_url" {
+  value       = avi_ipamdnsproviderprofile.internal.url
+  description = "URL/ref of the IPAM/DNS profile"
+}
+
+output "avi_se_group_uuid" {
+  value       = avi_serviceenginegroup.default.uuid
+  description = "UUID of the Service Engine Group"
+}
+
+
