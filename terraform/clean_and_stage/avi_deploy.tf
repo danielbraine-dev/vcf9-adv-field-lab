@@ -41,6 +41,13 @@ data "vsphere_resource_pool" "avi_rp" {
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
 
+# vSphere: Local Content Library for AVI SE
+resource "vsphere_content_library" "avi_se" {
+  name            = "AVI SE Content Library"
+  description     = "Local content library for AVI SE artifacts"
+  storage_backing = [data.vsphere_datastore.avi_ds.id]
+}
+
 # Deploy OVA
 resource "vsphere_virtual_machine" "avi_controller" {
   name             = var.avi_vm_name
