@@ -42,7 +42,7 @@ data "vsphere_resource_pool" "avi_rp" {
 }
 
 # vSphere: Local Content Library for AVI SE
-resource "vsphere_content_library" "avi_se" {
+resource "vsphere_content_library" "avi_se_cl" {
   name            = "AVI SE Content Library"
   description     = "Local content library for AVI SE artifacts"
   storage_backing = [data.vsphere_datastore.avi_ds.id]
