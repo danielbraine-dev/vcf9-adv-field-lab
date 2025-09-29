@@ -140,7 +140,7 @@ terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=true" 'vcfa_ip_s
 terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=true" 'vcfa_region.us_west[0]' "${REGION_NAME}" || true
 
 log "Destroying imported VCFA resources…"
-terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=false"
+terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true"
 
 #-----------------------------
 # 3) Remove Supervisor installed in vSphere (native REST)
