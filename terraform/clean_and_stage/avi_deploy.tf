@@ -54,7 +54,7 @@ resource "vsphere_virtual_machine" "avi_controller" {
   datastore_id     = data.vsphere_datastore.avi_ds.id
   resource_pool_id = data.vsphere_resource_pool.avi_rp.id
 
-  num_cpus = 8
+  num_cpus = 6
   memory   = 24576
   guest_id = "other3xLinux64Guest"
   wait_for_guest_net_timeout = 0
