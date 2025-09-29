@@ -19,13 +19,22 @@ variable "mgmt_segment_id"          { type = string }                    # NSX s
 variable "data_lr_id"               { type = string }                    # T1 logical router ID for data/VIP
 variable "data_segment_id"          { type = string }                    # NSX segment id string for data/VIP
 
-# vCenter & Content Library
-variable "content_library_name"     { type = string }                    # existing CL in vCenter
-variable "vcenter_id"               { type = string }                    # name/ID label you want shown in Avi
-
 # Names for connector users created in Avi
 variable "nsxt_avi_user"            { type = string, default = "nsxt-conn-user" }
 variable "vcenter_avi_user"         { type = string, default = "vcenter-conn-user" }
+
+# IPAM/DNS + SE Group specifics
+variable "vip_network_name"         { type = string, default = "Dummy-Net"}                    # Avi Network name (from NSX segment) for VIPs
+variable "ipam_dns_name"            { type = string, default = "avi-internal-ipamdns" }
+variable "se_group_name"            { type = string, default = "wld1-se-group" }
+variable "se_ha_mode"               { type = string, default = "HA_MODE_SHARED" }  # or HA_MODE_ELASTIC
+variable "se_min"                   { type = number, default = 1 }
+variable "se_max"                   { type = number, default = 2 }
+variable "se_name_prefix"           { type = string, default = "wld1-sup-se-" }
+
+# Break the Cloud<->IPAM cycle by deferring IPAM attach to Pass B
+variable "attach_ipam_now"          { type = bool, default = false }
+
 
 ################################
 # Lookups
@@ -61,7 +70,7 @@ resource "avi_cloudconnectoruser" "vcenter_user" {
 }
 
 ################################
-# Avi NSX-T Cloud
+# Avi NSX-T Cloud (Pass A creates without IPAM, Pass B updates WITH IPAM)
 ################################
 resource "avi_cloud" "nsx_t_cloud" {
   depends_on   = [avi_cloudconnectoruser.nsx_t_user]
@@ -76,8 +85,8 @@ resource "avi_cloud" "nsx_t_cloud" {
 
     # Management network for Controllers/SEs (overlay segment under mgmt T1)
     management_segment {
-      tier1_lr_id = var.mgmt_lr_id
-      segment_id  = var.mgmt_segment_id
+      tier1_lr_id = nsxt_policy_tier1_gateway.se_mgmt.id
+      segment_id  = nsxt_policy_segment.se_mgmt.id
     }
 
     # Data/VIP segment(s) attached under a T1 (manual mode)
@@ -105,7 +114,7 @@ resource "avi_vcenterserver" "vc_01" {
     avi_cloud.nsx_t_cloud
   ]
 
-  name                     = var.vcenter_id
+  name                     = var.vsphere_server
   tenant_ref               = var.avi_tenant
 
   # Attach this vCenter to the NSX-T Cloud we just created
@@ -116,9 +125,59 @@ resource "avi_vcenterserver" "vc_01" {
 
   # Select the existing vCenter Content Library (for SE image storage)
   content_lib {
-    id = data.vsphere_content_library.library.id
+    id = vsphere_content_library.avi_se_cl.id
   }
 }
+
+##################################
+# Attach IPAM/DNS only when attach_ipam_now=true (Pass B)
+##################################
+  ipam_provider_ref = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
+  dns_provider_ref  = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
+}
+
+################################
+# Discover VIP network after Cloud exists (Pass B)
+################################
+data "avi_network" "vip" {
+  name      = var.vip_network_name
+  cloud_ref = avi_cloud.nsx_t_cloud.url
+  depends_on = [avi_cloud.nsx_t_cloud]
+}
+
+################################
+# IPAM/DNS profile (internal) using the discovered VIP network (Pass B)
+################################
+resource "avi_ipamdnsproviderprofile" "internal" {
+  name = var.ipam_dns_name
+  type = "IPAMDNS_TYPE_INTERNAL_DNS"
+
+  internal_profile {
+    usable_network_refs = [data.avi_network.vip.url]
+  }
+
+  depends_on = [data.avi_network.vip]
+}
+
+################################
+# Service Engine Group (Pass B)
+################################
+resource "avi_serviceenginegroup" "default" {
+  name      = var.se_group_name
+  cloud_ref = avi_cloud.nsx_t_cloud.uuid
+
+  ha_mode        = var.se_ha_mode
+  min_se         = var.se_min
+  max_se         = var.se_max
+  se_name_prefix = var.se_name_prefix
+
+  # Ensure vCenter is registered before we start placing SEs
+  depends_on = [
+    avi_vcenterserver.vc_01,
+    avi_cloud.nsx_t_cloud
+  ]
+}
+
 
 ################################
 # Helpful outputs
