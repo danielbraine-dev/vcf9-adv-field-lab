@@ -87,7 +87,7 @@ variable "content_library_datastore" {
 variable "enable_vcfa_cleanup" {
   description = "Gate to actually manage (delete) imported VCFA resources"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "vcfa_org_name"           { type = string, default = "showcase-all-apps" }
