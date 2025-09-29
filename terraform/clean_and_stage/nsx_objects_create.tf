@@ -56,4 +56,25 @@ resource "nsxt_policy_segment" "se_mgmt" {
   }
 }
 
+# NSX-T: Segment SE-mgmt with segment-local DHCP
+resource "nsxt_policy_segment" "se_data_vip" {
+  display_name        = "SE-Data_VIP"
+  transport_zone_path = var.overlay_tz_path
+  connectivity_path   = var.wld1_t1_path
 
+  subnet {
+    cidr        = "10.5.5.1/24"
+    dhcp_ranges = ["10.5.5.2-10.5.5.20"]
+
+    dhcp_v4_config {
+      server_address = "10.5.5.254/24"
+      dns_servers    = ["10.1.1.1"]
+      lease_time     = 86400
+    }
+  }
+
+  tag {
+    scope = var.nsx_tag_scope
+    tag   = var.nsx_tag
+  }
+}
