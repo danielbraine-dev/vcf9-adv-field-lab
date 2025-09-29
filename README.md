@@ -7,7 +7,7 @@ sudo apt update -y && \
 sudo apt install git -y && \
 cd ~/Downloads && \
 git clone https://github.com/danielbraine-dev/vcf9-adv-deploy-lab-setup.git && \
-cd vcf9-adv-deploy-lab-setup && \
+cd vcf9-adv-deploy-lab-setup/terraform/clean_and_stage && \
 chmod +x setup.sh && \
 ./setup.sh
 
