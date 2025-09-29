@@ -214,7 +214,7 @@ log "Deploying Avi Controller OVA via Terraform…"
 terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.avi_controller'
 
 # Wait for the Avi Controller API to come up
-AVI_FQDN="avi-controller01-a.site-a.vcf.lab}"
+AVI_FQDN="avi-controller01-a.site-a.vcf.lab"
 log "Waiting for Avi API at https://${AVI_FQDN}…"
 until curl -sk --max-time 5 "https://${AVI_FQDN}/api/initial-data" >/dev/null; do
   sleep 10
