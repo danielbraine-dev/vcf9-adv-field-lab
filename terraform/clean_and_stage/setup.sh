@@ -22,7 +22,7 @@ else
   warn "commands.txt not found; skipping tool install."
 fi
 
-if [[ -x "${ROOT_DIR}/dns_fix.sh" ]]; then
+if [[ -x "${ROOT_DIR}/scripts/dns_fix.sh" ]]; then
   log "Applying DNS fix…"
   chmod +x "${ROOT_DIR}/scripts/dns_fix.sh"
   "${ROOT_DIR}/dns_fix.sh" || warn "dns_fix.sh reported a warning."
