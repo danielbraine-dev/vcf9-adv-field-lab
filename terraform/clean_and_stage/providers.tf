@@ -22,6 +22,9 @@ terraform {
       source  = "vmware/vcfa"
       version = ">= 1.0.0"
     }
+    tls = { 
+      source = hashicorp/tls" 
+    }
   }
 }
 
