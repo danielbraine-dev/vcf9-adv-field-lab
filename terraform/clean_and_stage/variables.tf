@@ -59,6 +59,12 @@ variable "overlay_tz_path" {
   default     = "/infra/sites/default/enforcement-points/default/transport-zones/1b3a2f36-bfd1-443e-a0f6-4de01abc963e"
 }
 
+variable "transport_zone_name" {
+  description = "Name of WLD1 TZ"
+  type        = string
+  default     = "overlay-tz-nsx-wld01-a"
+}
+
 # Optional: if your provider version supports associating a DHCP Profile to the segment.
 variable "dhcp_profile_path" {
   description = "Policy path to the DHCP Profile used for Segment Local DHCP (leave blank if not used)"
