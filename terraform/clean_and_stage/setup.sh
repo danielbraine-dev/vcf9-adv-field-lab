@@ -175,6 +175,38 @@ terraform -chdir="${ROOT_DIR}" apply -auto-approve \
 #   5c) Export cert -> import into NSX
 #   5d) Run ALB onboarding workflow in NSX
 #-----------------------------
+# -----------------------------
+# Prep variables for AVI deploy
+# -----------------------------
+AVI_OVA_FILENAME="${AVI_OVA_FILENAME:-$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1 | xargs -n1 basename)}"
+AVI_OVA_PATH="${ROOT_DIR}/${AVI_OVA_FILENAME}"
+
+if [[ ! -f "${AVI_OVA_PATH}" ]]; then
+  error "Could not find an .ova in ${ROOT_DIR}. Place the AVI OVA next to setup.sh or set AVI_OVA_FILENAME."
+  exit 1
+fi
+
+# Get the realized display name of the SE mgmt segment from state
+AVI_MGMT_PG="$(
+  terraform -chdir="${ROOT_DIR}" state show -no-color nsxt_policy_segment.se_mgmt \
+    | awk -F' = ' '/^\s*display_name\s*=/{print $2}' | tail -n1
+)"
+
+if [[ -z "${AVI_MGMT_PG}" ]]; then
+  error "Could not resolve nsxt_policy_segment.se_mgmt.display_name from state."
+  exit 1
+fi
+
+# Feed Terraform via an auto tfvars (picked up automatically)
+cat > "${ROOT_DIR}/avi.auto.tfvars.json" <<EOF
+{
+  "avi_ova_path": "${AVI_OVA_PATH}",
+  "avi_mgmt_pg": "${AVI_MGMT_PG}"
+}
+EOF
+
+log "Prepared AVI vars: ova=${AVI_OVA_PATH}, mgmt_pg=${AVI_MGMT_PG}"
+
 log "Adding DNS record for Avi controller…"
 bash "${ROOT_DIR}/scripts/add_dns_record.sh"
 
