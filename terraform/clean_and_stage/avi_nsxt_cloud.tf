@@ -16,8 +16,7 @@ variable "mgmt_lr_id"               { type = string }                    # T1 lo
 variable "mgmt_segment_id"          { type = string }                    # NSX segment id string for mgmt
 
 # Data / VIP segment lives under this T1 and segment id
-variable "data_lr_id"               { type = string }                    # T1 logical router ID for data/VIP
-variable "data_segment_id"          { type = string }                    # NSX segment id string for data/VIP
+variable "data_segment_id"          { type = string, default = nsxt_policy_segment.se_data_vip.id }                    # NSX segment id string for data/VIP
 
 # Names for connector users created in Avi
 variable "nsxt_avi_user"            { type = string, default = "nsxt-conn-user" }
@@ -42,6 +41,10 @@ variable "attach_ipam_now"          { type = bool, default = false }
 # NSX-T Transport Zone (by display name)
 data "nsxt_transport_zone" "nsx_tr_zone" {
   display_name = var.transport_zone_name
+}
+# NSX-T Data T1  (by display name)
+data "nsxt_policy_tier1_gateway" "data_vip_t1" {
+  display_name = var.wld1_t1_name
 }
 
 ################################
@@ -94,7 +97,7 @@ resource "avi_cloud" "nsx_t_cloud" {
       segment_config_mode = "TIER1_SEGMENT_MANUAL"
       manual {
         tier1_lrs {
-          tier1_lr_id = var.data_lr_id
+          tier1_lr_id = data.nsxt_policy_tier1_gateway.data_vip_t1.id
           segment_id  = var.data_segment_id
         }
       }
