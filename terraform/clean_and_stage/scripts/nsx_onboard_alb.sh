@@ -8,19 +8,7 @@ AVI_IP="$(awk -F= '/avi_mgmt_ip/{gsub(/"| /,"",$2);print $2}' terraform.tfvars)"
 
 [[ -z "$NSX_HOST" || -z "$NSX_USER" || -z "$NSX_PASS" || -z "$AVI_IP" ]] && { echo "Missing NSX or AVI vars"; exit 1; }
 
-# 1) Grab Avi controller server cert
-PEM="avi_controller.pem"
-echo "Exporting Avi controller certificate to ${PEM}…"
-echo | openssl s_client -connect "${AVI_IP}:443" -showcerts 2>/dev/null | openssl x509 -outform PEM > "${PEM}"
-
-# 2) Import cert to NSX trust store
-echo "Importing Avi cert into NSX trust store…"
-curl -sk -u "${NSX_USER}:${NSX_PASS}" \
-  -H "Content-Type: application/json" \
-  -X POST "https://${NSX_HOST}/api/v1/trust-management/certificates?action=import" \
-  --data-binary @"<(jq -Rn --arg pem "$(cat ${PEM})" '{pem_encoded: $pem, display_name: "avi-controller-cert"}')"
-
-# 3) Run ALB onboarding workflow (your exact payload)
+# 1) Run ALB onboarding workflow (your exact payload)
 echo "Running ALB onboarding workflow in NSX…"
 curl -sk -X PUT "https://${NSX_HOST}/policy/api/v1/infra/alb-onboarding-workflow" \
   -H 'X-Allow-Overwrite: True' \
