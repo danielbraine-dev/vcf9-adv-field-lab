@@ -52,6 +52,12 @@ varaible "wld1_t1_path" {
   type        = string
   default     = "/infra/tier-1s/349361ff-2844-4ad3-9f03-6ab52b47f5af"
 }
+
+variable "wld1_t1_name"{
+  type    = string
+  default = "t1-wld-a"
+}
+
 variable "edge_cluster_path" {
   description = "Policy path to the Edge Cluster used by the T1"
   type        = string
