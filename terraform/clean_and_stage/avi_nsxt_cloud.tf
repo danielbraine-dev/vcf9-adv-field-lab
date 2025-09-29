@@ -35,11 +35,6 @@ data "nsxt_transport_zone" "nsx_tr_zone" {
   display_name = var.transport_zone_name
 }
 
-# vCenter Content Library (by name)
-data "vsphere_content_library" "library" {
-  name = var.content_library_name
-}
-
 ################################
 # Cloud connector users in Avi
 ################################
