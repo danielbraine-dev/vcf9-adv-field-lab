@@ -1,6 +1,4 @@
 # base tooling
-sudo snap install curl
-sudo snap install helm --classic
 sudo apt update -y
 sudo apt install -y jq unzip bash-completion
 
@@ -14,6 +12,9 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashi
 $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" \
  | sudo tee /etc/apt/sources.list.d/hashicorp.list
 sudo apt update -y && sudo apt install -y terraform
+
+# helm
+curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
 # VCF CLI
 curl -LO https://packages.broadcom.com/artifactory/vcf-distro/vcf-cli/linux/amd64/v9.0.0/vcf-cli.tar.gz
