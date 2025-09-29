@@ -24,7 +24,7 @@ data "vcfa_project" "default" {
 #   terraform import kubernetes_namespace.demo[0] ${var.ns_name}
 ############################
 resource "kubernetes_namespace" "demo" {
-  count = var.enable_vcfa_cleanup ? 1 : 0
+  count = var.enable_vcfa_cleanup ?  0: 1
 
   metadata {
     name = var.ns_name
@@ -40,7 +40,7 @@ resource "kubernetes_namespace" "demo" {
 #     ${data.vcfa_org.showcase.id}/${var.org_cl_name}
 ############################
 resource "vcfa_content_library" "org_cl" {
-  count  = var.enable_vcfa_cleanup ? 1 : 0
+  count  = var.enable_vcfa_cleanup ? 0 : 1
   name   = var.org_cl_name
   scope  = "ORG"
   org_id = data.vcfa_org.showcase.id
@@ -54,7 +54,7 @@ resource "vcfa_content_library" "org_cl" {
 #   terraform import vcfa_content_library.provider_cl[0] ${var.provider_cl_name}
 ############################
 resource "vcfa_content_library" "provider_cl" {
-  count = var.enable_vcfa_cleanup ? 1 : 0
+  count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.provider_cl_name
   scope = "PROVIDER"
 
@@ -68,7 +68,7 @@ resource "vcfa_content_library" "provider_cl" {
 #     ${data.vcfa_org.showcase.id}/${data.vcfa_region.us_west.id}
 ############################
 resource "vcfa_region_quota" "showcase_us_west" {
-  count     = var.enable_vcfa_cleanup ? 1 : 0
+  count     = var.enable_vcfa_cleanup ? 0 : 1
   org_id    = data.vcfa_org.showcase.id
   region_id = data.vcfa_region.us_west.id
 
@@ -82,7 +82,7 @@ resource "vcfa_region_quota" "showcase_us_west" {
 #     ${data.vcfa_org.showcase.id}/${data.vcfa_region.us_west.id}/${var.org_reg_net_name}
 ############################
 resource "vcfa_org_regional_networking" "showcase_us_west" {
-  count     = var.enable_vcfa_cleanup ? 1 : 0
+  count     = var.enable_vcfa_cleanup ? 0 : 1
   org_id    = data.vcfa_org.showcase.id
   region_id = data.vcfa_region.us_west.id
   name      = var.org_reg_net_name
@@ -97,7 +97,7 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
 #     ${data.vcfa_region.us_west.id}/${var.provider_gw_name}
 ############################
 resource "vcfa_provider_gateway" "us_west" {
-  count     = var.enable_vcfa_cleanup ? 1 : 0
+  count     = var.enable_vcfa_cleanup ? 0 : 1
   region_id = data.vcfa_region.us_west.id
   name      = var.provider_gw_name
 
@@ -110,7 +110,7 @@ resource "vcfa_provider_gateway" "us_west" {
 #   terraform import vcfa_ip_space.us_west[0] ${var.provider_ip_space}
 ############################
 resource "vcfa_ip_space" "us_west" {
-  count = var.enable_vcfa_cleanup ? 1 : 0
+  count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.provider_ip_space
 
   lifecycle { prevent_destroy = false }
@@ -122,7 +122,7 @@ resource "vcfa_ip_space" "us_west" {
 #   terraform import vcfa_region.us_west[0] ${var.vcfa_region_name}
 ############################
 resource "vcfa_region" "us_west" {
-  count = var.enable_vcfa_cleanup ? 1 : 0
+  count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.vcfa_region_name
 
   lifecycle { prevent_destroy = false }
