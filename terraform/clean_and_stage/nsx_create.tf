@@ -56,20 +56,4 @@ resource "nsxt_policy_segment" "se_mgmt" {
   }
 }
 
-############################
-# vSphere: Local Content Library for AVI SE
-############################
-data "vsphere_datacenter" "cl_dc" {
-  name = var.vsphere_datacenter
-}
 
-data "vsphere_datastore" "cl_ds" {
-  name          = "cluster-wld01-01a-vsan01"
-  datacenter_id = data.vsphere_datacenter.cl_dc.id
-}
-
-resource "vsphere_content_library" "avi_se" {
-  name            = "AVI SE Content Library"
-  description     = "Local content library for AVI SE artifacts"
-  storage_backing = [data.vsphere_datastore.cl_ds.id]
-}
