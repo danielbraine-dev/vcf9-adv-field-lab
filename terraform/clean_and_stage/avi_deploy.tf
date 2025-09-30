@@ -14,7 +14,10 @@ variable "avi_mgmt_gateway" { type = string }
 variable "avi_dns_servers"  { type = list(string) }
 variable "avi_ntp_servers"  { type = list(string) }
 variable "avi_domain_search"{ type = string }
-variable "avi_admin_password" { type = string, sensitive = true }
+variable "avi_admin_password" { 
+  type = string
+  sensitive = true 
+}
 
 # Inventory lookups
 data "vsphere_datacenter" "avi_dc" {
