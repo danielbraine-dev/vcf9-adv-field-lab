@@ -250,23 +250,34 @@ step8_create_cert(){
   done
   log "Avi API is up."
 
-  # Apply just the cert/trust pieces (Terraform)
+  # Apply just the cert/trust pieces and write PEMs to disk
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=tls_private_key.avi \
     -target=tls_self_signed_cert.avi \
     -target=avi_sslkeyandcertificate.portal \
-    -target=avi_systemconfiguration.this
+    -target=avi_systemconfiguration.this \
+    -target=local_file.avi_cert_pem \
+    -target=local_file.avi_key_pem
 
-  # Import the same cert into NSX trust via API
-  if [[ -x "${ROOT_DIR}/scripts/nsx_import_cert.sh" ]]; then
-    log "Importing Avi portal certificate into NSX trust…"
-    "${ROOT_DIR}/scripts/nsx_import_cert.sh"
+  # Extract NSX creds from terraform.tfvars (same helper you already use)
+  read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
+
+  NSX_HOST="$(read_tfvar nsx_host)"
+  NSX_USER="$(read_tfvar nsx_username)"
+  NSX_PASS="$(read_tfvar nsx_password)"
+  CERT_PATH="${ROOT_DIR}/out/avi-portal.crt"
+  CERT_NAME="$(read_tfvar avi_cert_name || echo avi-portal-cert)"
+
+  if [[ -z "${NSX_HOST}" || -z "${NSX_USER}" || -z "${NSX_PASS}" ]]; then
+    warn "NSX variables missing from ${TFVARS_FILE}; skipping NSX trust upload."
   else
-    warn "scripts/nsx_import_cert.sh not found or not executable; skipping NSX cert import."
+    log "Uploading Avi portal cert to NSX trust store…"
+    bash "${ROOT_DIR}/scripts/upload_nsx_cert.sh" "$NSX_HOST" "$NSX_USER" "$NSX_PASS" "$CERT_PATH" "$CERT_NAME"
   fi
 
   pause
 }
+
 
 
 step9_nsx_cloud(){
