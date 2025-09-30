@@ -40,7 +40,7 @@ data "vsphere_network" "avi_net" {
 }
 
 data "vsphere_resource_pool" "avi_rp" {
-  name          = "${data.vsphere_cluster.avi_cluster.name}/Resources"
+  name          = "${data.vsphere_compute_cluster.avi_cluster.name}/Resources"
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
 
