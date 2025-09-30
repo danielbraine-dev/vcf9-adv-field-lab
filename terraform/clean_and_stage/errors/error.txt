@@ -8,49 +8,193 @@ If you ever set or change modules or backend configuration for Terraform,
 rerun this command to reinitialize your working directory. If you forget, other
 commands will detect it and remind you to do so if necessary.
 ╷
-│ Error: Unsupported attribute
+│ Error: Unsupported argument
 │ 
-│   on avi_certs.tf line 41, in resource "avi_systemconfiguration" "this":
-│   41:     sslkeyandcertificate_refs = [avi_sslkeyandcertificate.portal.url]
+│   on avi_deploy.tf line 78, in resource "vsphere_virtual_machine" "avi_controller":
+│   78:     file_path      = var.avi_ova_path
 │ 
-│ This object has no argument, nested block, or exported attribute named "url".
-╵
-╷
-│ Error: Reference to undeclared resource
-│ 
-│   on avi_deploy.tf line 43, in data "vsphere_resource_pool" "avi_rp":
-│   43:   name          = "${data.vsphere_cluster.avi_cluster.name}/Resources"
-│ 
-│ A data resource "vsphere_cluster" "avi_cluster" has not been declared in the root module.
+│ An argument named "file_path" is not expected here.
 ╵
 ╷
 │ Error: Unsupported argument
 │ 
-│   on avi_nsxt_cloud.tf line 126, in resource "avi_cloud" "nsx_t_cloud":
-│  126:     transport_zone      = data.nsxt_transport_zone.nsx_tr_zone.path
+│   on avi_deploy.tf line 84, in resource "vsphere_virtual_machine" "avi_controller":
+│   84:     network_map = {
 │ 
-│ An argument named "transport_zone" is not expected here.
+│ An argument named "network_map" is not expected here.
 ╵
 ╷
-│ Error: Unsupported block type
+│ Error: Reference to undeclared resource
 │ 
-│   on avi_nsxt_cloud.tf line 129, in resource "avi_cloud" "nsx_t_cloud":
-│  129:     management_segment {
+│   on avi_nsxt_cloud.tf line 132, in resource "avi_cloud" "nsx_t_cloud":
+│  132:       transport_zone = data.nsxt_transport_zone.nsx_tr_zone.id
 │ 
-│ Blocks of type "management_segment" are not expected here.
+│ A data resource "nsxt_transport_zone" "nsx_tr_zone" has not been declared in the root module.
 ╵
 ╷
-│ Error: Unsupported block type
+│ Error: Reference to undeclared resource
 │ 
-│   on avi_nsxt_cloud.tf line 135, in resource "avi_cloud" "nsx_t_cloud":
-│  135:     tier1_segment_config {
+│   on avi_nsxt_cloud.tf line 144, in resource "avi_cloud" "nsx_t_cloud":
+│  144:       transport_zone = data.nsxt_transport_zone.nsx_tr_zone.id
 │ 
-│ Blocks of type "tier1_segment_config" are not expected here.
+│ A data resource "nsxt_transport_zone" "nsx_tr_zone" has not been declared in the root module.
+╵
+╷
+│ Error: Invalid data source
+│ 
+│   on vcfa_cleanup.tf line 16, in data "vcfa_project" "default":
+│   16: data "vcfa_project" "default" {
+│ 
+│ The provider vmware/vcfa does not support data source "vcfa_project".
 ╵
 ╷
 │ Error: Missing required argument
 │ 
-│   on providers.tf line 68, in provider "vcfa":
-│   68: provider "vcfa" {
+│   on vcfa_cleanup.tf line 42, in resource "vcfa_content_library" "org_cl":
+│   42: resource "vcfa_content_library" "org_cl" {
 │ 
-│ The argument "org" is required, but no definition was found.
+│ The argument "storage_class_ids" is required, but no definition was found.
+╵
+╷
+│ Error: Unsupported argument
+│ 
+│   on vcfa_cleanup.tf line 45, in resource "vcfa_content_library" "org_cl":
+│   45:   scope  = "ORG"
+│ 
+│ An argument named "scope" is not expected here.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 56, in resource "vcfa_content_library" "provider_cl":
+│   56: resource "vcfa_content_library" "provider_cl" {
+│ 
+│ The argument "org_id" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 56, in resource "vcfa_content_library" "provider_cl":
+│   56: resource "vcfa_content_library" "provider_cl" {
+│ 
+│ The argument "storage_class_ids" is required, but no definition was found.
+╵
+╷
+│ Error: Unsupported argument
+│ 
+│   on vcfa_cleanup.tf line 59, in resource "vcfa_content_library" "provider_cl":
+│   59:   scope = "PROVIDER"
+│ 
+│ An argument named "scope" is not expected here.
+╵
+╷
+│ Error: Invalid resource type
+│ 
+│   on vcfa_cleanup.tf line 70, in resource "vcfa_region_quota" "showcase_us_west":
+│   70: resource "vcfa_region_quota" "showcase_us_west" {
+│ 
+│ The provider vmware/vcfa does not support resource type "vcfa_region_quota".
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 84, in resource "vcfa_org_regional_networking" "showcase_us_west":
+│   84: resource "vcfa_org_regional_networking" "showcase_us_west" {
+│ 
+│ The argument "provider_gateway_id" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 99, in resource "vcfa_provider_gateway" "us_west":
+│   99: resource "vcfa_provider_gateway" "us_west" {
+│ 
+│ The argument "tier0_gateway_id" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 99, in resource "vcfa_provider_gateway" "us_west":
+│   99: resource "vcfa_provider_gateway" "us_west" {
+│ 
+│ The argument "ip_space_ids" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 112, in resource "vcfa_ip_space" "us_west":
+│  112: resource "vcfa_ip_space" "us_west" {
+│ 
+│ The argument "default_quota_max_cidr_count" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 112, in resource "vcfa_ip_space" "us_west":
+│  112: resource "vcfa_ip_space" "us_west" {
+│ 
+│ The argument "default_quota_max_ip_count" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 112, in resource "vcfa_ip_space" "us_west":
+│  112: resource "vcfa_ip_space" "us_west" {
+│ 
+│ The argument "default_quota_max_subnet_size" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 112, in resource "vcfa_ip_space" "us_west":
+│  112: resource "vcfa_ip_space" "us_west" {
+│ 
+│ The argument "region_id" is required, but no definition was found.
+╵
+╷
+│ Error: Insufficient internal_scope blocks
+│ 
+│   on vcfa_cleanup.tf line 112, in resource "vcfa_ip_space" "us_west":
+│  112: resource "vcfa_ip_space" "us_west" {
+│ 
+│ At least 1 "internal_scope" blocks are required.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 124, in resource "vcfa_region" "us_west":
+│  124: resource "vcfa_region" "us_west" {
+│ 
+│ The argument "supervisor_ids" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 124, in resource "vcfa_region" "us_west":
+│  124: resource "vcfa_region" "us_west" {
+│ 
+│ The argument "storage_policy_names" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 124, in resource "vcfa_region" "us_west":
+│  124: resource "vcfa_region" "us_west" {
+│ 
+│ The argument "nsx_manager_id" is required, but no definition was found.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 134, in data "vcfa_vcenter" "target":
+│  134: data "vcfa_vcenter" "target" {
+│ 
+│ The argument "name" is required, but no definition was found.
+╵
+╷
+│ Error: Unsupported argument
+│ 
+│   on vcfa_cleanup.tf line 135, in data "vcfa_vcenter" "target":
+│  135:   fqdn = var.vcenter_fqdn_to_refresh
+│ 
+│ An argument named "fqdn" is not expected here.
