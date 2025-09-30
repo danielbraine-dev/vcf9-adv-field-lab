@@ -34,19 +34,12 @@ resource "avi_sslkeyandcertificate" "portal" {
   }
 }
 
-# Assign to System Configuration → Portal certificate
+# Set Portal certificate (Avi system configuration)
 resource "avi_systemconfiguration" "this" {
   portal_configuration {
-    ssl_key_and_certificate_ref = avi_sslkeyandcertificate.portal.url
+    # Schema expects a LIST of refs
+    sslkeyandcertificate_refs = [avi_sslkeyandcertificate.portal.url]
   }
-  # (Optionally set ntp/dns/etc if you manage them here)
-  depends_on = [avi_sslkeyandcertificate.portal]
-}
 
-###############################################################################
-# 3) Import the same PEM into NSX trust so NSX trusts the Avi portal
-###############################################################################
-resource "nsxt_policy_certificate" "avi_portal" {
-  display_name = var.avi_cert_name
-  pem_encoded  = tls_self_signed_cert.avi.cert_pem
+  depends_on = [avi_sslkeyandcertificate.portal]
 }
