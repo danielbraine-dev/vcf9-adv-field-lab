@@ -6,11 +6,11 @@
 # Required IDs (no data sources in this provider)
 variable "vcfa_org_id"      { 
   type = string 
-  default = ""
+  default = "f045fef1-4904-471e-bb5f-8157acafb18b"
 }     
 variable "vcfa_region_id"   { 
   type = string
-  default=""
+  default="a289cc88-4da2-4c73-bc49-59846616c946"
 }  
 
 ############################################################
