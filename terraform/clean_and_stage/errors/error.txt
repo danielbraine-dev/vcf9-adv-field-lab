@@ -10,32 +10,16 @@ commands will detect it and remind you to do so if necessary.
 ╷
 │ Error: Unsupported argument
 │ 
-│   on avi_deploy.tf line 78, in resource "vsphere_virtual_machine" "avi_controller":
-│   78:     file_path      = var.avi_ova_path
+│   on avi_deploy.tf line 82, in resource "vsphere_virtual_machine" "avi_controller":
+│   82:     power_on                  = true
 │ 
-│ An argument named "file_path" is not expected here.
-╵
-╷
-│ Error: Unsupported argument
-│ 
-│   on avi_deploy.tf line 84, in resource "vsphere_virtual_machine" "avi_controller":
-│   84:     network_map = {
-│ 
-│ An argument named "network_map" is not expected here.
+│ An argument named "power_on" is not expected here.
 ╵
 ╷
 │ Error: Reference to undeclared resource
 │ 
 │   on avi_nsxt_cloud.tf line 132, in resource "avi_cloud" "nsx_t_cloud":
 │  132:       transport_zone = data.nsxt_transport_zone.nsx_tr_zone.id
-│ 
-│ A data resource "nsxt_transport_zone" "nsx_tr_zone" has not been declared in the root module.
-╵
-╷
-│ Error: Reference to undeclared resource
-│ 
-│   on avi_nsxt_cloud.tf line 144, in resource "avi_cloud" "nsx_t_cloud":
-│  144:       transport_zone = data.nsxt_transport_zone.nsx_tr_zone.id
 │ 
 │ A data resource "nsxt_transport_zone" "nsx_tr_zone" has not been declared in the root module.
 ╵
@@ -125,7 +109,7 @@ commands will detect it and remind you to do so if necessary.
 │   on vcfa_cleanup.tf line 112, in resource "vcfa_ip_space" "us_west":
 │  112: resource "vcfa_ip_space" "us_west" {
 │ 
-│ The argument "default_quota_max_cidr_count" is required, but no definition was found.
+│ The argument "region_id" is required, but no definition was found.
 ╵
 ╷
 │ Error: Missing required argument
@@ -149,7 +133,7 @@ commands will detect it and remind you to do so if necessary.
 │   on vcfa_cleanup.tf line 112, in resource "vcfa_ip_space" "us_west":
 │  112: resource "vcfa_ip_space" "us_west" {
 │ 
-│ The argument "region_id" is required, but no definition was found.
+│ The argument "default_quota_max_cidr_count" is required, but no definition was found.
 ╵
 ╷
 │ Error: Insufficient internal_scope blocks
@@ -158,6 +142,14 @@ commands will detect it and remind you to do so if necessary.
 │  112: resource "vcfa_ip_space" "us_west" {
 │ 
 │ At least 1 "internal_scope" blocks are required.
+╵
+╷
+│ Error: Missing required argument
+│ 
+│   on vcfa_cleanup.tf line 124, in resource "vcfa_region" "us_west":
+│  124: resource "vcfa_region" "us_west" {
+│ 
+│ The argument "nsx_manager_id" is required, but no definition was found.
 ╵
 ╷
 │ Error: Missing required argument
@@ -178,14 +170,6 @@ commands will detect it and remind you to do so if necessary.
 ╷
 │ Error: Missing required argument
 │ 
-│   on vcfa_cleanup.tf line 124, in resource "vcfa_region" "us_west":
-│  124: resource "vcfa_region" "us_west" {
-│ 
-│ The argument "nsx_manager_id" is required, but no definition was found.
-╵
-╷
-│ Error: Missing required argument
-│ 
 │   on vcfa_cleanup.tf line 134, in data "vcfa_vcenter" "target":
 │  134: data "vcfa_vcenter" "target" {
 │ 
@@ -198,3 +182,5 @@ commands will detect it and remind you to do so if necessary.
 │  135:   fqdn = var.vcenter_fqdn_to_refresh
 │ 
 │ An argument named "fqdn" is not expected here.
+╵
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ 
