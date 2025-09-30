@@ -66,6 +66,7 @@ provider "vsphere" {
 
 # --- VCFA ---
 provider "vcfa" {
-  url = var.vcfa_endpoint
+  url          = var.vcfa_endpoint
+  org          = var.vcfa_org_name
   api_token    = var.vcfa_token
 }
