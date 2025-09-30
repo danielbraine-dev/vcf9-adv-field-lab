@@ -64,7 +64,7 @@ resource "vcfa_content_library" "provider_cl" {
 ############################
 # 4) Org Region Quota ("us-west-region")
 # Import:
-#   terraform import vcfa_region_quota.showcase_us_west[0] \
+#   terraform import vcfa_org_region_quota.showcase_us_west[0] \
 #     ${data.vcfa_org.showcase.id}/${data.vcfa_region.us_west.id}
 ############################
 resource "vcfa_region_quota" "showcase_us_west" {
