@@ -1,6 +1,7 @@
 # base tooling
 sudo apt update -y
 sudo apt install -y jq unzip bash-completion
+sudo snap install curl
 
 # k8s client bits (installed now, used later)
 sudo apt install -y kubectl kubectx kubecolor
