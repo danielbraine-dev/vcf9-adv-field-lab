@@ -75,13 +75,14 @@ resource "vsphere_virtual_machine" "avi_controller" {
   }
 
   ovf_deploy {
-    file_path      = var.avi_ova_path
-    disk_provisioning = "thin"
+    local_ovf_path            = var.avi_ova_path
+    disk_provisioning         = "thin"
     allow_unverified_ssl_cert = true
-    ip_protocol    = "IPv4"
+    ip_protocol               = "IPv4"
+    power_on                  = true
 
     # Map OVA networks to your portgroup
-    network_map = {
+    ovf_network_map = {
       "Management" = data.vsphere_network.avi_net.id
     }
   }
