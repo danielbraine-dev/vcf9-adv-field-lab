@@ -141,7 +141,7 @@ resource "avi_cloud" "nsx_t_cloud" {
 
     # ---------- DATA / VIP ----------
     data_network_config {
-      transport_zone = data.nsxt_transport_zone.nsx_tr_zone.id
+      transport_zone = data.nsxt_policy_transport_zone.nsx_tr_zone.id
       tz_type        = "OVERLAY"
 
       tier1_segment_config {
