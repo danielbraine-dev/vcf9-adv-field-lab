@@ -129,7 +129,7 @@ resource "avi_cloud" "nsx_t_cloud" {
     management_network_config {
       # Use the (deprecated but still working) manager-plane TZ data source for now.
       # It returns an ID string, which matches the schema's plain string requirement.
-      transport_zone = data.nsxt_transport_zone.nsx_tr_zone.id
+      transport_zone = data.nsxt_policy_transport_zone.nsx_tr_zone.id
       tz_type        = "OVERLAY"
 
       overlay_segment {
