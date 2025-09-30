@@ -9,3 +9,3551 @@ Providers required by configuration:
 ├── provider[registry.terraform.io/hashicorp/kubernetes] >= 2.38.0
 └── provider[registry.terraform.io/vmware/vcfa] >= 1.0.0
 
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ terraform providers schema -json | jq '.provider_schemas["registry.terraform.io/vmware/avi"].resource_schemas["avi_cloud"]'
+terraform providers schema -json | jq '.provider_schemas["registry.terraform.io/vmware/avi"].resource_schemas["avi_systemconfiguration"]'
+terraform providers schema -json | jq '.provider_schemas["registry.terraform.io/vmware/nsxt"].datasource_schemas["nsxt_policy_transport_zone"]'
+terraform providers schema -json | jq '.provider_schemas["registry.terraform.io/vmware/vcfa"].provider.block'
+{
+  "version": 0,
+  "block": {
+    "attributes": {
+      "autoscale_polling_interval": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "dhcp_enabled": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "dns_provider_ref": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "dns_resolution_on_se": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "east_west_dns_provider_ref": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "east_west_ipam_provider_ref": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "enable_vip_on_all_interfaces": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "enable_vip_static_routes": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "id": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "ip6_autocfg_enabled": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "ipam_provider_ref": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "license_tier": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "license_type": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "maintenance_mode": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "metrics_polling_interval": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "mgmt_ip_v4_enabled": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "mgmt_ip_v6_enabled": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "mtu": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "name": {
+        "type": "string",
+        "description_kind": "plain",
+        "required": true
+      },
+      "obj_name_prefix": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "prefer_static_routes": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "resolve_fqdn_to_ipv6": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "se_group_template_ref": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "state_based_dns_registration": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "tenant_ref": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "uuid": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "vmc_deployment": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "vtype": {
+        "type": "string",
+        "description_kind": "plain",
+        "required": true
+      }
+    },
+    "block_types": {
+      "aws_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "access_key_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true,
+              "sensitive": true
+            },
+            "asg_poll_interval": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "free_elasticips": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "iam_assume_role": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "publish_vip_to_public_zone": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "region": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "route53_integration": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "secret_access_key": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true,
+              "sensitive": true
+            },
+            "ttl": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "use_iam_roles": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "use_sns_sqs": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "vpc": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "vpc_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            }
+          },
+          "block_types": {
+            "ebs_encryption": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "master_key": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "s3_encryption": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "master_key": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "sqs_encryption": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "master_key": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "zones": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "availability_zone": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "mgmt_network_name": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "mgmt_network_uuid": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "azure_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "availability_zones": {
+              "type": [
+                "list",
+                "string"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            },
+            "cloud_credentials_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "des_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "location": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "resource_group": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "se_storage_account": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "subscription_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "use_azure_dns": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "use_enhanced_ha": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "use_managed_disks": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "use_standard_alb": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "block_types": {
+            "network_info": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "management_network_id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_network_id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "virtual_network_id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              },
+              "min_items": 1
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "cloudstack_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "access_key_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true,
+              "sensitive": true
+            },
+            "api_url": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "cntr_public_ip": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "hypervisor": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "mgmt_network_name": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "mgmt_network_uuid": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "secret_access_key": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true,
+              "sensitive": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "configpb_attributes": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "version": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "custom_tags": {
+        "nesting_mode": "list",
+        "block": {
+          "attributes": {
+            "tag_key": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "tag_val": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "dns_resolvers": {
+        "nesting_mode": "list",
+        "block": {
+          "attributes": {
+            "fixed_ttl": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "min_ttl": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "resolver_name": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "use_mgmt": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "block_types": {
+            "nameserver_ips": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "addr": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "type": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "description_kind": "plain"
+              },
+              "min_items": 1
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "docker_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "app_sync_frequency": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "ca_tls_key_and_certificate_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "client_tls_key_and_certificate_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "container_port_match_http_service": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "coredump_directory": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "disable_auto_backend_service_sync": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "disable_auto_frontend_service_sync": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "disable_auto_se_creation": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "enable_event_subscription": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "feproxy_container_port_as_service": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "feproxy_vips_enable_proxy_arp": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "fleet_endpoint": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "http_container_ports": {
+              "type": [
+                "list",
+                "number"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            },
+            "se_deployment_method": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "se_spawn_rate": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "se_volume": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "services_accessible_all_interfaces": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "ssh_user_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "ucp_nodes": {
+              "type": [
+                "list",
+                "string"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            },
+            "use_container_ip_port": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "use_controller_image": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "block_types": {
+            "docker_registry_se": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "password": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true,
+                    "sensitive": true
+                  },
+                  "private": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "registry": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "username": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "block_types": {
+                  "oshift_registry": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "registry_namespace": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        },
+                        "registry_service": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        }
+                      },
+                      "block_types": {
+                        "registry_vip": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          }
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "east_west_placement_subnet": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "mask": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "ip_addr": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    },
+                    "min_items": 1
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "se_exclude_attributes": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "attribute": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "value": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "se_include_attributes": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "attribute": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "value": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "gcp_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "cloud_credentials_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "firewall_target_tags": {
+              "type": [
+                "list",
+                "string"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            },
+            "gcp_service_account_email": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "gcs_bucket_name": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "gcs_project_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "region_name": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "se_project_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "zones": {
+              "type": [
+                "list",
+                "string"
+              ],
+              "description_kind": "plain",
+              "required": true
+            }
+          },
+          "block_types": {
+            "encryption_keys": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "gcs_bucket_kms_key_id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "gcs_objects_kms_key_id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_disk_kms_key_id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_image_kms_key_id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "network_config": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "config": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "inband": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "vpc_network_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "vpc_project_id": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        },
+                        "vpc_subnet_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "one_arm": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "data_vpc_network_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "data_vpc_project_id": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        },
+                        "data_vpc_subnet_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "management_vpc_network_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "management_vpc_project_id": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        },
+                        "management_vpc_subnet_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "two_arm": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "backend_data_vpc_network_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "backend_data_vpc_project_id": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        },
+                        "backend_data_vpc_subnet_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "frontend_data_vpc_network_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "frontend_data_vpc_project_id": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        },
+                        "frontend_data_vpc_subnet_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "management_vpc_network_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "management_vpc_project_id": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        },
+                        "management_vpc_subnet_name": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              },
+              "min_items": 1
+            },
+            "vip_allocation_strategy": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "mode": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  }
+                },
+                "block_types": {
+                  "ilb": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "cloud_router_names": {
+                          "type": [
+                            "list",
+                            "string"
+                          ],
+                          "description_kind": "plain",
+                          "optional": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "routes": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "match_se_group_subnet": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        },
+                        "route_priority": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              },
+              "min_items": 1
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "linuxserver_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "se_inband_mgmt": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "se_log_disk_path": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "se_log_disk_size_gb": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "se_sys_disk_path": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "se_sys_disk_size_gb": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "ssh_user_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "block_types": {
+            "hosts": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "node_availability_zone": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_group_ref": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "block_types": {
+                  "host_attr": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "attr_key": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "attr_val": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "host_ip": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    },
+                    "min_items": 1
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "markers": {
+        "nesting_mode": "list",
+        "block": {
+          "attributes": {
+            "key": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "values": {
+              "type": [
+                "list",
+                "string"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "nsxt_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "automate_dfw_objects": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "automate_dfw_rules": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "domain_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "enforcementpoint_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "nsxt_credentials_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "nsxt_url": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "site_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "verify_certificate": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "vmc_mode": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "vpc_mode": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "block_types": {
+            "data_network_config": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "transport_zone": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "tz_type": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "vlan_segments": {
+                    "type": [
+                      "list",
+                      "string"
+                    ],
+                    "description_kind": "plain",
+                    "optional": true
+                  }
+                },
+                "block_types": {
+                  "tier1_segment_config": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "segment_config_mode": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        }
+                      },
+                      "block_types": {
+                        "automatic": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "num_se_per_segment": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "optional": true
+                              },
+                              "tier1_lr_ids": {
+                                "type": [
+                                  "list",
+                                  "string"
+                                ],
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "block_types": {
+                              "nsxt_segment_subnet": {
+                                "nesting_mode": "set",
+                                "block": {
+                                  "attributes": {
+                                    "mask": {
+                                      "type": "string",
+                                      "description_kind": "plain",
+                                      "required": true
+                                    }
+                                  },
+                                  "block_types": {
+                                    "ip_addr": {
+                                      "nesting_mode": "set",
+                                      "block": {
+                                        "attributes": {
+                                          "addr": {
+                                            "type": "string",
+                                            "description_kind": "plain",
+                                            "required": true
+                                          },
+                                          "type": {
+                                            "type": "string",
+                                            "description_kind": "plain",
+                                            "required": true
+                                          }
+                                        },
+                                        "description_kind": "plain"
+                                      },
+                                      "min_items": 1
+                                    }
+                                  },
+                                  "description_kind": "plain"
+                                },
+                                "min_items": 1
+                              }
+                            },
+                            "description_kind": "plain"
+                          }
+                        },
+                        "manual": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "block_types": {
+                              "tier1_lrs": {
+                                "nesting_mode": "list",
+                                "block": {
+                                  "attributes": {
+                                    "locale_service": {
+                                      "type": "string",
+                                      "description_kind": "plain",
+                                      "optional": true,
+                                      "computed": true
+                                    },
+                                    "segment_id": {
+                                      "type": "string",
+                                      "description_kind": "plain",
+                                      "optional": true,
+                                      "computed": true
+                                    },
+                                    "tier1_lr_id": {
+                                      "type": "string",
+                                      "description_kind": "plain",
+                                      "required": true
+                                    }
+                                  },
+                                  "description_kind": "plain"
+                                },
+                                "min_items": 1
+                              }
+                            },
+                            "description_kind": "plain"
+                          }
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "management_network_config": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "transport_zone": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "tz_type": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "vlan_segment": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "block_types": {
+                  "overlay_segment": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "locale_service": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        },
+                        "segment_id": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        },
+                        "tier1_lr_id": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "ntp_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "block_types": {
+            "ntp_authentication_keys": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "algorithm": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "key": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "key_number": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "ntp_server_list": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "addr": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "type": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "ntp_servers": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "key_number": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "block_types": {
+                  "server": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    },
+                    "min_items": 1
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "proxy_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "host": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "password": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true,
+              "sensitive": true
+            },
+            "port": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "username": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "rancher_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "access_key": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "app_sync_frequency": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "container_port_match_http_service": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "coredump_directory": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "disable_auto_backend_service_sync": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "disable_auto_frontend_service_sync": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "disable_auto_se_creation": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "enable_event_subscription": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "feproxy_container_port_as_service": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "feproxy_vips_enable_proxy_arp": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "fleet_endpoint": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "http_container_ports": {
+              "type": [
+                "list",
+                "number"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            },
+            "rancher_servers": {
+              "type": [
+                "list",
+                "string"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            },
+            "se_deployment_method": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "se_spawn_rate": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "se_volume": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "secret_key": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true,
+              "sensitive": true
+            },
+            "services_accessible_all_interfaces": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "ssh_user_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "use_container_ip_port": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "use_controller_image": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "block_types": {
+            "docker_registry_se": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "password": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true,
+                    "sensitive": true
+                  },
+                  "private": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "registry": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "username": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "block_types": {
+                  "oshift_registry": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "registry_namespace": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        },
+                        "registry_service": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        }
+                      },
+                      "block_types": {
+                        "registry_vip": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          }
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "east_west_placement_subnet": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "mask": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "ip_addr": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    },
+                    "min_items": 1
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "nuage_controller": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "nuage_organization": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "nuage_password": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true,
+                    "sensitive": true
+                  },
+                  "nuage_port": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "nuage_username": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "nuage_vsd_host": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_domain": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_enterprise": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_network": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_policy_group": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_user": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "se_zone": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "se_exclude_attributes": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "attribute": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "value": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "se_include_attributes": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "attribute": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "value": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "vca_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "privilege": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "vca_host": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "vca_instance": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "vca_mgmt_network": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "vca_orgnization": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "vca_password": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true,
+              "sensitive": true
+            },
+            "vca_username": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "vca_vdc": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "vcenter_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "datacenter": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "datacenter_managed_object_id": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "is_nsx_environment": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "management_network": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "password": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true,
+              "sensitive": true
+            },
+            "privilege": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "use_content_lib": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "username": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "vcenter_template_se_location": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "vcenter_url": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "verify_certificate": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "block_types": {
+            "content_lib": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "management_ip_subnet": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "mask": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "ip_addr": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    },
+                    "min_items": 1
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      }
+    },
+    "description_kind": "plain"
+  }
+}
+{
+  "version": 0,
+  "block": {
+    "attributes": {
+      "common_criteria_mode": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "default_license_tier": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "dns_virtualservice_refs": {
+        "type": [
+          "list",
+          "string"
+        ],
+        "description_kind": "plain",
+        "optional": true
+      },
+      "docker_mode": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "enable_cors": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "enable_host_header_check": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "fips_mode": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "host_key_algorithm_exclude": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "id": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "kex_algorithm_exclude": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "legacy_ssl_support": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "rekey_time_limit": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "rekey_volume_limit": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      },
+      "sddcmanager_fqdn": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "ssh_ciphers": {
+        "type": [
+          "list",
+          "string"
+        ],
+        "description_kind": "plain",
+        "optional": true
+      },
+      "ssh_hmacs": {
+        "type": [
+          "list",
+          "string"
+        ],
+        "description_kind": "plain",
+        "optional": true
+      },
+      "trusted_host_profiles_refs": {
+        "type": [
+          "list",
+          "string"
+        ],
+        "description_kind": "plain",
+        "optional": true
+      },
+      "truststore_pkiprofile_ref": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "uuid": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true,
+        "computed": true
+      },
+      "welcome_workflow_complete": {
+        "type": "string",
+        "description_kind": "plain",
+        "optional": true
+      }
+    },
+    "block_types": {
+      "admin_auth_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "allow_local_user_login": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "block_types": {
+            "remote_auth_configurations": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "auth_mapping_profile_ref": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "auth_profile_ref": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "index": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "service_auth_configurations": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "index": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "service_auth_mapping_profile_ref": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "service_auth_profile_ref": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "configpb_attributes": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "version": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "controller_analytics_policy": {
+        "nesting_mode": "set",
+        "block": {
+          "block_types": {
+            "metrics_event_thresholds": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "metrics_event_threshold_type": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "reset_threshold": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  },
+                  "watermark_thresholds": {
+                    "type": [
+                      "list",
+                      "number"
+                    ],
+                    "description_kind": "plain",
+                    "optional": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "dns_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "search_domain": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "block_types": {
+            "server_list": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "addr": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "type": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "email_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "auth_password": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true,
+              "sensitive": true
+            },
+            "auth_username": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "disable_tls": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "email_timezone": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "from_email": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "from_name": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "mail_server_name": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "mail_server_port": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "smtp_type": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "global_tenant_config": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "se_in_provider_context": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "tenant_access_to_provider_se": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "tenant_vrf": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "linux_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "banner": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "cis_mode": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "motd": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "mgmt_ip_access_control": {
+        "nesting_mode": "set",
+        "block": {
+          "block_types": {
+            "api_access": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "group_refs": {
+                    "type": [
+                      "list",
+                      "string"
+                    ],
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "match_criteria": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "addrs": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "prefixes": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "mask": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "block_types": {
+                        "ip_addr": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "ranges": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "block_types": {
+                        "begin": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        },
+                        "end": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "shell_server_access": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "group_refs": {
+                    "type": [
+                      "list",
+                      "string"
+                    ],
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "match_criteria": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "addrs": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "prefixes": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "mask": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "block_types": {
+                        "ip_addr": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "ranges": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "block_types": {
+                        "begin": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        },
+                        "end": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "snmp_access": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "group_refs": {
+                    "type": [
+                      "list",
+                      "string"
+                    ],
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "match_criteria": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "addrs": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "prefixes": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "mask": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "block_types": {
+                        "ip_addr": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "ranges": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "block_types": {
+                        "begin": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        },
+                        "end": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "ssh_access": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "group_refs": {
+                    "type": [
+                      "list",
+                      "string"
+                    ],
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "match_criteria": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "addrs": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "prefixes": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "mask": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "block_types": {
+                        "ip_addr": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "ranges": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "block_types": {
+                        "begin": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        },
+                        "end": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "sysint_access": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "group_refs": {
+                    "type": [
+                      "list",
+                      "string"
+                    ],
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "match_criteria": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "block_types": {
+                  "addrs": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "prefixes": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "attributes": {
+                        "mask": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "block_types": {
+                        "ip_addr": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  },
+                  "ranges": {
+                    "nesting_mode": "list",
+                    "block": {
+                      "block_types": {
+                        "begin": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        },
+                        "end": {
+                          "nesting_mode": "set",
+                          "block": {
+                            "attributes": {
+                              "addr": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              },
+                              "type": {
+                                "type": "string",
+                                "description_kind": "plain",
+                                "required": true
+                              }
+                            },
+                            "description_kind": "plain"
+                          },
+                          "min_items": 1
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "ntp_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "block_types": {
+            "ntp_authentication_keys": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "algorithm": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true
+                  },
+                  "key": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "key_number": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "ntp_server_list": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "addr": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  },
+                  "type": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "required": true
+                  }
+                },
+                "description_kind": "plain"
+              }
+            },
+            "ntp_servers": {
+              "nesting_mode": "list",
+              "block": {
+                "attributes": {
+                  "key_number": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "block_types": {
+                  "server": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "addr": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        },
+                        "type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "required": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    },
+                    "min_items": 1
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "portal_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "allow_basic_authentication": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "api_force_timeout": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "disable_remote_cli_shell": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "disable_swagger": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "enable_clickjacking_protection": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "enable_http": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "enable_https": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "http_port": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "https_port": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "legacy_ssl_support": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "minimum_password_length": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "password_strength_check": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "pkiprofile_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "redirect_to_https": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "sslkeyandcertificate_refs": {
+              "type": [
+                "list",
+                "string"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            },
+            "sslprofile_ref": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "use_uuid_from_input": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "proxy_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "host": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "password": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true,
+              "sensitive": true
+            },
+            "port": {
+              "type": "string",
+              "description_kind": "plain",
+              "required": true
+            },
+            "username": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "secure_channel_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "sslkeyandcertificate_refs": {
+              "type": [
+                "list",
+                "string"
+              ],
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "snmp_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "community": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true,
+              "sensitive": true
+            },
+            "large_trap_payload": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "sys_contact": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "sys_location": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            },
+            "version": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            }
+          },
+          "block_types": {
+            "snmp_v3_config": {
+              "nesting_mode": "set",
+              "block": {
+                "attributes": {
+                  "engine_id": {
+                    "type": "string",
+                    "description_kind": "plain",
+                    "optional": true,
+                    "computed": true
+                  }
+                },
+                "block_types": {
+                  "user": {
+                    "nesting_mode": "set",
+                    "block": {
+                      "attributes": {
+                        "auth_passphrase": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "sensitive": true
+                        },
+                        "auth_type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        },
+                        "priv_passphrase": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "sensitive": true
+                        },
+                        "priv_type": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true
+                        },
+                        "username": {
+                          "type": "string",
+                          "description_kind": "plain",
+                          "optional": true,
+                          "computed": true
+                        }
+                      },
+                      "description_kind": "plain"
+                    }
+                  }
+                },
+                "description_kind": "plain"
+              }
+            }
+          },
+          "description_kind": "plain"
+        }
+      },
+      "telemetry_configuration": {
+        "nesting_mode": "set",
+        "block": {
+          "attributes": {
+            "enable": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true
+            },
+            "url": {
+              "type": "string",
+              "description_kind": "plain",
+              "optional": true,
+              "computed": true
+            }
+          },
+          "description_kind": "plain"
+        }
+      }
+    },
+    "description_kind": "plain"
+  }
+}
+null
+{
+  "attributes": {
+    "allow_api_token_file": {
+      "type": "bool",
+      "description": "Set this to true if you understand the security risks of using API token files and would like to suppress the warnings",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "allow_service_account_token_file": {
+      "type": "bool",
+      "description": "Set this to true if you understand the security risks of using Service Account token files and would like to suppress the warnings",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "allow_unverified_ssl": {
+      "type": "bool",
+      "description": "If set, VCFAClient will permit unverifiable SSL certificates.",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "api_token": {
+      "type": "string",
+      "description": "The API token used instead of username/password for VCFA API operations",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "api_token_file": {
+      "type": "string",
+      "description": "The API token file instead of username/password for VCFA API operations",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "auth_type": {
+      "type": "string",
+      "description": "'integrated', 'token', 'api_token', 'api_token_file' and 'service_account_token_file' are supported. 'integrated' is default.",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "import_separator": {
+      "type": "string",
+      "description": "Defines the import separation string to be used with 'terraform import'",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "logging": {
+      "type": "bool",
+      "description": "If set, it will enable logging of API requests and responses",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "logging_file": {
+      "type": "string",
+      "description": "Defines the full name of the logging file for API calls (requires 'logging')",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "org": {
+      "type": "string",
+      "description": "The VCFA Org for API operations",
+      "description_kind": "plain",
+      "required": true
+    },
+    "password": {
+      "type": "string",
+      "description": "The user password for VCFA API operations.",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "service_account_token_file": {
+      "type": "string",
+      "description": "The Service Account API token file instead of username/password for VCFA API operations. (Requires VCFA 9.0+)",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "sysorg": {
+      "type": "string",
+      "description": "The VCFA Org for user authentication",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "token": {
+      "type": "string",
+      "description": "The token used instead of username/password for VCFA API operations.",
+      "description_kind": "plain",
+      "optional": true
+    },
+    "url": {
+      "type": "string",
+      "description": "The VCFA url for VCFA API operations.",
+      "description_kind": "plain",
+      "required": true
+    },
+    "user": {
+      "type": "string",
+      "description": "The user name for VCFA API operations.",
+      "description_kind": "plain",
+      "optional": true
+    }
+  },
+  "description_kind": "plain"
+}
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ 
+
