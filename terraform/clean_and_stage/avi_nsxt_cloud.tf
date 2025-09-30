@@ -74,7 +74,7 @@ variable "attach_ipam_now"          {
 # Lookups
 ################################
 # NSX-T Transport Zone (by display name)
-data "nsxt_transport_zone" "nsx_tr_zone" {
+data "nsxt_policy_transport_zone" "nsx_tr_zone" {
   display_name = var.transport_zone_name
 }
 # NSX-T Data T1  (by display name)
@@ -123,7 +123,7 @@ resource "avi_cloud" "nsx_t_cloud" {
 
   nsxt_configuration {
     nsxt_url            = var.nsx_host
-    transport_zone      = data.nsxt_transport_zone.nsx_tr_zone.id
+    transport_zone      = data.nsxt_transport_zone.nsx_tr_zone.path
 
     # Management network for Controllers/SEs (overlay segment under mgmt T1)
     management_segment {
