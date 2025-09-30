@@ -1,1 +1,11 @@
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ terraform providers
+
+Providers required by configuration:
+.
+├── provider[registry.terraform.io/hashicorp/tls] >= 4.1.0
+├── provider[registry.terraform.io/vmware/nsxt] >= 3.10.0
+├── provider[registry.terraform.io/vmware/avi] 31.1.1
+├── provider[registry.terraform.io/vmware/vsphere] >= 2.15.0
+├── provider[registry.terraform.io/hashicorp/kubernetes] >= 2.38.0
+└── provider[registry.terraform.io/vmware/vcfa] >= 1.0.0
 
