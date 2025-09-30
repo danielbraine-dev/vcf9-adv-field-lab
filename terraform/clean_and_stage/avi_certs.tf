@@ -1,8 +1,14 @@
 ###############################################################################
 # 1) Generate self-signed cert for the Avi Controller FQDN
 ###############################################################################
-variable "avi_fqdn"     { type = string, default = "avi-controller01-a.site-a.vcf.lab" }
-variable "avi_cert_name" { type = string, default = "avi-portal-cert" }
+variable "avi_fqdn"     { 
+  type = string
+  default = "avi-controller01-a.site-a.vcf.lab" 
+}
+variable "avi_cert_name" { 
+  type = string
+  default = "avi-portal-cert" 
+}
 
 resource "tls_private_key" "avi" {
   algorithm = "RSA"
