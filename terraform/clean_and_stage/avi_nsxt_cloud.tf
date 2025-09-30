@@ -142,9 +142,13 @@ resource "avi_cloud" "nsx_t_cloud" {
       }
     }
 
-    automate_dfw_rules   = "false"
+    automate_dfw_rules   = false
     nsxt_credentials_ref = avi_cloudconnectoruser.nsx_t_user.uuid
   }
+  # Attach IPAM/DNS only when attach_ipam_now=true (Pass B)
+  ipam_provider_ref = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
+  dns_provider_ref  = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
+}
 }
 
 ################################
@@ -169,13 +173,6 @@ resource "avi_vcenterserver" "vc_01" {
   content_lib {
     id = vsphere_content_library.avi_se_cl.id
   }
-}
-
-##################################
-# Attach IPAM/DNS only when attach_ipam_now=true (Pass B)
-##################################
-  ipam_provider_ref = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
-  dns_provider_ref  = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
 }
 
 ################################
