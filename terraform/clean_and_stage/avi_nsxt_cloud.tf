@@ -149,7 +149,6 @@ resource "avi_cloud" "nsx_t_cloud" {
   ipam_provider_ref = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
   dns_provider_ref  = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
 }
-}
 
 ################################
 # Register vCenter into the Cloud + Content Library
