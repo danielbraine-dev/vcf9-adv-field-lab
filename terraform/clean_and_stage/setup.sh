@@ -249,16 +249,25 @@ step8_create_cert(){
     sleep 10
   done
   log "Avi API is up."
-  
+
   # Apply just the cert/trust pieces (Terraform)
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=tls_private_key.avi \
     -target=tls_self_signed_cert.avi \
     -target=avi_sslkeyandcertificate.portal \
-    -target=avi_systemconfiguration.this \
-    -target=nsxt_policy_certificate.avi_portal
+    -target=avi_systemconfiguration.this
+
+  # Import the same cert into NSX trust via API
+  if [[ -x "${ROOT_DIR}/scripts/nsx_import_cert.sh" ]]; then
+    log "Importing Avi portal certificate into NSX trust…"
+    "${ROOT_DIR}/scripts/nsx_import_cert.sh"
+  else
+    warn "scripts/nsx_import_cert.sh not found or not executable; skipping NSX cert import."
+  fi
+
   pause
 }
+
 
 step9_nsx_cloud(){
   log "PASS A — NSXCloud + vCenter (no IPAM/DNS yet)"
@@ -288,7 +297,7 @@ step10_onboard_nsx_alb(){
 
 step11_install_sup(){
   #-----------------------------
-  # 6) Install Supervisor in vSphere (native REST)
+  # Install Supervisor in vSphere (native REST)
   #-----------------------------
   log "STEP 6: Installing Supervisor in vSphere…"
   bash "${ROOT_DIR}/scripts/install_supervisor.sh" || warn "Supervisor install script finished with warnings."
