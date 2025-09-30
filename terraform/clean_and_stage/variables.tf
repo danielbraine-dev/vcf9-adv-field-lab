@@ -203,3 +203,13 @@ variable "vcenter_fqdn_to_refresh" {
   type = string
   default = "vc-wld01-a.site-a.vcf.lab" 
 }
+variable "vcfa_provider_gw_name"  { type = string }
+variable "vcfa_provider_gateway_id" { type = string }
+variable "vcfa_tier0_gateway_id"  { type = string }
+variable "vcfa_org_cl_storage_class_ids" { type = list(string) }
+variable "vcfa_provider_cl_storage_class_ids" { type = list(string) }
+variable "vcfa_ip_space_ids"      { type = list(string) }
+variable "vcfa_ip_space_name"             { type = string }
+variable "vcfa_default_quota_max_ip_count"      { type = number }
+variable "vcfa_default_quota_max_subnet_size"   { type = number }
+variable "vcfa_default_quota_max_cidr_count"    { type = number }
