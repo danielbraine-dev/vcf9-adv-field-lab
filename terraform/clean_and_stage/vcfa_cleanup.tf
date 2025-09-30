@@ -36,6 +36,10 @@ variable "vcfa_org_cl_name"             {
   type = string
   default = "showcase-content-library" 
 } 
+variable "vcfa_org_cl_storage_class_ids" {
+  type=string
+  default=""
+}
 variable "provider_cl_name"        { 
   type = string
   default = "provider-content-library" 
@@ -68,6 +72,10 @@ variable "vcfa_tier0_gateway_id"  {
   type = string 
   default=""
 }
+variable "vcfa_nsx_manager_id"  {
+  type = string
+  default ="bf0495ef-e1fc-4da8-a7ff-4e7320903c5d"
+}
 variable "vcfa_ip_space_ids"      { 
 type = list(string)
 default = ["6e7a4ea5-43a8-4c93-b1d3-cde61b69969e"]
@@ -88,6 +96,14 @@ variable "vcfa_default_quota_max_cidr_count"    {
   type = number
   default = null
 }
+variable "vcfa_storage_policy_names" {
+  type = string
+  default = ""
+}
+variable "vcfa_supervisor_ids" {
+  type = string
+  default = ""
+}
 
 
 ############################################################
@@ -96,11 +112,12 @@ variable "vcfa_default_quota_max_cidr_count"    {
 resource "vcfa_supervisor_namespace" "project_ns" {
   count     = var.enable_vcfa_cleanup ? 1 : 0
   name      = var.vcfa_ns_name
+  class_name = 
   project_name = var.org_project_name
   region_name = var.vcfa_region_name
   vpc_name = var.vcfa_vpc_name
-  zones_initial_class_config_overrides = []
-  storage_classes_initial_class_config_overrieds = []
+  zones_initial_class_config_overrides = 
+  storage_classes_initial_class_config_overrides = 
   lifecycle { prevent_destroy = false }
 }
 
@@ -132,10 +149,10 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
   count     = var.enable_vcfa_cleanup ? 1 : 0
   org_id    = var.vcfa_org_id
   region_id = var.vcfa_region_id
-  #supervisor_ids =
-  #region_vm_class_ids = 
-  #region_storage_policy = 
-  #zone_resource_allocations = 
+  supervisor_ids =
+  region_vm_class_ids = 
+  region_storage_policy = 
+  zone_resource_allocations = 
   lifecycle { prevent_destroy = false }
 }
 
@@ -157,7 +174,7 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
 ############################
 resource "vcfa_provider_gateway" "us_west" {
   count              = var.enable_vcfa_cleanup ? 1 : 0
-  region_id          = var.vcfa_region.id
+  region_id          = var.vcfa_region_id
   tier0_gateway_id   = var.vcfa_tier0_gateway_id
   id_space_ids       = var.vcfa_ip_space_ids
   name               = var.provider_gw_name
@@ -166,8 +183,6 @@ resource "vcfa_provider_gateway" "us_west" {
 
 ############################
 # 7) Provider IP Space "ip-space-us-west"
-# Import:
-#   terraform import vcfa_ip_space.us_west[0] ${var.provider_ip_space}
 ############################
 resource "vcfa_ip_space" "us_west" {
   count = var.enable_vcfa_cleanup ? 1 : 0
@@ -177,7 +192,7 @@ resource "vcfa_ip_space" "us_west" {
   default_quota_max_subnet_size   = var.vcfa_default_quota_max_subnet_size
   default_quota_max_cidr_count    = var.vcfa_default_quota_max_cidr_count
   internal_scope {
-    scope = "PROVIDER"   # <-- this is an example; copy real attrs from state
+    cidr = ""
   }
   lifecycle { prevent_destroy = false }
 }
