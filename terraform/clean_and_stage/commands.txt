@@ -37,5 +37,5 @@ sudo apt purge -y || true
 sudo apt -y update
 sudo apt -y install vim
 
-# load new shell goodies in future shells
-source ~/.bashrc || true
+# load new shell options
+source ~/.bashrc
