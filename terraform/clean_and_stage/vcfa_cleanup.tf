@@ -153,7 +153,7 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
 ############################
 resource "vcfa_provider_gateway" "us_west" {
   count              = var.enable_vcfa_cleanup ? 0 : 1
-  region_id          = data.vcfa_region.us_west.id
+  region_id          = var.vcfa_region.id
   tier0_gateway_id   = var.vcfa_tier0_gateway_id
   id_space_ids       = var.vcfa_ip_space_ids
   name               = var.provider_gw_name
@@ -193,13 +193,10 @@ resource "vcfa_region" "us_west" {
 ############################
 # 9) Refresh vCenter connection "vc-wld01-a.site-a.vcf.lab"
 ############################
-data "vcfa_vcenter" "target" {
-  name = var.vcenter_fqdn_to_refresh
-}
 
 # One-shot action: refresh/test the VC connection after deletions
 resource "vcfa_vcenter_refresh" "refresh" {
-  vcenter_id = data.vcfa_vcenter.target.id
+  vcenter_id = var.vcenter_fqdn_to_refresh.id
   depends_on = [
     kubernetes_namespace.demo,
     vcfa_content_library.org_cl,
