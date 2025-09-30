@@ -7,11 +7,11 @@ terraform {
       version = ">= 3.9.0"
     }
     avi = {
-      source  = "vmware.com/avi/avi"
+      source  = "vmware/avi"
       version = "31.1.1"
     }
     vsphere = {
-      source  = "hashicorp/vsphere"
+      source  = "vmware/vsphere"
       version = ">= 2.5.0"
     }
     kubernetes = {
