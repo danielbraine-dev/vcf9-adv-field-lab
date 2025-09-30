@@ -94,7 +94,7 @@ variable "vcfa_default_quota_max_cidr_count"    {
 # 1) Supervisor Namespace (Org + Region + Name)
 ############################################################
 resource "vcfa_supervisor_namespace" "project_ns" {
-  count     = var.enable_vcfa_cleanup ? 0 : 1
+  count     = var.enable_vcfa_cleanup ? 1 : 0
   name      = var.vcfa_ns_name
   project_name = var.org_project_name
   region_name = var.vcfa_region_name
@@ -108,7 +108,7 @@ resource "vcfa_supervisor_namespace" "project_ns" {
 # 2) Org-scoped Content Library (requires org_id + storage_class_ids)
 ############################################################
 resource "vcfa_content_library" "org_cl" {
-  count             = var.enable_vcfa_cleanup ? 0 : 1
+  count             = var.enable_vcfa_cleanup ? 1 : 0
   org_id            = var.vcfa_org_id
   name              = var.vcfa_org_cl_name
   storage_class_ids = var.vcfa_org_cl_storage_class_ids
@@ -119,7 +119,7 @@ resource "vcfa_content_library" "org_cl" {
 # 3) Provider-scoped Content Library "provider-content-library"
 ############################
 resource "vcfa_content_library" "provider_cl" {
-  count = var.enable_vcfa_cleanup ? 0 : 1
+  count = var.enable_vcfa_cleanup ? 1 : 0
   name  = var.provider_cl_name
   storage_class_ids = var.vcfa_provider_cl_storage_class_ids
   lifecycle { prevent_destroy = false }
@@ -129,7 +129,7 @@ resource "vcfa_content_library" "provider_cl" {
 # 4) Org Region Quota (correct type name is vcfa_org_region_quota)
 ############################################################
 resource "vcfa_org_region_quota" "showcase_us_west" {
-  count     = var.enable_vcfa_cleanup ? 0 : 1
+  count     = var.enable_vcfa_cleanup ? 1 : 0
   org_id    = var.vcfa_org_id
   region_id = var.vcfa_region_id
   supervisor_ids =
@@ -143,7 +143,7 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
 # 5) Org Regional Networking 
 ############################################################
 resource "vcfa_org_regional_networking" "showcase_us_west" {
-  count               = var.enable_vcfa_cleanup ? 0 : 1
+  count               = var.enable_vcfa_cleanup ? 1 : 0
   org_id              = var.vcfa_org_id
   region_id           = var.vcfa_region_id
   name                = var.vcfa_org_reg_net_name
@@ -156,7 +156,7 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
 # 6) Provider Gateway "provider-gateway-us-west"
 ############################
 resource "vcfa_provider_gateway" "us_west" {
-  count              = var.enable_vcfa_cleanup ? 0 : 1
+  count              = var.enable_vcfa_cleanup ? 1 : 0
   region_id          = var.vcfa_region.id
   tier0_gateway_id   = var.vcfa_tier0_gateway_id
   id_space_ids       = var.vcfa_ip_space_ids
@@ -170,7 +170,7 @@ resource "vcfa_provider_gateway" "us_west" {
 #   terraform import vcfa_ip_space.us_west[0] ${var.provider_ip_space}
 ############################
 resource "vcfa_ip_space" "us_west" {
-  count = var.enable_vcfa_cleanup ? 0 : 1
+  count = var.enable_vcfa_cleanup ? 1 : 0
   name  = var.provider_ip_space
   region_id                       = var.vcfa_region_id
   default_quota_max_ip_count      = var.vcfa_default_quota_max_ip_count
@@ -186,7 +186,7 @@ resource "vcfa_ip_space" "us_west" {
 # 8) Region "us-west-region"
 ############################
 resource "vcfa_region" "us_west" {
-  count = var.enable_vcfa_cleanup ? 0 : 1
+  count = var.enable_vcfa_cleanup ? 1 : 0
   name  = var.vcfa_region_name
   nsx_manager_id        = var.vcfa_nsx_manager_id
   storage_policy_names  = var.vcfa_storage_policy_names
