@@ -79,7 +79,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
     disk_provisioning         = "thin"
     allow_unverified_ssl_cert = true
     ip_protocol               = "IPv4"
-    power_on                  = true
 
     # Map OVA networks to your portgroup
     ovf_network_map = {
