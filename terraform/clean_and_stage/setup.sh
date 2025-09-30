@@ -4,17 +4,17 @@ set -euo pipefail
 # Enable tracing with TRACE=1 ./setup.sh …
 [[ "${TRACE:-0}" == "1" ]] && set -x
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TFVARS_FILE="${ROOT_DIR}/terraform.tfvars"
+  
+log()   { printf "\n\033[1;36m%s\033[0m\n" "$*"; }
+warn()  { printf "\n\033[1;33m%s\033[0m\n" "$*"; }
+error() { printf "\n\033[1;31m%s\033[0m\n" "$*"; }
+
 pause() { [[ "${PAUSE:-0}" == "1" ]] && read -rp "→ Press Enter to continue…" || true; }
 
 step1_install_tools() {
   echo "[1] Install tools…"
-  ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  TFVARS_FILE="${ROOT_DIR}/terraform.tfvars"
-  
-  log()   { printf "\n\033[1;36m%s\033[0m\n" "$*"; }
-  warn()  { printf "\n\033[1;33m%s\033[0m\n" "$*"; }
-  error() { printf "\n\033[1;31m%s\033[0m\n" "$*"; }
-  
   #-----------------------------
   # 1) Setup tools in lab & apply fixes
   #-----------------------------
@@ -118,7 +118,7 @@ step3_tf_init() {
   # Terraform init (repo root)
   log "Running terraform init…"
   terraform -chdir="${ROOT_DIR}" init -upgrade
-  terraform validate
+  terraform -chdir="${ROOT_DIR}" validate
   pause
 }
 
@@ -311,8 +311,8 @@ run() {
     11) step11_install_sup;;
     all) step1_install_tools; step2_dns_fix; step3_tf_init; step4_remove_vcfa_objects; step5_remove_sup; step6_create_nsx_objects; step7_deploy_avi; step8_create_cert; step9_nsx_cloud; step10_onboard_nsx_alb; step11_install_sup;;
     *) echo "Usage: $0 [all|1|2|3|4|5|6|7|8|9|10|11] (set TRACE=1 and/or PAUSE=1)"; exit 2;;
-  end
+  esac
 }
 run "${1:-all}"
 
-log "All steps complete. ✅"
+echo "All steps complete. ✅"
