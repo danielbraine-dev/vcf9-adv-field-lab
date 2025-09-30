@@ -124,7 +124,7 @@ step3_tf_init() {
 
 step4_remove_vcfa_objects(){
   #-----------------------------
-  # 2) Remove existing VCFA configurations (provider-based import + destroy)
+  # Remove existing VCFA configurations (provider-based import + destroy)
   #-----------------------------
   log "Priming VCFA lookup data (org/region/project)…"
   terraform -chdir="${ROOT_DIR}" apply \
@@ -178,7 +178,7 @@ step4_remove_vcfa_objects(){
 
 step5_remove_sup(){
   #-----------------------------
-  # 3) Remove Supervisor installed in vSphere (native REST)
+  # Remove Supervisor installed in vSphere (native REST)
   #-----------------------------
   log "STEP 3: Removing Supervisor from vSphere…"
   bash "${ROOT_DIR}/scripts/remove_supervisor.sh" || warn "Supervisor removal script finished with warnings."
@@ -187,7 +187,7 @@ step5_remove_sup(){
 
 step6_create_nsx_objects(){
   #-----------------------------
-  # 4) Create NSX Tier-1 + Segment & vSphere Content Library
+  # Create NSX Tier-1 + Segment & vSphere Content Library
   #-----------------------------
   log "Applying NSX/vSphere creation stack (Tier-1 + Segment + Content Library)…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
@@ -199,15 +199,9 @@ step6_create_nsx_objects(){
 
 step7_deploy_avi(){
   #-----------------------------
-  # 5) Install AVI + NSX integration
-  #   5a) DNS record for controller
-  #   5b) Terraform OVA deploy
-  #   5c) Export cert -> import into NSX
-  #   5d) Run ALB onboarding workflow in NSX
+  # Install AVI + NSX integration
   #-----------------------------
-  # -----------------------------
-  # Prep variables for AVI deploy
-  # -----------------------------
+ 
   AVI_OVA_FILENAME="${AVI_OVA_FILENAME:-$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1 | xargs -n1 basename)}"
   AVI_OVA_PATH="${ROOT_DIR}/${AVI_OVA_FILENAME}"
   
@@ -219,7 +213,9 @@ step7_deploy_avi(){
   # Get the realized display name of the SE mgmt segment from state
   AVI_MGMT_PG="$(
     terraform -chdir="${ROOT_DIR}" state show -no-color nsxt_policy_segment.se_mgmt \
-      | awk -F' = ' '/^\s*display_name\s*=/{print $2}' | tail -n1
+      | awk -F' = ' '/^\s*display_name\s*=/{print $2}' \
+      | sed -e 's/^"//' -e 's/"$//' \
+      | tail -n1
   )"
   
   if [[ -z "${AVI_MGMT_PG}" ]]; then
@@ -332,4 +328,8 @@ run() {
     fi
   done
 }
+# Only execute when run directly (not when sourced)
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  run "${1:-all}"
+fi
 
