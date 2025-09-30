@@ -166,7 +166,7 @@ log "Applying NSX/vSphere creation stack (Tier-1 + Segment + Content Library)…
 terraform -chdir="${ROOT_DIR}" apply -auto-approve \
   -target='nsxt_policy_tier1_gateway.se_mgmt' \
   -target='nsxt_policy_segment.se_mgmt' \
-  -target='vsphere_content_library.avi_se'
+  -target='vsphere_content_library.avi_se_cl'
 
 #-----------------------------
 # 5) Install AVI + NSX integration
