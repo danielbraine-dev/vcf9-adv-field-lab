@@ -18,9 +18,12 @@ variable "vcfa_region_id"   {
 ############################################################
 resource "vcfa_supervisor_namespace" "project_ns" {
   count     = var.enable_vcfa_cleanup ? 0 : 1
-  org_id    = var.vcfa_org_id
-  region_id = var.vcfa_region_id
   name      = var.vcfa_ns_name
+  project_name = 
+  region_name = 
+  vpc_name =
+  zones_initial_class_config_overrides =
+  storage_classes_initial_class_config_overrieds =
   lifecycle { prevent_destroy = false }
 }
 
@@ -41,7 +44,7 @@ resource "vcfa_content_library" "org_cl" {
 resource "vcfa_content_library" "provider_cl" {
   count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.provider_cl_name
-  scope = "PROVIDER"
+  storage_class_ids = var.vcfa_provider_cl_storage_class_ids
   lifecycle { prevent_destroy = false }
 }
 
@@ -52,6 +55,10 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
   count     = var.enable_vcfa_cleanup ? 0 : 1
   org_id    = var.vcfa_org_id
   region_id = var.vcfa_region_id
+  supervisor_ids =
+  region_vm_class_ids = 
+  region_storage_policy = 
+  zone_resource_allocations = 
   lifecycle { prevent_destroy = false }
 }
 
@@ -114,7 +121,7 @@ resource "vcfa_region" "us_west" {
 # 9) Refresh vCenter connection "vc-wld01-a.site-a.vcf.lab"
 ############################
 data "vcfa_vcenter" "target" {
-  fqdn = var.vcenter_fqdn_to_refresh
+  name = 
 }
 
 # One-shot action: refresh/test the VC connection after deletions
