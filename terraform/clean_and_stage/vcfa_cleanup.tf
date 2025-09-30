@@ -3,55 +3,42 @@
 # Pattern: import existing → set enable_vcfa_cleanup=true → apply to delete
 ############################################################
 
-# --- Lookups ---
-data "vcfa_org" "showcase" {
-  name = var.vcfa_org_name
-}
+# Required IDs (no data sources in this provider)
+variable "vcfa_org_id"      { 
+  type = string 
+  default = ""
+}     
+variable "vcfa_region_id"   { 
+  type = string
+  default=""
+}  
 
-data "vcfa_region" "us_west" {
-  name = var.vcfa_region_name
-}
-
-# Optional: project lookup (kept for clarity; not strictly required to delete)
-data "vcfa_project" "default" {
-  org_id = data.vcfa_org.showcase.id
-  name   = var.org_project_name
-}
-
-############################
-# 1) Namespace under org/project
-# Import then destroy:
-#   terraform import kubernetes_namespace.demo[0] ${var.ns_name}
-############################
-resource "kubernetes_namespace" "demo" {
-  count = var.enable_vcfa_cleanup ?  0: 1
-
-  metadata {
-    name = var.ns_name
-  }
+############################################################
+# 1) Supervisor Namespace (Org + Region + Name)
+############################################################
+resource "vcfa_supervisor_namespace" "project_ns" {
+  count     = var.enable_vcfa_cleanup ? 0 : 1
+  org_id    = var.vcfa_org_id
+  region_id = var.vcfa_region_id
+  name      = var.vcfa_ns_name
 
   lifecycle { prevent_destroy = false }
 }
 
-############################
-# 2) Org-scoped Content Library "showcase-content-library"
-# Import:
-#   terraform import vcfa_content_library.org_cl[0] \
-#     ${data.vcfa_org.showcase.id}/${var.org_cl_name}
-############################
+############################################################
+# 2) Org-scoped Content Library (requires org_id + storage_class_ids)
+############################################################
 resource "vcfa_content_library" "org_cl" {
-  count  = var.enable_vcfa_cleanup ? 0 : 1
-  name   = var.org_cl_name
-  scope  = "ORG"
-  org_id = data.vcfa_org.showcase.id
+  count             = var.enable_vcfa_cleanup ? 0 : 1
+  org_id            = var.vcfa_org_id
+  name              = var.vcfa_org_cl_name
+  storage_class_ids = var.vcfa_org_cl_storage_class_ids
 
   lifecycle { prevent_destroy = false }
 }
 
 ############################
 # 3) Provider-scoped Content Library "provider-content-library"
-# Import:
-#   terraform import vcfa_content_library.provider_cl[0] ${var.provider_cl_name}
 ############################
 resource "vcfa_content_library" "provider_cl" {
   count = var.enable_vcfa_cleanup ? 0 : 1
@@ -61,34 +48,30 @@ resource "vcfa_content_library" "provider_cl" {
   lifecycle { prevent_destroy = false }
 }
 
-############################
-# 4) Org Region Quota ("us-west-region")
-# Import:
-#   terraform import vcfa_org_region_quota.showcase_us_west[0] \
-#     ${data.vcfa_org.showcase.id}/${data.vcfa_region.us_west.id}
-############################
-resource "vcfa_region_quota" "showcase_us_west" {
+############################################################
+# 4) Org Region Quota (correct type name is vcfa_org_region_quota)
+############################################################
+resource "vcfa_org_region_quota" "showcase_us_west" {
   count     = var.enable_vcfa_cleanup ? 0 : 1
-  org_id    = data.vcfa_org.showcase.id
-  region_id = data.vcfa_region.us_west.id
+  org_id    = var.vcfa_org_id
+  region_id = var.vcfa_region_id
 
   lifecycle { prevent_destroy = false }
 }
 
-############################
-# 5) Org Regional Networking "showcase-all-appsus-west-region"
-# Import:
-#   terraform import vcfa_org_regional_networking.showcase_us_west[0] \
-#     ${data.vcfa_org.showcase.id}/${data.vcfa_region.us_west.id}/${var.org_reg_net_name}
-############################
+############################################################
+# 5) Org Regional Networking (requires provider_gateway_id)
+############################################################
 resource "vcfa_org_regional_networking" "showcase_us_west" {
-  count     = var.enable_vcfa_cleanup ? 0 : 1
-  org_id    = data.vcfa_org.showcase.id
-  region_id = data.vcfa_region.us_west.id
-  name      = var.org_reg_net_name
+  count               = var.enable_vcfa_cleanup ? 0 : 1
+  org_id              = var.vcfa_org_id
+  region_id           = var.vcfa_region_id
+  name                = var.vcfa_org_reg_net_name
+  provider_gateway_id = var.vcfa_provider_gateway_id
 
   lifecycle { prevent_destroy = false }
 }
+
 
 ############################
 # 6) Provider Gateway "provider-gateway-us-west"
