@@ -24,7 +24,7 @@ data "vsphere_datacenter" "avi_dc" {
   name = var.vsphere_datacenter
 }
 
-data "vsphere_cluster" "avi_cluster" {
+data "vsphere_compute_cluster" "avi_cluster" {
   name          = var.vsphere_cluster
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
