@@ -267,11 +267,14 @@ step9_nsx_cloud(){
     -target=avi_cloud.nsx_t_cloud \
     -target=avi_vcenterserver.vc_01
   
-  log "PASS B — Discover networks, create IPAM/DNS, attach to Cloud, create SE Group"
+  log "PASS B1 — Discover networks and create IPAM/DNS profile"
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+    -target=data.avi_network.vip \
+    -target=avi_ipamdnsproviderprofile.internal
+
+  log "PASS B2 — Attach IPAM/DNS to Cloud and create SE Group"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="attach_ipam_now=true" \
-    -target=data.avi_network.vip \
-    -target=avi_ipamdnsproviderprofile.internal \
     -target=avi_cloud.nsx_t_cloud \
     -target=avi_serviceenginegroup.default
   pause
