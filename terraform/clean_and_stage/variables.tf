@@ -93,7 +93,7 @@ variable "t0_path" {
   default     = "/infra/tier-0s/f2d56669-12c2-42b3-aa7a-8f57340665e5"
 }
 
-varaible "wld1_t1_path" {
+variable "wld1_t1_path" {
   description ="Policy path to the WLD1 Tier-1 gateway"
   type        = string
   default     = "/infra/tier-1s/349361ff-2844-4ad3-9f03-6ab52b47f5af"
