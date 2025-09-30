@@ -44,6 +44,16 @@ variable "avi_version"    {
   type = string
   default = "31.1.2" 
 }
+variable "ipam_provider_url" { 
+  type = string
+  default = null 
+}
+variable "dns_provider_url"  { 
+  type = string
+  default = null 
+}
+
+
 
 # vSphere
 variable "vsphere_server"   {
