@@ -12,6 +12,46 @@ variable "vcfa_region_id"   {
   type = string
   default="a289cc88-4da2-4c73-bc49-59846616c946"
 }  
+variable "vcfa_org_name"           { 
+  type = string
+  default = "showcase-all-apps" 
+}
+variable "vcfa_region_name"        { 
+  type = string
+  default = "us-west-region" 
+}
+variable "org_project_name"        { 
+  type = string
+  default = "default-project" 
+}
+variable "vcfa_ns_name"                 { 
+  type = string
+  default = "demo-namespace-vkrcg" 
+}
+variable "vcfa_org_cl_name"             { 
+  type = string
+  default = "showcase-content-library" 
+} 
+variable "provider_cl_name"        { 
+  type = string
+  default = "provider-content-library" 
+}
+variable "vcfa_org_reg_net_name"        { 
+  type = string  
+  default = "showcase-all-appsus-west-region" 
+}
+variable "provider_gw_name"        { 
+  type = string
+  default = "provider-gateway-us-west" 
+}
+variable "provider_ip_space"       { 
+  type = string
+  default = "ip-space-us-west" 
+}
+variable "vcenter_fqdn_to_refresh" { 
+  type = string
+  default = "vc-wld01-a.site-a.vcf.lab" 
+}
 
 ############################################################
 # 1) Supervisor Namespace (Org + Region + Name)
