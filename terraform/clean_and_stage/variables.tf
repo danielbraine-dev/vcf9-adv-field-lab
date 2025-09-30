@@ -175,11 +175,11 @@ variable "org_project_name"        {
   type = string
   default = "default-project" 
 }
-variable "ns_name"                 { 
+variable "vcfa_ns_name"                 { 
   type = string
   default = "demo-namespace-vkrcg" 
 }
-variable "org_cl_name"             { 
+variable "vcfa_org_cl_name"             { 
   type = string
   default = "showcase-content-library" 
 } 
@@ -187,7 +187,7 @@ variable "provider_cl_name"        {
   type = string
   default = "provider-content-library" 
 }
-variable "org_reg_net_name"        { 
+variable "vcfa_org_reg_net_name"        { 
   type = string  
   default = "showcase-all-appsus-west-region" 
 }
