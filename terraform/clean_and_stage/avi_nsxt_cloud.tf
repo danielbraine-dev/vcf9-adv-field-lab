@@ -115,40 +115,54 @@ resource "avi_cloudconnectoruser" "vcenter_user" {
 # Avi NSX-T Cloud (Pass A creates without IPAM, Pass B updates WITH IPAM)
 ################################
 resource "avi_cloud" "nsx_t_cloud" {
-  depends_on   = [avi_cloudconnectoruser.nsx_t_user]
-  name         = var.nsxt_cloudname
-  tenant_ref   = var.avi_tenant
-  vtype        = "CLOUD_NSXT"
+  depends_on      = [avi_cloudconnectoruser.nsx_t_user]
+  name            = var.nsxt_cloudname
+  tenant_ref      = var.avi_tenant
+  vtype           = "CLOUD_NSXT"
   obj_name_prefix = var.nsxt_cloud_prefix
 
   nsxt_configuration {
-    nsxt_url            = var.nsx_host
-    transport_zone      = data.nsxt_transport_zone.nsx_tr_zone.path
+    nsxt_url             = var.nsx_host
+    nsxt_credentials_ref = avi_cloudconnectoruser.nsx_t_user.uuid
 
-    # Management network for Controllers/SEs (overlay segment under mgmt T1)
-    management_segment {
-      tier1_lr_id = nsxt_policy_tier1_gateway.se_mgmt.id
-      segment_id  = nsxt_policy_segment.se_mgmt.id
+    # ---------- MANAGEMENT (SE mgmt) ----------
+    management_network_config {
+      # Use the (deprecated but still working) manager-plane TZ data source for now.
+      # It returns an ID string, which matches the schema's plain string requirement.
+      transport_zone = data.nsxt_transport_zone.nsx_tr_zone.id
+      tz_type        = "OVERLAY"
+
+      overlay_segment {
+        # Supply the Tier-1 LR ID only; segment_id is optional.
+        tier1_lr_id = nsxt_policy_tier1_gateway.se_mgmt.id
+        # segment_id  = nsxt_policy_segment.se_mgmt.id   # optional; can be added later if needed
+      }
     }
 
-    # Data/VIP segment(s) attached under a T1 (manual mode)
-    tier1_segment_config {
-      segment_config_mode = "TIER1_SEGMENT_MANUAL"
-      manual {
-        tier1_lrs {
-          tier1_lr_id = data.nsxt_policy_tier1_gateway.data_vip_t1.id
-          segment_id  = data.nsxt_policy_segment.se_data_vip.id
+    # ---------- DATA / VIP ----------
+    data_network_config {
+      transport_zone = data.nsxt_transport_zone.nsx_tr_zone.id
+      tz_type        = "OVERLAY"
+
+      tier1_segment_config {
+        segment_config_mode = "TIER1_SEGMENT_MANUAL"
+        manual {
+          tier1_lrs {
+            tier1_lr_id = data.nsxt_policy_tier1_gateway.data_vip_t1.id
+            # segment_id  = data.nsxt_policy_segment.se_data_vip.id  # optional; omit unless you truly need to pin a segment
+          }
         }
       }
     }
 
-    automate_dfw_rules   = false
-    nsxt_credentials_ref = avi_cloudconnectoruser.nsx_t_user.uuid
+    automate_dfw_rules = "false"  # per-schema this is a string in your version
   }
-  # Attach IPAM/DNS only when attach_ipam_now=true (Pass B)
+
+  # Keep these decoupled so there's no graph cycle:
   ipam_provider_ref = var.ipam_provider_url
   dns_provider_ref  = var.dns_provider_url
 }
+
 
 ################################
 # Register vCenter into the Cloud + Content Library
