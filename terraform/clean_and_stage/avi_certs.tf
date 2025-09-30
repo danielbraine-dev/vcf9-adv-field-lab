@@ -43,3 +43,25 @@ resource "avi_systemconfiguration" "this" {
 
   depends_on = [avi_sslkeyandcertificate.portal]
 }
+
+###############################################################################
+# 3) Save PEMs to disk for the NSX upload script
+###############################################################################
+# Ensure output dir exists
+resource "null_resource" "ensure_out_dir" {
+  provisioner "local-exec" { command = "mkdir -p ${path.root}/out" }
+}
+
+resource "local_file" "avi_cert_pem" {
+  content         = tls_self_signed_cert.avi.cert_pem
+  filename        = "${path.root}/out/avi-portal.crt"
+  depends_on      = [null_resource.ensure_out_dir]
+  file_permission = "0644"
+}
+
+resource "local_file" "avi_key_pem" {
+  content         = tls_private_key.avi.private_key_pem
+  filename        = "${path.root}/out/avi-portal.key"
+  depends_on      = [null_resource.ensure_out_dir]
+  file_permission = "0600"
+}
