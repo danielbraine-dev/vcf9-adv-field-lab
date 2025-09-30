@@ -7,8 +7,15 @@ variable "nsx_host" {
   type        = string
   default     = "nsx-wld01-a.site-a.vcf.lab"
 }
-variable "nsx_username" { type = string, default = "admin" }
-variable "nsx_password" { type = string, sensitive = true, default = "VMware123!VMware123!" }
+variable "nsx_username" { 
+  type = string
+  default = "admin" 
+}
+variable "nsx_password" { 
+  type = string
+  sensitive = true
+  default = "VMware123!VMware123!" 
+}
 variable "nsx_allow_unverified_ssl" {
   description = "Set true for lab/self-signed certs"
   type        = bool
@@ -16,24 +23,63 @@ variable "nsx_allow_unverified_ssl" {
 }
 
 # Avi
-variable "avi_username"   { type = string, default = "admin" }
-variable "avi_password"   { type = string, sensitive = true, default = "VMware123!VMware123!" }
-variable "avi_tenant"     { type = string, default = "admin" }
-variable "avi_controller" { type = string, default = "10.1.1.200" }
-variable "avi_version"    { type = string, default = "31.1.2" }
+variable "avi_username"   { 
+  type = string
+  default = "admin" 
+}
+variable "avi_password"   { 
+  type = string
+  sensitive = true  
+  default = "VMware123!VMware123!" 
+}
+variable "avi_tenant"     {
+  type = string
+  default = "admin" 
+}
+variable "avi_controller" { 
+  type = string
+  default = "10.1.1.200" 
+}
+variable "avi_version"    { 
+  type = string
+  default = "31.1.2" 
+}
 
 # vSphere
-variable "vsphere_server"   { type = string, default = "vc-wld01-a.site-a.vcf.lab" }
-variable "vsphere_user"     { type = string, default = "administrator@wld.sso" }
-variable "vsphere_password" { type = string, sensitive = true, default = "VMware123!VMware123!" }
+variable "vsphere_server"   {
+  type = string
+  default = "vc-wld01-a.site-a.vcf.lab" 
+}
+variable "vsphere_user"     { 
+  type = string
+  default = "administrator@wld.sso" 
+}
+variable "vsphere_password" { 
+  type = string
+  sensitive = true
+  default = "VMware123!VMware123!" 
+}
 
 # Kubernetes (optional)
-variable "kubeconfig_path" { type = string, default = "" }
-variable "kube_context"    { type = string, default = "" }
+variable "kubeconfig_path" { 
+  type = string
+  default = "" 
+}
+variable "kube_context"    { 
+  type = string
+  default = "" 
+}
 
 # VCFA
-variable "vcfa_endpoint" { type = string, default = "" }   # e.g., https://vcfa.provider.lab
-variable "vcfa_token"    { type = string, sensitive = true, default = "" }
+variable "vcfa_endpoint" { 
+  type = string
+  default = "" 
+}  
+variable "vcfa_token"    { 
+  type = string
+  sensitive = true
+  default = "" 
+}
 
 ############################
 # NSX object paths and Tags
@@ -107,13 +153,43 @@ variable "enable_vcfa_cleanup" {
   default     = true
 }
 
-variable "vcfa_org_name"           { type = string, default = "showcase-all-apps" }
-variable "vcfa_region_name"        { type = string, default = "us-west-region" }
-variable "org_project_name"        { type = string, default = "default-project" }
-variable "ns_name"                 { type = string, default = "demo-namespace-vkrcg" }
-variable "org_cl_name"             { type = string, default = "showcase-content-library" } # org-scoped
-variable "provider_cl_name"        { type = string, default = "provider-content-library" }  # provider-scoped
-variable "org_reg_net_name"        { type = string, default = "showcase-all-appsus-west-region" }
-variable "provider_gw_name"        { type = string, default = "provider-gateway-us-west" }
-variable "provider_ip_space"       { type = string, default = "ip-space-us-west" }
-variable "vcenter_fqdn_to_refresh" { type = string, default = "vc-wld01-a.site-a.vcf.lab" }
+variable "vcfa_org_name"           { 
+  type = string
+  default = "showcase-all-apps" 
+}
+variable "vcfa_region_name"        { 
+  type = string
+  default = "us-west-region" 
+}
+variable "org_project_name"        { 
+  type = string
+  default = "default-project" 
+}
+variable "ns_name"                 { 
+  type = string
+  default = "demo-namespace-vkrcg" 
+}
+variable "org_cl_name"             { 
+  type = string
+  default = "showcase-content-library" 
+} 
+variable "provider_cl_name"        { 
+  type = string
+  default = "provider-content-library" 
+}
+variable "org_reg_net_name"        { 
+  type = string  
+  default = "showcase-all-appsus-west-region" 
+}
+variable "provider_gw_name"        { 
+  type = string
+  default = "provider-gateway-us-west" 
+}
+variable "provider_ip_space"       { 
+  type = string
+  default = "ip-space-us-west" 
+}
+variable "vcenter_fqdn_to_refresh" { 
+  type = string
+  default = "vc-wld01-a.site-a.vcf.lab" 
+}
