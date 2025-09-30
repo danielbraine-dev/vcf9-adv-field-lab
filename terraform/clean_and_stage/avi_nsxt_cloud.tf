@@ -9,30 +9,65 @@
 # Variables
 ################################
 variable "nsxt_cloudname"           { type = string }                    # e.g., "nsxt-cloud"
-variable "nsxt_cloud_prefix"        { type = string, default="avi-wld01-a" }                    # e.g., "wld-"
-
+variable "nsxt_cloud_prefix"        { 
+  type = string
+  default="avi-wld01-a" 
+}
 # Management (SE mgmt) segment lives under this T1 and segment id
 variable "mgmt_lr_id"               { type = string }                    # T1 logical router ID for mgmt
 variable "mgmt_segment_id"          { type = string }                    # NSX segment id string for mgmt
 
 # Data / VIP segment lives under this T1 and segment id
-variable "data_segment_id"          { type = string, default = nsxt_policy_segment.se_data_vip.id }                    # NSX segment id string for data/VIP
+variable "data_segment_id"          { 
+  type = string
+  default = nsxt_policy_segment.se_data_vip.id
+}                   
 
 # Names for connector users created in Avi
-variable "nsxt_avi_user"            { type = string, default = "nsxt-conn-user" }
-variable "vcenter_avi_user"         { type = string, default = "vcenter-conn-user" }
+variable "nsxt_avi_user"            { 
+  type = string
+  default = "nsxt-conn-user" 
+}
+variable "vcenter_avi_user"         { 
+  type = string
+  default = "vcenter-conn-user" 
+}
 
 # IPAM/DNS + SE Group specifics
-variable "vip_network_name"         { type = string, default = "Dummy-Net"}                    # Avi Network name (from NSX segment) for VIPs
-variable "ipam_dns_name"            { type = string, default = "avi-internal-ipamdns" }
-variable "se_group_name"            { type = string, default = "wld1-se-group" }
-variable "se_ha_mode"               { type = string, default = "HA_MODE_SHARED" }  # or HA_MODE_ELASTIC
-variable "se_min"                   { type = number, default = 1 }
-variable "se_max"                   { type = number, default = 2 }
-variable "se_name_prefix"           { type = string, default = "wld1-sup-se-" }
+variable "vip_network_name"         { 
+  type = string
+  default = "Dummy-Net"
+}                    
+variable "ipam_dns_name"            { 
+  type = string  
+  default = "avi-internal-ipamdns" 
+}
+variable "se_group_name"            { 
+  type = string 
+  default = "wld1-se-group" 
+}
+variable "se_ha_mode"               { 
+  type = string
+  default = "HA_MODE_SHARED" 
+}
+variable "se_min"                   { 
+  type = number
+  default = 1 
+}
+variable "se_max"                   { 
+  type = number
+  default = 2 
+}
+variable "se_name_prefix"           { 
+  type = string
+  default = "wld1-sup-se-" 
+}
 
 # Break the Cloud<->IPAM cycle by deferring IPAM attach to Pass B
-variable "attach_ipam_now"          { type = bool, default = false }
+variable "attach_ipam_now"          { 
+  type = bool
+  default = false 
+}
 
 
 ################################
