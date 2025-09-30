@@ -25,7 +25,7 @@ fi
 if [[ -x "${ROOT_DIR}/scripts/dns_fix.sh" ]]; then
   log "Applying DNS fix…"
   chmod +x "${ROOT_DIR}/scripts/dns_fix.sh"
-  "${ROOT_DIR}/dns_fix.sh" || warn "dns_fix.sh reported a warning."
+  "${ROOT_DIR}/scripts/dns_fix.sh" || warn "dns_fix.sh reported a warning."
 else
   warn "dns_fix.sh not found; skipping DNS fix."
 fi
