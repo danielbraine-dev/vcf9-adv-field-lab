@@ -38,7 +38,7 @@ resource "avi_sslkeyandcertificate" "portal" {
 resource "avi_systemconfiguration" "this" {
   portal_configuration {
     # Schema expects a LIST of refs
-    sslkeyandcertificate_refs = [avi_sslkeyandcertificate.portal.url]
+    sslkeyandcertificate_refs = [avi_sslkeyandcertificate.portal.uuid]
   }
 
   depends_on = [avi_sslkeyandcertificate.portal]
