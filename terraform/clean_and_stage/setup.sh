@@ -246,22 +246,22 @@ step7_deploy_avi(){
 }
 
 step8_create_cert(){
-# Wait for the Avi Controller API to come up
-AVI_FQDN="avi-controller01-a.site-a.vcf.lab"
-log "Waiting for Avi API at https://${AVI_FQDN}…"
-until curl -sk --max-time 5 "https://${AVI_FQDN}/api/initial-data" >/dev/null; do
-  sleep 10
-done
-log "Avi API is up."
-
-# Apply just the cert/trust pieces (Terraform)
-terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-  -target=tls_private_key.avi \
-  -target=tls_self_signed_cert.avi \
-  -target=avi_sslkeyandcertificate.portal \
-  -target=avi_systemconfiguration.this \
-  -target=nsxt_policy_certificate.avi_portal
-pause
+  # Wait for the Avi Controller API to come up
+  AVI_FQDN="avi-controller01-a.site-a.vcf.lab"
+  log "Waiting for Avi API at https://${AVI_FQDN}…"
+  until curl -sk --max-time 5 "https://${AVI_FQDN}/api/initial-data" >/dev/null; do
+    sleep 10
+  done
+  log "Avi API is up."
+  
+  # Apply just the cert/trust pieces (Terraform)
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+    -target=tls_private_key.avi \
+    -target=tls_self_signed_cert.avi \
+    -target=avi_sslkeyandcertificate.portal \
+    -target=avi_systemconfiguration.this \
+    -target=nsxt_policy_certificate.avi_portal
+  pause
 }
 
 step9_nsx_cloud(){
