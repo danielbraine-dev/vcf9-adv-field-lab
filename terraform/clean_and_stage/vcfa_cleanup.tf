@@ -132,10 +132,10 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
   count     = var.enable_vcfa_cleanup ? 1 : 0
   org_id    = var.vcfa_org_id
   region_id = var.vcfa_region_id
-  supervisor_ids =
-  region_vm_class_ids = 
-  region_storage_policy = 
-  zone_resource_allocations = 
+  #supervisor_ids =
+  #region_vm_class_ids = 
+  #region_storage_policy = 
+  #zone_resource_allocations = 
   lifecycle { prevent_destroy = false }
 }
 
