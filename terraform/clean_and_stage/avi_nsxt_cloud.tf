@@ -146,8 +146,8 @@ resource "avi_cloud" "nsx_t_cloud" {
     nsxt_credentials_ref = avi_cloudconnectoruser.nsx_t_user.uuid
   }
   # Attach IPAM/DNS only when attach_ipam_now=true (Pass B)
-  ipam_provider_ref = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
-  dns_provider_ref  = var.attach_ipam_now ? avi_ipamdnsproviderprofile.internal.url : null
+  ipam_provider_ref = var.ipam_provider_url
+  dns_provider_ref  = var.dns_provider_url
 }
 
 ################################
