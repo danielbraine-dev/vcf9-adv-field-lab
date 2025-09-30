@@ -1,0 +1,4 @@
+terraform providers schema -json | jq '.provider_schemas["registry.terraform.io/vmware/avi"].resource_schemas["avi_cloud"]'
+terraform providers schema -json | jq '.provider_schemas["registry.terraform.io/vmware/avi"].resource_schemas["avi_systemconfiguration"]'
+terraform providers schema -json | jq '.provider_schemas["registry.terraform.io/vmware/nsxt"].datasource_schemas["nsxt_policy_transport_zone"]'
+terraform providers schema -json | jq '.provider_schemas["registry.terraform.io/vmware/vcfa"].provider.block'
