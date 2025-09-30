@@ -56,6 +56,10 @@ variable "vcenter_fqdn_to_refresh" {
   type = string
   default = "vc-wld01-a.site-a.vcf.lab" 
 }
+variable "vcfa_vcenter_id"    {
+  type = string
+  default="a6ee5489-8ef0-4776-afca-fa93de4c6dc7"
+}
 variable "vcfa_provider_gateway_id" { 
   type = string 
   default = "7727f60a-f8bb-4e76-81ba-9933dd528c6a"
@@ -196,7 +200,7 @@ resource "vcfa_region" "us_west" {
 
 # One-shot action: refresh/test the VC connection after deletions
 resource "vcfa_vcenter_refresh" "refresh" {
-  vcenter_id = var.vcenter_fqdn_to_refresh.id
+  vcenter_id = var.vcfa_vcenter_id
   depends_on = [
     kubernetes_namespace.demo,
     vcfa_content_library.org_cl,
