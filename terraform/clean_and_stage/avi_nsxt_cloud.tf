@@ -83,7 +83,7 @@ resource "avi_cloud" "nsx_t_cloud" {
   obj_name_prefix = var.nsxt_cloud_prefix
 
   nsxt_configuration {
-    nsxt_url            = var.nsxt_host
+    nsxt_url            = var.nsx_host
     transport_zone      = data.nsxt_transport_zone.nsx_tr_zone.id
 
     # Management network for Controllers/SEs (overlay segment under mgmt T1)
