@@ -21,7 +21,6 @@ resource "vcfa_supervisor_namespace" "project_ns" {
   org_id    = var.vcfa_org_id
   region_id = var.vcfa_region_id
   name      = var.vcfa_ns_name
-
   lifecycle { prevent_destroy = false }
 }
 
@@ -33,7 +32,6 @@ resource "vcfa_content_library" "org_cl" {
   org_id            = var.vcfa_org_id
   name              = var.vcfa_org_cl_name
   storage_class_ids = var.vcfa_org_cl_storage_class_ids
-
   lifecycle { prevent_destroy = false }
 }
 
@@ -44,7 +42,6 @@ resource "vcfa_content_library" "provider_cl" {
   count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.provider_cl_name
   scope = "PROVIDER"
-
   lifecycle { prevent_destroy = false }
 }
 
@@ -55,12 +52,11 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
   count     = var.enable_vcfa_cleanup ? 0 : 1
   org_id    = var.vcfa_org_id
   region_id = var.vcfa_region_id
-
   lifecycle { prevent_destroy = false }
 }
 
 ############################################################
-# 5) Org Regional Networking (requires provider_gateway_id)
+# 5) Org Regional Networking 
 ############################################################
 resource "vcfa_org_regional_networking" "showcase_us_west" {
   count               = var.enable_vcfa_cleanup ? 0 : 1
@@ -68,22 +64,19 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
   region_id           = var.vcfa_region_id
   name                = var.vcfa_org_reg_net_name
   provider_gateway_id = var.vcfa_provider_gateway_id
-
   lifecycle { prevent_destroy = false }
 }
 
 
 ############################
 # 6) Provider Gateway "provider-gateway-us-west"
-# Import:
-#   terraform import vcfa_provider_gateway.us_west[0] \
-#     ${data.vcfa_region.us_west.id}/${var.provider_gw_name}
 ############################
 resource "vcfa_provider_gateway" "us_west" {
-  count     = var.enable_vcfa_cleanup ? 0 : 1
-  region_id = data.vcfa_region.us_west.id
-  name      = var.provider_gw_name
-
+  count              = var.enable_vcfa_cleanup ? 0 : 1
+  region_id          = data.vcfa_region.us_west.id
+  tier0_gateway_id   = var.vcfa_tier0_gateway_id
+  id_space_ids       = var.vcfa_ip_space_ids
+  name               = var.provider_gw_name
   lifecycle { prevent_destroy = false }
 }
 
@@ -95,19 +88,25 @@ resource "vcfa_provider_gateway" "us_west" {
 resource "vcfa_ip_space" "us_west" {
   count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.provider_ip_space
-
+  region_id                       = var.vcfa_region_id
+  default_quota_max_ip_count      = var.vcfa_default_quota_max_ip_count
+  default_quota_max_subnet_size   = var.vcfa_default_quota_max_subnet_size
+  default_quota_max_cidr_count    = var.vcfa_default_quota_max_cidr_count
+  internal_scope {
+    scope = "PROVIDER"   # <-- this is an example; copy real attrs from state
+  }
   lifecycle { prevent_destroy = false }
 }
 
 ############################
 # 8) Region "us-west-region"
-# Import:
-#   terraform import vcfa_region.us_west[0] ${var.vcfa_region_name}
 ############################
 resource "vcfa_region" "us_west" {
   count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.vcfa_region_name
-
+  nsx_manager_id        = var.vcfa_nsx_manager_id
+  storage_policy_names  = var.vcfa_storage_policy_names
+  supervisor_ids        = var.vcfa_supervisor_ids
   lifecycle { prevent_destroy = false }
 }
 
