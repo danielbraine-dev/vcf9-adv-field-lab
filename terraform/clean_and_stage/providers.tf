@@ -12,7 +12,7 @@ terraform {
     }
     vsphere = {
       source  = "vmware/vsphere"
-      version = ">= 2.5.0"
+      version = ">= 2.15.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
