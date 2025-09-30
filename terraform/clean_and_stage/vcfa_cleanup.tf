@@ -28,6 +28,10 @@ variable "vcfa_ns_name"                 {
   type = string
   default = "demo-namespace-vkrcg" 
 }
+variable "vcfa_vpc_name"       {
+  type=string
+  default="us-west-region-Default-VPC"
+}
 variable "vcfa_org_cl_name"             { 
   type = string
   default = "showcase-content-library" 
@@ -52,6 +56,35 @@ variable "vcenter_fqdn_to_refresh" {
   type = string
   default = "vc-wld01-a.site-a.vcf.lab" 
 }
+variable "vcfa_provider_gateway_id" { 
+  type = string 
+  default = "7727f60a-f8bb-4e76-81ba-9933dd528c6a"
+}
+variable "vcfa_tier0_gateway_id"  { 
+  type = string 
+  default=""
+}
+variable "vcfa_ip_space_ids"      { 
+type = list(string)
+default = ["6e7a4ea5-43a8-4c93-b1d3-cde61b69969e"]
+}
+variable "vcfa_ip_space_name"             {
+  type = string
+  default = "ip-space-us-west"
+}
+variable "vcfa_default_quota_max_ip_count"      { 
+  type = number 
+  default = null
+}
+variable "vcfa_default_quota_max_subnet_size"   { 
+  type = number
+  default = null 
+}
+variable "vcfa_default_quota_max_cidr_count"    {
+  type = number
+  default = null
+}
+
 
 ############################################################
 # 1) Supervisor Namespace (Org + Region + Name)
@@ -59,11 +92,11 @@ variable "vcenter_fqdn_to_refresh" {
 resource "vcfa_supervisor_namespace" "project_ns" {
   count     = var.enable_vcfa_cleanup ? 0 : 1
   name      = var.vcfa_ns_name
-  project_name = 
-  region_name = 
-  vpc_name =
-  zones_initial_class_config_overrides =
-  storage_classes_initial_class_config_overrieds =
+  project_name = var.org_project_name
+  region_name = var.vcfa_region_name
+  vpc_name = var.vcfa_vpc_name
+  zones_initial_class_config_overrides = []
+  storage_classes_initial_class_config_overrieds = []
   lifecycle { prevent_destroy = false }
 }
 
@@ -161,7 +194,7 @@ resource "vcfa_region" "us_west" {
 # 9) Refresh vCenter connection "vc-wld01-a.site-a.vcf.lab"
 ############################
 data "vcfa_vcenter" "target" {
-  name = 
+  name = var.vcenter_fqdn_to_refresh
 }
 
 # One-shot action: refresh/test the VC connection after deletions
