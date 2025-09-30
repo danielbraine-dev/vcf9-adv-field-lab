@@ -296,8 +296,8 @@ step11_install_sup(){
   pause
 }
 
-run() {
-  case "${1:-all}" in
+do_step() {
+  case "$1" in
     1) step1_install_tools;;
     2) step2_dns_fix;;
     3) step3_tf_init;;
@@ -307,12 +307,29 @@ run() {
     7) step7_deploy_avi;;
     8) step8_create_cert;;
     9) step9_nsx_cloud;;
-    10) step10_onboard_nsx_alb;;
-    11) step11_install_sup;;
-    all) step1_install_tools; step2_dns_fix; step3_tf_init; step4_remove_vcfa_objects; step5_remove_sup; step6_create_nsx_objects; step7_deploy_avi; step8_create_cert; step9_nsx_cloud; step10_onboard_nsx_alb; step11_install_sup;;
-    *) echo "Usage: $0 [all|1|2|3|4|5|6|7|8|9|10|11] (set TRACE=1 and/or PAUSE=1)"; exit 2;;
+   10) step10_onboard_nsx_alb;;
+   11) step11_install_sup;;
+    *) echo "Unknown step $1"; exit 2;;
   esac
 }
-run "${1:-all}"
 
-echo "All steps complete. ✅"
+run() {
+  local spec="${1:-all}"
+  if [[ "$spec" == "all" ]]; then
+    for n in {1..11}; do do_step "$n"; done
+    echo "All steps complete. ✅"
+    return
+  fi
+
+  IFS=',' read -ra parts <<< "$spec"
+  for p in "${parts[@]}"; do
+    if [[ "$p" =~ ^([0-9]+)[-:]([0-9]+)$ ]]; then
+      for n in $(seq "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"); do do_step "$n"; done
+    elif [[ "$p" =~ ^[0-9]+$ ]]; then
+      do_step "$p"
+    else
+      echo "Bad step spec: '$p'"; echo "Usage: $0 [all|N|N-M|N:M|N1,N2,...]"; exit 2
+    fi
+  done
+}
+
