@@ -4,7 +4,7 @@ terraform {
   required_providers {
     nsxt = {
       source  = "vmware/nsxt"
-      version = ">= 3.9.0"
+      version = ">= 3.10.0"
     }
     avi = {
       source  = "vmware/avi"
@@ -16,7 +16,7 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = ">= 2.29.0"
+      version = ">= 2.38.0"
     }
     vcfa = {
       source  = "vmware/vcfa"
@@ -24,6 +24,7 @@ terraform {
     }
     tls = { 
       source = "hashicorp/tls" 
+      version = ">=4.1.0"
     }
   }
 }
