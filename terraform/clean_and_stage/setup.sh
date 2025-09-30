@@ -112,8 +112,8 @@ step3_tf_init() {
   tgw_ipblock_range            = "172.16.100.0-172.16.100.255"
   workload_vpc_cidrs           = ["172.16.200.0/24"]
   service_cidr                 = "10.96.0.0/23"
-  EOF
-  fi
+EOF
+fi
   
   # Terraform init (repo root)
   log "Running terraform init…"
@@ -229,7 +229,7 @@ step7_deploy_avi(){
     "avi_ova_path": "${AVI_OVA_PATH}",
     "avi_mgmt_pg": "${AVI_MGMT_PG}"
   }
-  EOF
+EOF
   
   log "Prepared AVI vars: ova=${AVI_OVA_PATH}, mgmt_pg=${AVI_MGMT_PG}"
   
