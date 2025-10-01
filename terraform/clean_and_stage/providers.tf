@@ -66,10 +66,73 @@ provider "vsphere" {
 
 # --- VCFA ---
 provider "vcfa" {
+  alias        ="tenant"
   user         = "admin"
   password     = "VMware123!VMware123!"
   auth_type    = "integrated"
   url          = var.vcfa_endpoint
   org          = "System"
   allow_unverified_ssl = true
+}
+provider "vcfa" {
+  alias        = "system"  
+  user         = "admin"
+  password     = "VMware123!VMware123!"
+  auth_type    = "integrated"
+  url          = var.vcfa_endpoint
+  org          = "System"
+  allow_unverified_ssl = true
+}
+# --------- Providers used ONLY to create API tokens (user/password auth) ----------
+provider "vcfa" {
+  alias     = "tenant_password"
+  url       = var.vcfa_endpoint
+  org       = var.vcfa_org_name
+  user      = "admin"
+  password  = "VMware123!VMware123!"
+  auth_type = "integrated"
+}
+
+provider "vcfa" {
+  alias    = "system_password"
+  url      = var.vcfa_base_url
+  org      = "System"
+  user      = "admin"
+  password  = "VMware123!VMware123!"
+  auth_type = "integrated"
+}
+}
+
+# Mint tokens once and write them to files
+resource "vcfa_api_token" "tenant" {
+  provider         = vcfa.tenant_password
+  name             = "tenant_automation"
+  file_name        = ".auth/vcfa_tenant_token.json"
+  allow_token_file = true
+}
+
+resource "vcfa_api_token" "system" {
+  provider         = vcfa.system_password
+  name             = "system_automation"
+  file_name        = ".auth/vcfa_system_token.json"
+  allow_token_file = true
+}
+
+# --------- Providers used by ALL resources and data sources (token-file auth) ----------
+provider "vcfa" {
+  alias                = "tenant"
+  url                  = var.vcfa_endpoint
+  org                  = var.vcfa_org_name
+  auth_type            = "api_token_file"
+  allow_api_token_file = true
+  api_token_file       = vcfa_api_token.tenant.file_name
+}
+
+provider "vcfa" {
+  alias                = "system"
+  url                  = var.vcfa_endpoint
+  org                  = "System"
+  auth_type            = "api_token_file"
+  allow_api_token_file = true
+  api_token_file       = vcfa_api_token.system.file_name
 }
