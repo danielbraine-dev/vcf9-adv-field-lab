@@ -113,7 +113,6 @@ data "vcfa_vcenter" "vc" {
 data "vcfa_nsx_manager" "nsx_manager" {
   name = "nsx-wld01-a.site-a.vcf.lab"
 }
-
 data "vcfa_org" "system" {
   name="System"
 }
@@ -127,14 +126,22 @@ data "vcfa_region_zone" "default" {
   region_id = data.vcfa_region.region.id
   name = "z-wld-a"
 }
-data "vcfa_storage_class" "sc" {
-  region_id = data.vcfa_region.region.id
-  name      = "vSAN Default Stroage Policy"
-}
 data "vcfa_supervisor" "wld1" {
   name = "supervisor"
   vcenter_id = data.vcfa_vcenter.vc.id
   depends_on = [data.vcfa_vcenter.vc]
+}
+data "vcfa_storage_class" "sc" {
+  region_id = data.vcfa_region.region.id
+  name      = "vSAN Default Stroage Policy"
+}
+data "vcfa_region_storage_policy" "sp" {
+  name = "default_storage_policy"
+  region_id = data.vcfa_region.region.id
+}
+data "vcfa_region_vm_class" "region_vm_class0" {
+  region_id = data.vcfa_region.region.id
+  name      = "best-effort-2xlarge"
 }
 
 
@@ -190,14 +197,13 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
   supervisor_ids = [data.vcfa_supervisor.wld1.id]
   zone_resource_allocations {
     region_zone_id          = data.vcfa_region_zone.default.id
-    cpu_limit_mhz           =
-    cpu_reservation_mhz     =
-    memory_limit_mib        =
-    memory_reservation_mib =
+    cpu_limit_mhz           = 350
+    cpu_reservation_mhz     = 0
+    memory_limit_mib        =1200
+    memory_reservation_mib  = 0
   }
   region_vm_class_ids = [
     data.vcfa_region_vm_class.region_vm_class0.id,
-    data.vcfa_region_vm_class.region_vm_class1.id
   ]
   region_storage_policy = {
     region_storage_policy_id = data.vcfa_region_storage_policy.sp.id
