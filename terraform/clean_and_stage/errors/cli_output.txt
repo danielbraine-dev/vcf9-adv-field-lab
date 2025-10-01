@@ -1,31 +1,9 @@
-oluser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ terraform providers schema -json \
-  | jq '.provider_schemas["registry.terraform.io/vmware/vcfa"].resource_schemas | keys'
-terraform providers schema -json \
-  | jq '.provider_schemas["registry.terraform.io/vmware/vcfa"].datasource_schemas | keys'
-[
-  "vcfa_api_token",
-  "vcfa_certificate",
-  "vcfa_content_library",
-  "vcfa_content_library_item",
-  "vcfa_edge_cluster_qos",
-  "vcfa_global_role",
-  "vcfa_ip_space",
-  "vcfa_nsx_manager",
-  "vcfa_org",
-  "vcfa_org_ldap",
-  "vcfa_org_local_user",
-  "vcfa_org_networking",
-  "vcfa_org_oidc",
-  "vcfa_org_region_quota",
-  "vcfa_org_regional_networking",
-  "vcfa_org_regional_networking_vpc_qos",
-  "vcfa_org_settings",
-  "vcfa_provider_gateway",
-  "vcfa_provider_ldap",
-  "vcfa_region",
-  "vcfa_rights_bundle",
-  "vcfa_role",
-  "vcfa_supervisor_namespace",
-  "vcfa_vcenter"
-]
-jq: error (at <stdin>:1): null (null) has no keys
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ ./setup.sh 3
+[3] terraform init/validate…
+
+Bootstrapping VCFA token…
+==> Discovering token endpoint from https://auto-a.site-a.vcf.lab
+!! Could not discover a token endpoint (404s everywhere).
+   • If you use Keycloak, set VCFA_OIDC_REALM, e.g.: export VCFA_OIDC_REALM=vcfa
+   • Or provide your exact endpoint via VCFA_CREATE_TOKEN_PATH if your platform mints tokens with a custom API.
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ 
