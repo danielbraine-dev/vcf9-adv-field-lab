@@ -145,7 +145,7 @@ data "vcfa_region_vm_class" "region_vm_class0" {
 }
 data "vcfa_provider_gateway" "provider_gw" {
   name = "provider-gateway-us-west"
-  region_id = vcfa_region.region.id
+  region_id = data.vcfa_region.region.id
 }
 data "vcfa_edge_cluster" "default" {
   name ="edgecl-wld-a"
@@ -163,8 +163,17 @@ resource "vcfa_supervisor_namespace" "project_ns" {
   project_name = var.org_project_name
   region_name = var.vcfa_region_name
   vpc_name = var.vcfa_vpc_name
-  zones_initial_class_config_overrides {}
-  storage_classes_initial_class_config_overrides {}
+  storage_classes_initial_class_config_overrides {
+    limit = ""
+    name = "vSAN Default Storage Policy"
+  }
+  zones_initial_class_config_overrides {
+    cpu_limit = ""
+    cpu_reservation = "0M"
+    memory_limit = ""
+    memory_reservation = "0Mi"
+    name = "z-wld-a"
+  }
   lifecycle { prevent_destroy = false }
 }
 
