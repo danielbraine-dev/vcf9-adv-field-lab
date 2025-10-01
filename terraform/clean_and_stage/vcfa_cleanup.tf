@@ -133,7 +133,7 @@ data "vcfa_supervisor" "wld1" {
 }
 data "vcfa_storage_class" "sc" {
   region_id = data.vcfa_region.region.id
-  name      = "vSAN Default Stroage Policy"
+  name      = "vSAN Default Storage Policy"
 }
 data "vcfa_region_storage_policy" "sp" {
   name = "default_storage_policy"
