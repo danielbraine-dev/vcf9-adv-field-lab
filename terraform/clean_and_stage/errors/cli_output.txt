@@ -1,9 +1,1 @@
-Error: expected import ID to be <project_name>.<supervisor_namespace_name>
-Error: invalid import identifier '"urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b"/showcase-content-library', should be <Organization name>.<Content Library name> for Tenant Content Libraries or System.<Content Library name> for Provider Content Libraries
-Error: invalid import identifier 'provider-content-library', should be <Organization name>.<Content Library name> for Tenant Content Libraries or System.<Content Library name> for Provider Content Libraries
-Error: expected import ID to be <org name>.<region name>
-Error: ID syntax should be <Organization name>.<Org Regional Networking name>
-Error: resource name must be specified as region-name.provider-gateway-name
-Error: resource name must be specified as region-name.ip-space-name
-vcfa_region.us_west[0]: Import prepared!
-  Prepared vcfa_region for import
+ Error: error reading Supervisor Namespace: error reading Supervisor Namespace demo-namespace-vkrcg in Project default-project: error in HTTP GET request for: apiVersion: v1 code: 401 kind Status: reason: Unauthorized, message: Unauthorized status: Failure
