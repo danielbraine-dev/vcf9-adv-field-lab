@@ -206,7 +206,7 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
 # 5) Org Regional Networking 
 ############################################################
 resource "vcfa_org_regional_networking" "showcase_us_west" {
-  provider            = vcfa.tenant
+  provider            = vcfa.system
   count               = var.enable_vcfa_cleanup ? 0 : 1
   org_id              = data.vcfa_org.showcase.id
   region_id           = data.vcfa_region.region.id
