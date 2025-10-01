@@ -193,7 +193,6 @@ resource "avi_vcenterserver" "vc_01" {
 ################################
 data "avi_network" "vip" {
   name      = var.vip_network_name
-  cloud_ref = avi_cloud.nsx_t_cloud.url
   depends_on = [avi_cloud.nsx_t_cloud]
 }
 
@@ -205,7 +204,7 @@ resource "avi_ipamdnsproviderprofile" "internal" {
   type = "IPAMDNS_TYPE_INTERNAL_DNS"
 
   internal_profile {
-    usable_network_refs = [data.avi_network.vip.url]
+    usable_network_refs = [data.avi_network.vip.id]
   }
 
   depends_on = [data.avi_network.vip]
