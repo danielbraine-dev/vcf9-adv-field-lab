@@ -159,42 +159,42 @@ step4_remove_vcfa_objects(){
   # Make sure resources exist in config during import
   # (enable_vcfa_cleanup=false ⇒ count=1)
   # Supervisor Namespace
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
   'vcfa_supervisor_namespace.project_ns[0]' \
   'default-project.demo-namespace-vkrcg'
 
 # Org-scoped Content Library
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
   'vcfa_content_library.org_cl[0]' \
   'showcase-all-apps.showcase-content-library'
 
 # Provider-scoped Content Library
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
   'vcfa_content_library.provider_cl[0]' \
   'System.provider-content-library'
 
 # Org Region Quota
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
   'vcfa_org_region_quota.showcase_us_west[0]' \
   'showcase-all-apps.us-west-region'
 
 # Org Regional Networking
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
   'vcfa_org_regional_networking.showcase_us_west[0]' \
   'showcase-all-apps.showcase-all-appsus-west-region'
 
 # Provider Gateway
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
   'vcfa_provider_gateway.us_west[0]' \
   'us-west-region.provider-gateway-us-west'
 
 # Provider IP Space
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
   'vcfa_ip_space.us_west[0]' \
   'us-west-region.ip-space-us-west'
 
 # Region
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
   'vcfa_region.us_west[0]' \
   'us-west-region'
 
