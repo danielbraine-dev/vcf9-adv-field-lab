@@ -65,14 +65,29 @@ provider "vsphere" {
 # }
 
 # --- VCFA ---
+# Where to store tokens
+locals {
+  auth_dir              = "${path.root}/.auth"
+  tenant_token_path     = "${local.auth_dir}/vcfa_tenant_token.json"
+  system_token_path     = "${local.auth_dir}/vcfa_system_token.json"
+}
+
+# Ensure .auth exists (once)
+resource "null_resource" "auth_dir" {
+  provisioner "local-exec" {
+    command = "mkdir -p ${local.auth_dir}"
+  }
+}
+
 # --------- Providers used ONLY to create API tokens (user/password auth) ----------
 provider "vcfa" {
-  alias     = "tenant_password"
-  url       = var.vcfa_endpoint
-  org       = var.vcfa_org_name
-  user      = "admin"
-  password  = "VMware123!VMware123!"
-  auth_type = "integrated"
+  alias                = "tenant_password"
+  url                  = var.vcfa_endpoint
+  org                  = var.vcfa_org_name
+  user                 = "admin"
+  password             = "VMware123!VMware123!"
+  auth_type            = "integrated"
+  allow_unverified_ssl = true
 }
 
 provider "vcfa" {
@@ -82,31 +97,45 @@ provider "vcfa" {
   user      = "admin"
   password  = "VMware123!VMware123!"
   auth_type = "integrated"
+  allow_unverified_ssl = true
 }
 
 # Mint tokens once and write them to files
 resource "vcfa_api_token" "tenant" {
   provider         = vcfa.tenant_password
   name             = "tenant_automation"
-  file_name        = ".auth/vcfa_tenant_token.json"
+  file_name        = local.tenant_token_path
   allow_token_file = true
+  depends_on       = [null_resoure.auth_dir]
 }
 
 resource "vcfa_api_token" "system" {
   provider         = vcfa.system_password
   name             = "system_automation"
-  file_name        = ".auth/vcfa_system_token.json"
+  file_name        = local.system_token_path
   allow_token_file = true
+  depends_on       = [null_resoure.auth_dir]
+
 }
 
 # --------- Providers used by ALL resources and data sources (token-file auth) ----------
+provider "vcfa" {
+  url                   = var.vcfa_endpoint
+  org                   = var.vcfa_org_name
+  auth_type             = "api_token_file"
+  allow_api_token_file  = true
+  api_token_file        = local.tenant_token_path
+  allow_unverified_ssl  = true
+}
+
 provider "vcfa" {
   alias                = "tenant"
   url                  = var.vcfa_endpoint
   org                  = var.vcfa_org_name
   auth_type            = "api_token_file"
   allow_api_token_file = true
-  api_token_file       = vcfa_api_token.tenant.file_name
+  api_token_file       = local.tenant_token_path
+  allow_unverified_ssl = true
 }
 
 provider "vcfa" {
@@ -115,5 +144,6 @@ provider "vcfa" {
   org                  = "System"
   auth_type            = "api_token_file"
   allow_api_token_file = true
-  api_token_file       = vcfa_api_token.system.file_name
+  api_token_file       = local.system_token-path
+  allow_unverified_ssl = true
 }
