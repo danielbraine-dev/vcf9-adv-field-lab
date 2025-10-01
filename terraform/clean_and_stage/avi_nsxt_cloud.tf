@@ -202,12 +202,6 @@ data "avi_network" "vip" {
 resource "avi_ipamdnsproviderprofile" "internal" {
   name = var.ipam_dns_name
   type = "IPAMDNS_TYPE_INTERNAL_DNS"
-
-  internal_profile {
-    usable_network_refs = [data.avi_network.vip.id]
-  }
-
-  depends_on = [data.avi_network.vip]
 }
 
 ################################
