@@ -58,69 +58,69 @@ variable "vcfa_ip_space_name"             {
 ##########################
 data "vcfa_vcenter" "vc" {
   name = "vc-wld01-a.site-a.vcf.lab"
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_nsx_manager" "nsx_manager" {
   name = "nsx-wld01-a.site-a.vcf.lab"
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_org" "system" {
   name="System"
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_org" "showcase" {
   name="showcase-all-apps"
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_region" "region" {
   name = var.vcfa_region_name
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_region_zone" "default" {
   region_id = data.vcfa_region.region.id
   name = "z-wld-a"
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_supervisor" "wld1" {
   name = "supervisor"
   vcenter_id = data.vcfa_vcenter.vc.id
-  provider = "system"
+  provider = vcfa.system
   depends_on = [data.vcfa_vcenter.vc]
 }
 data "vcfa_storage_class" "sc" {
   region_id = data.vcfa_region.region.id
   name      = "cluster-wld01-01a vSAN Storage Policy"
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_region_storage_policy" "sp" {
   name = "cluster-wld01-01a vSAN Storage Policy"
   region_id = data.vcfa_region.region.id
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_region_vm_class" "region_vm_class0" {
   region_id = data.vcfa_region.region.id
   name      = "best-effort-2xlarge"
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_provider_gateway" "provider_gw" {
   name = "provider-gateway-us-west"
   region_id = data.vcfa_region.region.id
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_edge_cluster" "default" {
   name ="edgecl-wld-a"
   region_id = data.vcfa_region.region.id
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_ip_space" "us_west" {
   name = "ip-space-us-west"
   region_id = data.vcfa_region.region.id
-  provider = "system"
+  provider = vcfa.system
 }
 data "vcfa_tier0_gateway" "main" {
   name    = "t0-wld-a"
   region_id = data.vcfa_region.region.id
-  provider = "system"
+  provider = vcfa.system
 }
 ############################################################
 # 1) Supervisor Namespace (Org + Region + Name)
