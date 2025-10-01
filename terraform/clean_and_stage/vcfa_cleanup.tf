@@ -112,12 +112,13 @@ data "vcfa_tier0_gateway" "main" {
 # 1) Supervisor Namespace (Org + Region + Name)
 ############################################################
 resource "vcfa_supervisor_namespace" "project_ns" {
-  count     = var.enable_vcfa_cleanup ? 0 : 1
-  name_prefix = "wld1-sup"
-  class_name = "small"
-  project_name = var.org_project_name
-  region_name = var.vcfa_region_name
-  vpc_name = var.vcfa_vpc_name
+  provider      = vcfa.tenant
+  count         = var.enable_vcfa_cleanup ? 0 : 1
+  name_prefix   = "wld1-sup"
+  class_name    = "small"
+  project_name  = var.org_project_name
+  region_name   = var.vcfa_region_name
+  vpc_name      = var.vcfa_vpc_name
   storage_classes_initial_class_config_overrides {
     limit = ""
     name = "vSAN Default Storage Policy"
@@ -136,6 +137,7 @@ resource "vcfa_supervisor_namespace" "project_ns" {
 # 2) Org-scoped Content Library (requires org_id + storage_class_ids)
 ############################################################
 resource "vcfa_content_library" "org_cl" {
+  provider          = vcfa.tenant
   count             = var.enable_vcfa_cleanup ? 0 : 1
   org_id            = data.vcfa_org.showcase.id
   name              = var.vcfa_org_cl_name
@@ -149,6 +151,7 @@ resource "vcfa_content_library" "org_cl" {
 # 3) Provider-scoped Content Library "provider-content-library"
 ############################
 resource "vcfa_content_library" "provider_cl" {
+  provider      = vcfa.system
   org_id                  = data.vcfa_org.system.id
   count                   = var.enable_vcfa_cleanup ? 0 : 1
   name                    = var.provider_cl_name
@@ -162,6 +165,7 @@ resource "vcfa_content_library" "provider_cl" {
 # 4) Org Region Quota (correct type name is vcfa_org_region_quota)
 ############################################################
 resource "vcfa_org_region_quota" "showcase_us_west" {
+  provider      = vcfa.tenant
   count     = var.enable_vcfa_cleanup ? 0 : 1
   org_id    = data.vcfa_org.showcase.id
   region_id = data.vcfa_region.region.id
@@ -188,6 +192,7 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
 # 5) Org Regional Networking 
 ############################################################
 resource "vcfa_org_regional_networking" "showcase_us_west" {
+  provider            = vcfa.tenant
   count               = var.enable_vcfa_cleanup ? 0 : 1
   org_id              = data.vcfa_org.showcase.id
   region_id           = data.vcfa_region.region.id
@@ -202,6 +207,7 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
 # 6) Provider Gateway "provider-gateway-us-west"
 ############################
 resource "vcfa_provider_gateway" "us_west" {
+  provider           = vcfa.system
   count              = var.enable_vcfa_cleanup ? 0 : 1
   description        = ""
   region_id          = data.vcfa_region.region.id
@@ -215,6 +221,7 @@ resource "vcfa_provider_gateway" "us_west" {
 # 7) Provider IP Space "ip-space-us-west"
 ############################
 resource "vcfa_ip_space" "us_west" {
+  provider                        = vcfa.system
   count                           = var.enable_vcfa_cleanup ? 0 : 1
   name                            = var.provider_ip_space
   description                     = ""
@@ -234,6 +241,7 @@ resource "vcfa_ip_space" "us_west" {
 # 8) Region "us-west-region"
 ############################
 resource "vcfa_region" "us_west" {
+  provider            = vcfa.system
   count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.vcfa_region_name
   nsx_manager_id        = data.vcfa_nsx_manager.nsx_manager.id
