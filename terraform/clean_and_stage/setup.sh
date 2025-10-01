@@ -46,6 +46,25 @@ step2_dns_fix() {
 
 step3_tf_init() {
   echo "[3] terraform init/validate…"
+
+  # Mint + inject VCFA token if we don't already have a secrets auto vars file
+  if [[ ! -f "${ROOT_DIR}/secrets.auto.tfvars.json" ]]; then
+    if [[ -x "${ROOT_DIR}/scripts/vcfa_token_bootstrap.sh" ]]; then
+      log "Bootstrapping VCFA token…"
+      # Export the env your site needs (example):
+      export VCFA_URL="${VCFA_URL:-https://vcfa.provider.lab}"
+      export VCFA_ORG="${VCFA_ORG:-showcase-all-apps}"
+      export VCFA_USER="${VCFA_USER:-administrator}"
+      export VCFA_PASSWORD="${VCFA_PASSWORD:-CHANGEME}"
+      # If you need realm / different paths, export these too:
+      # export VCFA_OIDC_REALM="vcfa"
+      # export VCFA_CREATE_TOKEN_PATH="/api/v1/api-tokens"
+      "${ROOT_DIR}/scripts/vcfa_token_bootstrap.sh"
+    else
+      warn "scripts/vcfa_token_bootstrap.sh not found or not executable; skipping token bootstrap."
+    fi
+  fi
+  
   # Ensure a tfvars exists (safe defaults; edit as needed)
   if [[ ! -f "${TFVARS_FILE}" ]]; then
     log "Creating ${TFVARS_FILE} with lab defaults…"
