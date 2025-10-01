@@ -66,3 +66,5 @@ Error: error getting vCenter Server by Name 'vc-wld01-a.site-a.vcf.lab': error r
 │   with data.vcfa_tier0_gateway.main,
 │   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 107, in data "vcfa_tier0_gateway" "main":
 │  107: data "vcfa_tier0_gateway" "main" {
+│ 
+╵
