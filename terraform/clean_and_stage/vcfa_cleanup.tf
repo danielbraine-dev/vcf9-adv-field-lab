@@ -273,7 +273,7 @@ resource "vcfa_region" "us_west" {
   count = var.enable_vcfa_cleanup ? 1 : 0
   name  = var.vcfa_region_name
   nsx_manager_id        = var.vcfa_nsx_manager_id
-  storage_policy_names  = ['vSAN Default Storage Policy"]
+  storage_policy_names  = ["vSAN Default Storage Policy"]
   supervisor_ids        = [data.vcfa_supervisor.wld1.id]
   lifecycle { prevent_destroy = false }
 }
