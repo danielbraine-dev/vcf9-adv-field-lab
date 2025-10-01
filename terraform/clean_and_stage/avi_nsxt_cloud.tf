@@ -224,27 +224,4 @@ resource "avi_serviceenginegroup" "default" {
 }
 
 
-################################
-# Helpful outputs
-################################
-output "avi_nsx_cloud_uuid" {
-  value       = avi_cloud.nsx_t_cloud.uuid
-  description = "UUID of the Avi NSX-T Cloud"
-}
-
-output "avi_vcenter_uuid" {
-  value       = avi_vcenterserver.vc_01.uuid
-  description = "UUID of the registered vCenter in Avi"
-}
-
-output "avi_ipam_profile_url" {
-  value       = avi_ipamdnsproviderprofile.internal.url
-  description = "URL/ref of the IPAM/DNS profile"
-}
-
-output "avi_se_group_uuid" {
-  value       = avi_serviceenginegroup.default.uuid
-  description = "UUID of the Service Engine Group"
-}
-
 
