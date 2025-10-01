@@ -104,6 +104,39 @@ variable "vcfa_supervisor_ids" {
   type = string
   default = ""
 }
+##########################
+# LOOKUPS
+##########################
+data "vcfa_vcenter" "vc" {
+  name = "vc-wld01-a.site-a.vcf.lab"
+}
+data "vcfa_nsx_manager" "nsx_manager" {
+  name = "nsx-wld01-a.site-a.vcf.lab"
+}
+
+data "vcfa_org" "system" {
+  name="System"
+}
+data "vcfa_org" "showcase" {
+  name="showcase-all-apps"
+}
+data "vcfa_region" "region" {
+  name = var.vcfa_region_name
+}
+data "vcfa_region_zone" "default" {
+  region_id = data.vcfa_region.region.id
+  name = "z-wld-a"
+}
+data "vcfa_storage_class" "sc" {
+  region_id = data.vcfa_region.region.id
+  name      = "vSAN Default Stroage Policy"
+}
+data "vcfa_supervisor" "wld1" {
+  name = "supervisor"
+  vcenter_id = data.vcfa_vcenter.vc.id
+  depends_on = [data.vcfa_vcenter.vc]
+}
+
 
 
 ############################################################
@@ -126,25 +159,17 @@ resource "vcfa_supervisor_namespace" "project_ns" {
 ############################################################
 resource "vcfa_content_library" "org_cl" {
   count             = var.enable_vcfa_cleanup ? 1 : 0
-  org_id            = var.vcfa_org_id
+  org_id            = data.vcfa_org.showcase.id
   name              = var.vcfa_org_cl_name
-  storage_class_ids = var.vcfa_org_cl_storage_class_ids
+  storage_class_ids = [
+  data.vcfa_storage_class.sc.id
+]
   lifecycle { prevent_destroy = false }
 }
 
 ############################
 # 3) Provider-scoped Content Library "provider-content-library"
 ############################
-data "vcfa_org" "system" {
-  name="System"
-}
-data "vcfa_region" "region" {
-  name = var.vcfa_region_name
-}
-data "vcfa_storage_class" "sc" {
-  region_id = data.vcfa_region.region.id
-  name      = "vSAN Default Stroage Policy"
-}
 resource "vcfa_content_library" "provider_cl" {
   org_id                  = data.vcfa_org.system.id
   count                   = var.enable_vcfa_cleanup ? 1 : 0
@@ -160,12 +185,25 @@ resource "vcfa_content_library" "provider_cl" {
 ############################################################
 resource "vcfa_org_region_quota" "showcase_us_west" {
   count     = var.enable_vcfa_cleanup ? 1 : 0
-  org_id    = var.vcfa_org_id
-  region_id = var.vcfa_region_id
-  supervisor_ids =
-  region_vm_class_ids = 
-  region_storage_policy = 
-  zone_resource_allocations = 
+  org_id    = data.vcfa_org.showcase.id
+  region_id = data.vcfa_region.region.id
+  supervisor_ids = [data.vcfa_supervisor.wld1.id]
+  zone_resource_allocations {
+    region_zone_id          = data.vcfa_region_zone.default.id
+    cpu_limit_mhz           =
+    cpu_reservation_mhz     =
+    memory_limit_mib        =
+    memory_reservation_mib =
+  }
+  region_vm_class_ids = [
+    data.vcfa_region_vm_class.region_vm_class0.id,
+    data.vcfa_region_vm_class.region_vm_class1.id
+  ]
+  region_storage_policy = {
+    region_storage_policy_id = data.vcfa_region_storage_policy.sp.id
+    storage_limit_mib        = 8096
+  }
+  
   lifecycle { prevent_destroy = false }
 }
 
