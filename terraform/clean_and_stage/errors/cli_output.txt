@@ -1,9 +1,27 @@
-holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ ./setup.sh 3
-[3] terraform init/validate…
+# The vcfa_api_token below generates an API Token for the "bob" user configured in the provider block.
+provider "vcfa" {
+  user     = "bob"
+  password = var.my_password
+  org      = "tenant1"
+  # Omitted arguments...
+}
 
-Bootstrapping VCFA token…
-==> Discovering token endpoint from https://auto-a.site-a.vcf.lab
-!! Could not discover a token endpoint (404s everywhere).
-   • If you use Keycloak, set VCFA_OIDC_REALM, e.g.: export VCFA_OIDC_REALM=vcfa
-   • Or provide your exact endpoint via VCFA_CREATE_TOKEN_PATH if your platform mints tokens with a custom API.
-holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ 
+resource "vcfa_api_token" "example_token" {
+  name             = "example_token"
+  file_name        = "example_token.json"
+  allow_token_file = true
+}
+
+# Creating an API Token as the System Administrator.
+provider "vcfa" {
+  user     = "serviceadministrator"
+  password = var.system_password
+  org      = "System"
+  # Omitted arguments...
+}
+
+resource "vcfa_api_token" "system_token" {
+  name             = "system_token"
+  file_name        = "system_token.json"
+  allow_token_file = true
+}
