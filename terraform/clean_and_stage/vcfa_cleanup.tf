@@ -4,14 +4,6 @@
 ############################################################
 
 # Required IDs (no data sources in this provider)
-variable "vcfa_org_id"      { 
-  type = string 
-  default = "f045fef1-4904-471e-bb5f-8157acafb18b"
-}     
-variable "vcfa_region_id"   { 
-  type = string
-  default="a289cc88-4da2-4c73-bc49-59846616c946"
-}  
 variable "vcfa_org_name"           { 
   type = string
   default = "showcase-all-apps" 
@@ -36,10 +28,6 @@ variable "vcfa_org_cl_name"             {
   type = string
   default = "showcase-content-library" 
 } 
-variable "vcfa_org_cl_storage_class_ids" {
-  type=string
-  default=""
-}
 variable "provider_cl_name"        { 
   type = string
   default = "provider-content-library" 
@@ -60,50 +48,15 @@ variable "vcenter_fqdn_to_refresh" {
   type = string
   default = "vc-wld01-a.site-a.vcf.lab" 
 }
-variable "vcfa_vcenter_id"    {
-  type = string
-  default="a6ee5489-8ef0-4776-afca-fa93de4c6dc7"
-}
-variable "vcfa_provider_gateway_id" { 
-  type = string 
-  default = "7727f60a-f8bb-4e76-81ba-9933dd528c6a"
-}
 variable "vcfa_tier0_gateway_id"  { 
   type = string 
   default=""
-}
-variable "vcfa_nsx_manager_id"  {
-  type = string
-  default ="bf0495ef-e1fc-4da8-a7ff-4e7320903c5d"
-}
-variable "vcfa_ip_space_ids"      { 
-type = list(string)
-default = ["6e7a4ea5-43a8-4c93-b1d3-cde61b69969e"]
 }
 variable "vcfa_ip_space_name"             {
   type = string
   default = "ip-space-us-west"
 }
-variable "vcfa_default_quota_max_ip_count"      { 
-  type = number 
-  default = null
-}
-variable "vcfa_default_quota_max_subnet_size"   { 
-  type = number
-  default = null 
-}
-variable "vcfa_default_quota_max_cidr_count"    {
-  type = number
-  default = null
-}
-variable "vcfa_storage_policy_names" {
-  type = string
-  default = ""
-}
-variable "vcfa_supervisor_ids" {
-  type = string
-  default = ""
-}
+
 ##########################
 # LOOKUPS
 ##########################
@@ -133,10 +86,10 @@ data "vcfa_supervisor" "wld1" {
 }
 data "vcfa_storage_class" "sc" {
   region_id = data.vcfa_region.region.id
-  name      = "vSAN Default Storage Policy"
+  name      = "cluster-wld01-01a vSAN Storage Policy"
 }
 data "vcfa_region_storage_policy" "sp" {
-  name = "default_storage_policy"
+  name = "cluster-wld01-01a vSAN Storage Policy"
   region_id = data.vcfa_region.region.id
 }
 data "vcfa_region_vm_class" "region_vm_class0" {
