@@ -151,7 +151,10 @@ data "vcfa_edge_cluster" "default" {
   name ="edgecl-wld-a"
   region_id = data.vcfa_region.region.id
 }
-
+data "vcfa_ip_space" "us_west" {
+  name = "ip-space-us-west"
+  region_id = data.vcfa_region.region.id
+}
 
 ############################################################
 # 1) Supervisor Namespace (Org + Region + Name)
