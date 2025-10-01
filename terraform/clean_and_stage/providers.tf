@@ -101,7 +101,6 @@ provider "vcfa" {
   password  = "VMware123!VMware123!"
   auth_type = "integrated"
 }
-}
 
 # Mint tokens once and write them to files
 resource "vcfa_api_token" "tenant" {
