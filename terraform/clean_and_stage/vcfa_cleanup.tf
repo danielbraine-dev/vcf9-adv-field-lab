@@ -107,7 +107,7 @@ data "vcfa_ip_space" "us_west" {
 data "vcfa_tier0_gateway" "main" {
   name    = "t0-wld-a"
   region_id = data.vcfa_region.region.id
-
+}
 ############################################################
 # 1) Supervisor Namespace (Org + Region + Name)
 ############################################################
