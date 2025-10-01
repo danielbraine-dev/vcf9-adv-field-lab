@@ -65,24 +65,6 @@ provider "vsphere" {
 # }
 
 # --- VCFA ---
-provider "vcfa" {
-  alias        ="tenant"
-  user         = "admin"
-  password     = "VMware123!VMware123!"
-  auth_type    = "integrated"
-  url          = var.vcfa_endpoint
-  org          = "System"
-  allow_unverified_ssl = true
-}
-provider "vcfa" {
-  alias        = "system"  
-  user         = "admin"
-  password     = "VMware123!VMware123!"
-  auth_type    = "integrated"
-  url          = var.vcfa_endpoint
-  org          = "System"
-  allow_unverified_ssl = true
-}
 # --------- Providers used ONLY to create API tokens (user/password auth) ----------
 provider "vcfa" {
   alias     = "tenant_password"
