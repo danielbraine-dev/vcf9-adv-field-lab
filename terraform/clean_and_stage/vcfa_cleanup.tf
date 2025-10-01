@@ -158,8 +158,7 @@ data "vcfa_edge_cluster" "default" {
 ############################################################
 resource "vcfa_supervisor_namespace" "project_ns" {
   count     = var.enable_vcfa_cleanup ? 1 : 0
-  name      = var.vcfa_ns_name
-  name_prefix = ""
+  name_prefix = "wld1-sup"
   class_name = "small"
   project_name = var.org_project_name
   region_name = var.vcfa_region_name
@@ -252,7 +251,7 @@ resource "vcfa_provider_gateway" "us_west" {
   description        = ""
   region_id          = var.vcfa_region_id
   tier0_gateway_id   = var.vcfa_tier0_gateway_id
-  id_space_ids       = [var.vcfa_ip_space_ids]
+  ip_space_ids       = [var.vcfa_ip_space_ids]
   name               = var.provider_gw_name
   lifecycle { prevent_destroy = false }
 }
