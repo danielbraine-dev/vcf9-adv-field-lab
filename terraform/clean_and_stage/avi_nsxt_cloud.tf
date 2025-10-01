@@ -8,14 +8,14 @@
 ################################
 # Variables
 ################################
-variable "nsxt_cloudname"           { type = string }                    # e.g., "nsxt-cloud"
+variable "nsxt_cloudname"           { 
+  type = string
+  default = "NSX Cloud
+}               
 variable "nsxt_cloud_prefix"        { 
   type = string
   default="avi-wld01-a" 
 }
-# Management (SE mgmt) segment lives under this T1 and segment id
-variable "mgmt_lr_id"               { type = string }                    # T1 logical router ID for mgmt
-variable "mgmt_segment_id"          { type = string }                    # NSX segment id string for mgmt
 
 # Data / VIP segment lives under this T1 and segment id
 variable "data_segment_name"          { 
