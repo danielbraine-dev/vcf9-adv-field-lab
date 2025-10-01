@@ -298,7 +298,6 @@ resource "vcfa_region" "us_west" {
 resource "vcfa_vcenter_refresh" "refresh" {
   vcenter_id = var.vcfa_vcenter_id
   depends_on = [
-    kubernetes_namespace.demo,
     vcfa_content_library.org_cl,
     vcfa_content_library.provider_cl,
     vcfa_region_quota.showcase_us_west,
