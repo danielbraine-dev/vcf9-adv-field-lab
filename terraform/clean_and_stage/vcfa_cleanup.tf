@@ -48,10 +48,6 @@ variable "vcenter_fqdn_to_refresh" {
   type = string
   default = "vc-wld01-a.site-a.vcf.lab" 
 }
-variable "vcfa_tier0_gateway_id"  { 
-  type = string 
-  default=""
-}
 variable "vcfa_ip_space_name"             {
   type = string
   default = "ip-space-us-west"
@@ -108,6 +104,9 @@ data "vcfa_ip_space" "us_west" {
   name = "ip-space-us-west"
   region_id = data.vcfa_region.region.id
 }
+data "vcfa_tier0_gateway" "main" {
+  name    = "t0-wld-a"
+  region_id = data.vcfa_region.region.id
 
 ############################################################
 # 1) Supervisor Namespace (Org + Region + Name)
@@ -190,10 +189,10 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
 ############################################################
 resource "vcfa_org_regional_networking" "showcase_us_west" {
   count               = var.enable_vcfa_cleanup ? 0 : 1
-  org_id              = var.vcfa_org_id
-  region_id           = var.vcfa_region_id
+  org_id              = data.vcfa_org.showcase.id
+  region_id           = data.vcfa_region.region.id
   name                = var.vcfa_org_reg_net_name
-  provider_gateway_id = var.vcfa_provider_gateway_id
+  provider_gateway_id = data.vcfa_provider_gateway.provider_gw.id
   edge_cluster_id     = data.vcfa_edge_cluster.default.id
   lifecycle { prevent_destroy = false }
 }
@@ -205,8 +204,8 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
 resource "vcfa_provider_gateway" "us_west" {
   count              = var.enable_vcfa_cleanup ? 0 : 1
   description        = ""
-  region_id          = var.vcfa_region_id
-  tier0_gateway_id   = var.vcfa_tier0_gateway_id
+  region_id          = data.vcfa_region.region.id
+  tier0_gateway_id   = data.vcfa_tier0_gateway.main.id
   ip_space_ids       = [data.vcfa_ip_space.us_west.id]
   name               = var.provider_gw_name
   lifecycle { prevent_destroy = false }
@@ -219,7 +218,7 @@ resource "vcfa_ip_space" "us_west" {
   count                           = var.enable_vcfa_cleanup ? 0 : 1
   name                            = var.provider_ip_space
   description                     = ""
-  region_id                       = var.vcfa_region_id
+  region_id                       = data.vcfa_region.region.id
   external_scope                  = "0.0.0.0/0"
   default_quota_max_ip_count      = 256
   default_quota_max_subnet_size   = 24
@@ -237,7 +236,7 @@ resource "vcfa_ip_space" "us_west" {
 resource "vcfa_region" "us_west" {
   count = var.enable_vcfa_cleanup ? 0 : 1
   name  = var.vcfa_region_name
-  nsx_manager_id        = var.vcfa_nsx_manager_id
+  nsx_manager_id        = data.vcfa_nsx_manager.nsx_manager.id
   storage_policy_names  = ["vSAN Default Storage Policy"]
   supervisor_ids        = [data.vcfa_supervisor.wld1.id]
   lifecycle { prevent_destroy = false }
