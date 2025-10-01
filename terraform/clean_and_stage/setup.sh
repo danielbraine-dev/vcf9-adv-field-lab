@@ -128,17 +128,22 @@ step4_remove_vcfa_objects(){
   # Remove existing VCFA configurations (provider-based import + destroy)
   #-----------------------------
   log "Priming VCFA lookup data (org/region/project)…"
+  # Prime lookup data (refresh-only)
   terraform -chdir="${ROOT_DIR}" apply \
-    -target="data.vcfa_org.showcase" \
-    -target="data.vcfa_region.region" \
-    -target="data.vcfa_project.default" \
-    -refresh-only -auto-approve
+  -target="data.vcfa_org.showcase" \
+  -target="data.vcfa_region.region" \
+  -refresh-only -auto-approve
+
+  # Resolve IDs from state using the SAME addresses
+  ORG_ID="$(terraform -chdir="${ROOT_DIR}" state show -no-color data.vcfa_org.showcase \
+           | awk -F' = ' '/^ *id *=/{print $2}' | tail -n1)"
+  REGION_ID="$(terraform -chdir="${ROOT_DIR}" state show -no-color data.vcfa_region.region \
+             | awk -F' = ' '/^ *id *=/{print $2}' | tail -n1)"
   
-  # Resolve IDs for imports
-  log "Resolving IDs from state…"
-  ORG_ID="$(terraform -chdir="${ROOT_DIR}" state show -no-color data.vcfa_org.showcase | awk -F' = ' '/^ *id *=/{print $2}' | tail -n1)"
-  REGION_ID="$(terraform -chdir="${ROOT_DIR}" state show -no-color data.vcfa_region.us_west | awk -F' = ' '/^ *id *=/{print $2}' | tail -n1)"
-  [[ -z "${ORG_ID:-}" || -z "${REGION_ID:-}" ]] && { error "Failed to resolve Org/Region IDs"; exit 1; }
+  if [ -z "${ORG_ID:-}" ] || [ -z "${REGION_ID:-}" ]; then
+    echo "Failed to resolve Org/Region IDs"; exit 1
+  fi
+
   
   # read vars
   read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
@@ -151,35 +156,61 @@ step4_remove_vcfa_objects(){
   REGION_NAME="$(read_tfvar vcfa_region_name || echo us-west-region)"
   
   log "Importing VCFA resources for cleanup…"
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_supervisor_namespace.project_ns[0]' "${ORG_ID}/${REGION_ID}/${NS_NAME}" || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.org_cl[0]' "${ORG_ID}/${ORG_CL_NAME}" || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.provider_cl[0]' "${PROVIDER_CL_NAME}" || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_region_quota.showcase_us_west[0]' "${ORG_ID}/${REGION_ID}" || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_org_regional_networking.showcase_us_west[0]' "${ORG_ID}/${REGION_ID}/${ORG_REG_NET_NAME}" || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_provider_gateway.us_west[0]' "${REGION_ID}/${PROVIDER_GW_NAME}" || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_ip_space.us_west[0]' "${PROVIDER_IP_SPACE}" || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_region.us_west[0]' "${REGION_NAME}" || true
+  # Make sure resources exist in config during import
+  # (enable_vcfa_cleanup=false ⇒ count=1)
+  COMMON_FLAGS=(-var="enable_vcfa_cleanup=false")
+  
+  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
+    'vcfa_supervisor_namespace.project_ns[0]'           "${ORG_ID}/${REGION_ID}/${NS_NAME}" || true
+  
+  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
+    'vcfa_content_library.org_cl[0]'                    "${ORG_ID}/${ORG_CL_NAME}" || true
+  
+  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
+    'vcfa_content_library.provider_cl[0]'               "${PROVIDER_CL_NAME}" || true
+  
+  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
+    'vcfa_org_region_quota.showcase_us_west[0]'         "${ORG_ID}/${REGION_ID}" || true
+  
+  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
+    'vcfa_org_regional_networking.showcase_us_west[0]'  "${ORG_ID}/${REGION_ID}/${ORG_REG_NET_NAME}" || true
+  
+  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
+    'vcfa_provider_gateway.us_west[0]'                  "${REGION_ID}/${PROVIDER_GW_NAME}" || true
+  
+  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
+    'vcfa_ip_space.us_west[0]'                          "${PROVIDER_IP_SPACE}" || true
+  
+  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
+    'vcfa_region.us_west[0]'                            "${REGION_NAME}" || true
+
   
   log "Destroying imported VCFA resources…"
+  # Sanity: confirm everything is in state
+  terraform -chdir="${ROOT_DIR}" state list | egrep '^vcfa_(supervisor_namespace|content_library|org_region_quota|org_regional_networking|provider_gateway|ip_space|region)\.'
+
+  # Destroy pass: enable_vcfa_cleanup=true ⇒ count=0
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true"
+
   # Phase 1: Namespaces & org attachments
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
-  -target='vcfa_supervisor_namespace.project_ns[0]' \
-  -target='vcfa_org_region_quota.showcase_us_west[0]' \
-  -target='vcfa_org_regional_networking.showcase_us_west[0]'
+  #terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
+  #-target='vcfa_supervisor_namespace.project_ns[0]' \
+  #-target='vcfa_org_region_quota.showcase_us_west[0]' \
+  #-target='vcfa_org_regional_networking.showcase_us_west[0]'
 
   # Phase 2: Content libraries (org & provider)
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
-  -target='vcfa_content_library.org_cl[0]' \
-  -target='vcfa_content_library.provider_cl[0]'
+  #terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
+  #-target='vcfa_content_library.org_cl[0]' \
+  #-target='vcfa_content_library.provider_cl[0]'
 
   # Phase 3: Provider-scoped infra
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
-  -target='vcfa_provider_gateway.us_west[0]' \
-  -target='vcfa_ip_space.us_west[0]'
+  #terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
+  #-target='vcfa_provider_gateway.us_west[0]' \
+  #-target='vcfa_ip_space.us_west[0]'
 
   # Phase 4: Region last
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
-  -target='vcfa_region.us_west[0]'
+  #terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
+  #-target='vcfa_region.us_west[0]'
 
   
   pause
