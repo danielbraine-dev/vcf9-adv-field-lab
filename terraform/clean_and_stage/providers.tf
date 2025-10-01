@@ -77,7 +77,7 @@ provider "vcfa" {
 
 provider "vcfa" {
   alias    = "system_password"
-  url      = var.vcfa_base_url
+  url      = var.vcfa_endpoint
   org      = "System"
   user      = "admin"
   password  = "VMware123!VMware123!"
