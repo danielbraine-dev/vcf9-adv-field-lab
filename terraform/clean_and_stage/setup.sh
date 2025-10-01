@@ -46,7 +46,7 @@ step2_dns_fix() {
 
 step3_tf_init() {
   echo "[3] terraform init/validate…"
-
+  
   # Mint + inject VCFA token if we don't already have a secrets auto vars file
   if [[ ! -f "${ROOT_DIR}/secrets.auto.tfvars.json" ]]; then
     if [[ -x "${ROOT_DIR}/scripts/vcfa_token_bootstrap.sh" ]]; then
