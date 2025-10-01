@@ -1,27 +1,18 @@
-# The vcfa_api_token below generates an API Token for the "bob" user configured in the provider block.
-provider "vcfa" {
-  user     = "bob"
-  password = var.my_password
-  org      = "tenant1"
-  # Omitted arguments...
-}
+oluser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ ./setup.sh 4
 
-resource "vcfa_api_token" "example_token" {
-  name             = "example_token"
-  file_name        = "example_token.json"
-  allow_token_file = true
-}
+Priming VCFA lookup data (org/region/project)…
+var.mgmt_lr_id
+  Enter a value: 
 
-# Creating an API Token as the System Administrator.
-provider "vcfa" {
-  user     = "serviceadministrator"
-  password = var.system_password
-  org      = "System"
-  # Omitted arguments...
-}
+var.mgmt_segment_id
+  Enter a value: 
 
-resource "vcfa_api_token" "system_token" {
-  name             = "system_token"
-  file_name        = "system_token.json"
-  allow_token_file = true
-}
+var.nsxt_cloudname
+  Enter a value: 
+
+data.vcfa_region.region: Reading...
+data.vcfa_org.showcase: Reading...
+data.vcfa_org.showcase: Read complete after 0s [id=urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b]
+data.vcfa_region.region: Read complete after 0s [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+
+No changes. Your infrastructure still matches the configuration.
