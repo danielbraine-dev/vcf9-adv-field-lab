@@ -128,6 +128,11 @@ step4_remove_vcfa_objects(){
   # Remove existing VCFA configurations (provider-based import + destroy)
   #-----------------------------
   log "Priming VCFA lookup data (org/region/project)…"
+  terraform apply -target=null_resource.auth_dir \
+                -target=vcfa_api_token.tenant \
+                -target=vcfa_api_token.system \
+                -auto-approve  
+                
   # Prime lookup data (refresh-only)
   terraform -chdir="${ROOT_DIR}" apply \
   -target="data.vcfa_org.showcase" \
