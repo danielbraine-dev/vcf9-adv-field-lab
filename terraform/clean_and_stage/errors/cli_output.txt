@@ -1,1 +1,12 @@
- Error: error reading Supervisor Namespace: error reading Supervisor Namespace demo-namespace-vkrcg in Project default-project: error in HTTP GET request for: apiVersion: v1 code: 401 kind Status: reason: Unauthorized, message: Unauthorized status: Failure
+ Error: Invalid provider configuration
+│ 
+│ Provider "registry.terraform.io/vmware/vcfa" requires explicit configuration. Add a provider block to the root module and configure the provider's required arguments as
+│ described in the provider documentation.
+│ 
+╵
+╷
+│ Error: something went wrong during authentication: error finding LoginUrl: could not find valid version for login: could not retrieve supported versions: error fetching versions: Get "https://auto-a.site-a.vcf.lab/api/versions": tls: failed to verify certificate: x509: certificate signed by unknown authority
+│ 
+│   with provider["registry.terraform.io/vmware/vcfa"],
+│   on <empty> line 0:
+│   (source code not available)
