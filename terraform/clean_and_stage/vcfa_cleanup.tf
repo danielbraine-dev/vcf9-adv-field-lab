@@ -251,7 +251,7 @@ resource "vcfa_provider_gateway" "us_west" {
   description        = ""
   region_id          = var.vcfa_region_id
   tier0_gateway_id   = var.vcfa_tier0_gateway_id
-  ip_space_ids       = [var.vcfa_ip_space_ids]
+  ip_space_ids       = [data.vcfa_ip_space.us_west.id]
   name               = var.provider_gw_name
   lifecycle { prevent_destroy = false }
 }
