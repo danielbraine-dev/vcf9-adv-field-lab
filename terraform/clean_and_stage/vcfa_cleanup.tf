@@ -112,12 +112,12 @@ variable "vcfa_supervisor_ids" {
 resource "vcfa_supervisor_namespace" "project_ns" {
   count     = var.enable_vcfa_cleanup ? 1 : 0
   name      = var.vcfa_ns_name
-  class_name = 
+  class_name = "small"
   project_name = var.org_project_name
   region_name = var.vcfa_region_name
   vpc_name = var.vcfa_vpc_name
-  zones_initial_class_config_overrides = 
-  storage_classes_initial_class_config_overrides = 
+  zones_initial_class_config_overrides {}
+  storage_classes_initial_class_config_overrides {}
   lifecycle { prevent_destroy = false }
 }
 
