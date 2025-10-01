@@ -84,7 +84,7 @@ step3_tf_init() {
   vsphere_datastore  = "cluster-wld01-01a-vsan01"
   
   # ---- VCFA provider ----
-  vcfa_endpoint    = "https://vcfa.provider.lab"
+  vcfa_endpoint    = "https://auto-a.site-a.vcf.lab"
   vcfa_token       = "<PUT_YOUR_VCFA_TOKEN_HERE>"
   
   # ---- VCFA cleanup inputs (Step 2) ----
