@@ -135,10 +135,23 @@ resource "vcfa_content_library" "org_cl" {
 ############################
 # 3) Provider-scoped Content Library "provider-content-library"
 ############################
+data "vcfa_org" "system" {
+  name="System"
+}
+data "vcfa_region" "region" {
+  name = var.vcfa_region_name
+}
+data "vcfa_storage_class" "sc" {
+  region_id = data.vcfa_region.region.id
+  name      = "vSAN Default Stroage Policy"
+}
 resource "vcfa_content_library" "provider_cl" {
-  count = var.enable_vcfa_cleanup ? 1 : 0
-  name  = var.provider_cl_name
-  storage_class_ids = var.vcfa_provider_cl_storage_class_ids
+  org_id                  = data.vcfa_org.system.id
+  count                   = var.enable_vcfa_cleanup ? 1 : 0
+  name                    = var.provider_cl_name
+  storage_class_ids       = [
+    data.vcfa_storage_class.sc.id
+  ]
   lifecycle { prevent_destroy = false }
 }
 
