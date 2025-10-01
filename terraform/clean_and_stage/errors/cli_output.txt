@@ -1,18 +1,15 @@
-oluser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ ./setup.sh 4
-
-Priming VCFA lookup data (org/region/project)…
-var.mgmt_lr_id
-  Enter a value: 
-
-var.mgmt_segment_id
-  Enter a value: 
-
-var.nsxt_cloudname
-  Enter a value: 
-
-data.vcfa_region.region: Reading...
-data.vcfa_org.showcase: Reading...
-data.vcfa_org.showcase: Read complete after 0s [id=urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b]
-data.vcfa_region.region: Read complete after 0s [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
-
-No changes. Your infrastructure still matches the configuration.
+data.vsphere_network.avi_net: Still reading... [05m20s elapsed]
+data.nsxt_policy_segment.se_data_vip: Still reading... [05m20s elapsed]
+data.vcfa_storage_class.sc: Still reading... [05m20s elapsed]
+data.vcfa_region_storage_policy.sp: Still reading... [05m20s elapsed]
+data.avi_network.vip: Still reading... [05m20s elapsed]
+data.vsphere_network.avi_net: Still reading... [05m30s elapsed]
+data.nsxt_policy_segment.se_data_vip: Still reading... [05m30s elapsed]
+data.vcfa_storage_class.sc: Still reading... [05m30s elapsed]
+data.vcfa_region_storage_policy.sp: Still reading... [05m30s elapsed]
+data.avi_network.vip: Still reading... [05m30s elapsed]
+data.vsphere_network.avi_net: Still reading... [05m40s elapsed]
+data.nsxt_policy_segment.se_data_vip: Still reading... [05m40s elapsed]
+data.vcfa_storage_class.sc: Still reading... [05m40s elapsed]
+data.vcfa_region_storage_policy.sp: Still reading... [05m40s elapsed]
+data.avi_network.vip: Still reading... [05m40s elapsed]
