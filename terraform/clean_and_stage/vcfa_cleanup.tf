@@ -289,12 +289,3 @@ resource "vcfa_region" "us_west" {
   supervisor_ids        = [data.vcfa_supervisor.wld1.id]
   lifecycle { prevent_destroy = false }
 }
-
-############################
-# 9) Refresh vCenter connection "vc-wld01-a.site-a.vcf.lab"
-############################
-
-# One-shot action: refresh/test the VC connection after deletions
-resource "vcfa_vcenter_refresh" "refresh" {
-  vcenter_id = var.vcfa_vcenter_id
-}
