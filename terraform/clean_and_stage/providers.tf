@@ -106,7 +106,7 @@ resource "vcfa_api_token" "tenant" {
   name             = "tenant_automation"
   file_name        = local.tenant_token_path
   allow_token_file = true
-  depends_on       = [null_resoure.auth_dir]
+  depends_on       = [null_resource.auth_dir]
 }
 
 resource "vcfa_api_token" "system" {
@@ -114,7 +114,7 @@ resource "vcfa_api_token" "system" {
   name             = "system_automation"
   file_name        = local.system_token_path
   allow_token_file = true
-  depends_on       = [null_resoure.auth_dir]
+  depends_on       = [null_resource.auth_dir]
 
 }
 
@@ -144,6 +144,6 @@ provider "vcfa" {
   org                  = "System"
   auth_type            = "api_token_file"
   allow_api_token_file = true
-  api_token_file       = local.system_token-path
+  api_token_file       = local.system_token_path
   allow_unverified_ssl = true
 }
