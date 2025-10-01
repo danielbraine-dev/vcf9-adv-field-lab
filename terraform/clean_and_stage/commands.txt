@@ -39,3 +39,11 @@ sudo apt -y install vim
 
 # load new shell options
 source ~/.bashrc
+
+# make scripts executable
+cd scripts
+chmod +x add_dns_record.sh
+chmod +x install_supervisor.sh
+chmod +x nsx_onboard_alb.sh
+chmod +x remove_supervisor.sh
+chmod +x upload_nsx_cert.sh
