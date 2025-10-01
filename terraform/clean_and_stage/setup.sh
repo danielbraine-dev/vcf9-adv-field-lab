@@ -158,31 +158,46 @@ step4_remove_vcfa_objects(){
   log "Importing VCFA resources for cleanup…"
   # Make sure resources exist in config during import
   # (enable_vcfa_cleanup=false ⇒ count=1)
-  COMMON_FLAGS=(-var="enable_vcfa_cleanup=false")
-  
-  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
-    'vcfa_supervisor_namespace.project_ns[0]'           "${ORG_ID}/${REGION_ID}/${NS_NAME}"
-  
-  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
-    'vcfa_content_library.org_cl[0]'                    "${ORG_ID}/${ORG_CL_NAME}"
-  
-  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
-    'vcfa_content_library.provider_cl[0]'               "${PROVIDER_CL_NAME}" 
-  
-  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
-    'vcfa_org_region_quota.showcase_us_west[0]'         "${ORG_ID}/${REGION_ID}"
-  
-  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
-    'vcfa_org_regional_networking.showcase_us_west[0]'  "${ORG_ID}/${REGION_ID}/${ORG_REG_NET_NAME}"
-  
-  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
-    'vcfa_provider_gateway.us_west[0]'                  "${REGION_ID}/${PROVIDER_GW_NAME}"
-  
-  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
-    'vcfa_ip_space.us_west[0]'                          "${PROVIDER_IP_SPACE}"
-  
-  terraform -chdir="${ROOT_DIR}" import "${COMMON_FLAGS[@]}" \
-    'vcfa_region.us_west[0]'                            "${REGION_NAME}"
+  # Supervisor Namespace
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+  'vcfa_supervisor_namespace.project_ns[0]' \
+  'default-project.demo-namespace-vkrcg'
+
+# Org-scoped Content Library
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+  'vcfa_content_library.org_cl[0]' \
+  'showcase-all-apps.showcase-content-library'
+
+# Provider-scoped Content Library
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+  'vcfa_content_library.provider_cl[0]' \
+  'System.provider-content-library'
+
+# Org Region Quota
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+  'vcfa_org_region_quota.showcase_us_west[0]' \
+  'showcase-all-apps.us-west-region'
+
+# Org Regional Networking
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+  'vcfa_org_regional_networking.showcase_us_west[0]' \
+  'showcase-all-apps.showcase-all-appsus-west-region'
+
+# Provider Gateway
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+  'vcfa_provider_gateway.us_west[0]' \
+  'us-west-region.provider-gateway-us-west'
+
+# Provider IP Space
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+  'vcfa_ip_space.us_west[0]' \
+  'us-west-region.ip-space-us-west'
+
+# Region
+terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=true" \
+  'vcfa_region.us_west[0]' \
+  'us-west-region'
+
 
   
   log "Destroying imported VCFA resources…"
