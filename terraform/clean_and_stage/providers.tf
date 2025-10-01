@@ -67,7 +67,7 @@ provider "vsphere" {
 # --- VCFA ---
 provider "vcfa" {
   user         = "admin"
-  password     = "VMware123!VMware123"
+  password     = "VMware123!VMware123!"
   auth_type    = "integrated"
   url          = var.vcfa_endpoint
   org          = "System"
