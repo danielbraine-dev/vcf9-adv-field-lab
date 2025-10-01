@@ -1,70 +1,67 @@
-Error: error getting vCenter Server by Name 'vc-wld01-a.site-a.vcf.lab': error retrieving all entities of type 'vCenter Server': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/1.0.0/virtualCenters/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 8-2025-10-01-13-13-24-027--53ee4776-0cd3-425c-b647-8ad16d6c200e ] This operation is denied.
+vcfa_supervisor_namespace.project_ns[0]: Still destroying... [id=default-project:demo-namespace-vkrcg, 19m50s elapsed]
+╷
+│ Warning: Value for undeclared variable
 │ 
-│   with data.vcfa_vcenter.vc,
-│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 59, in data "vcfa_vcenter" "vc":
-│   59: data "vcfa_vcenter" "vc" {
+│ The root module does not declare a variable named "avi_ntp_servers" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "sup_mgmt_ip_range" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Values for undeclared variables
+│ 
+│ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
+╵
+╷
+│ Error: error deleting Org Regional Networking with ID 'urn:vcloud:regionalNetworkingSetting:e8b807f9-9a07-40f1-aa1b-854238d2b9b9': error deleting Regional Networking Setting: error waiting completion of task (https://auto-a.site-a.vcf.lab/api/task/b2798122-35c5-4d64-8f6e-b6ff58a07304): task did not complete successfully:  [500:INTERNAL_SERVER_ERROR] - [ 15-2025-10-01-13-45-09-335--ad352975-83ba-41cb-a57d-1ef273f753e1 ] Internal Server Error
+│  - InvalidRequest (com.vmware.vapi.std.errors.invalid_request) (statusCode:400) => {
+│     messages = [],
+│     data =  => {error_message=The object path=[/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lbs/default] cannot be deleted as either it has children or it is being referenced by other objects path=[/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/sql_22_TCP_9712b74a-26dc-40a5-8509-3b43aff4f6ed,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/mysql-lb-vm_22_TCP_6d4575e1-30e7-4951-9f2e-f0cb3ba8267a,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/apache_80_TCP_b6db8b49-99a4-449f-b60e-c4c10856aa77,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/mysql-lb-vm_3306_TCP_6d4575e1-30e7-4951-9f2e-f0cb3ba8267a,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/demo-web_80_TCP_997e9f8e-4b13-416b-a27d-645fc3a76346,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/apache_22_TCP_b6db8b49-99a4-449f-b60e-c4c10856aa77,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/sql_3306_TCP_9712b74a-26dc-40a5-8509-3b43aff4f6ed,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/kubernetes-cluster-qxml-control-plane-service_6443_TCP_a69899f2-23c0-4d24-b438-121c56775201,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/demo-web_22_TCP_997e9f8e-4b13-416b-a27d-645fc3a76346,/orgs...
+│ 
 │ 
 ╵
-
 ╷
-│ Error: error getting NSX Manager by Name 'nsx-wld01-a.site-a.vcf.lab': error retrieving all entities of type 'NSX-T Manager': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/nsxManagers/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 7-2025-10-01-13-13-24-026--387051cb-6afd-4c83-afc8-7de5ae3900d9 ] This operation is denied.
+│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 14-2025-10-01-13-45-09-271--6547793c-a04a-40ab-a466-7a4ad1789e6e ] Content library is not empty.
 │ 
-│   with data.vcfa_nsx_manager.nsx_manager,
-│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 62, in data "vcfa_nsx_manager" "nsx_manager":
-│   62: data "vcfa_nsx_manager" "nsx_manager" {
 │ 
 ╵
-
 ╷
-│ Error: error getting Organization by Name 'System': [ENF] entity not found: got zero entities by name 'System'
+│ Error: error deleting IP Space with ID 'urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e': error deleting TM IP Space: error in HTTP DELETE request: FORBIDDEN - [ 13-2025-10-01-13-45-09-190--d45e3af9-f164-4176-82a0-4acf8fb4a4a7 ] Cannot delete IP Space ip-space-us-west as Provider Gateways [provider-gateway-us-west] requires at least one associated IP Space.
 │ 
-│   with data.vcfa_org.system,
-│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 65, in data "vcfa_org" "system":
-│   65: data "vcfa_org" "system" {
 │ 
 ╵
-
 ╷
-│ Error: error getting Region Storage Policy by Name 'cluster-wld01-01a vSAN Storage Policy': error retrieving all entities of type 'Region Storage Policy': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/regionStoragePolicies/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 11-2025-10-01-13-13-24-162--5ede6e96-2d96-446f-9121-b2d81941607d ] This operation is denied.
+│ Error: error deleting Provider Gateway with ID 'urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a': error deleting TM Provider Gateway: error in HTTP DELETE request: FORBIDDEN - [ 10-2025-10-01-13-45-09-170--7b416e2d-a4f3-40c2-972f-234119a75061 ] Cannot delete Provider Gateway provider-gateway-us-west as it is being used in Regional Networking Settings [showcase-all-appsus-west-region].
 │ 
-│   with data.vcfa_region_storage_policy.sp,
-│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 87, in data "vcfa_region_storage_policy" "sp":
-│   87: data "vcfa_region_storage_policy" "sp" {
 │ 
 ╵
-
 ╷
-│ Error: error getting Provider Gateway by Name 'provider-gateway-us-west': error retrieving all entities of type 'TM Provider Gateway': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/providerGateways/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 13-2025-10-01-13-13-24-164--1ca59541-a0de-4939-80d1-0ff7fefe4e68 ] This operation is denied.
+│ Error: error deleting Region with ID 'urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946': error deleting Region: error in HTTP DELETE request: BAD_REQUEST - [ 11-2025-10-01-13-45-09-170--56004078-a85b-46a1-bac1-db393fe2e1eb ] Cannot delete Region us-west-region because it has Content Libraries. Here are the first 1 (out of 1 Content Libraries) backed by this Region: provider-content-library.
 │ 
-│   with data.vcfa_provider_gateway.provider_gw,
-│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 95, in data "vcfa_provider_gateway" "provider_gw":
-│   95: data "vcfa_provider_gateway" "provider_gw" {
 │ 
 ╵
-
 ╷
-│ Error: error getting Edge Cluster by Name 'edgecl-wld-a': error retrieving all entities of type 'TM Edge Cluster': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/edgeClusters/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 14-2025-10-01-13-13-24-164--ad628eae-6fc7-4184-aa96-28d7ce76ead9 ] This operation is denied.
+│ Error: error waiting for Supervisor Namespace demo-namespace-vkrcg in Project default-project to be deleted: context deadline exceeded
 │ 
-│   with data.vcfa_edge_cluster.default,
-│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 99, in data "vcfa_edge_cluster" "default":
-│   99: data "vcfa_edge_cluster" "default" {
 │ 
 ╵
-
 ╷
-│ Error: error getting IP Space by Name 'ip-space-us-west': error retrieving all entities of type 'TM IP Space': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/ipSpaces/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 16-2025-10-01-13-13-24-165--6fc0e4d2-5a32-44c3-88ca-f5e6f70c6146 ] This operation is denied.
+│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 7-2025-10-01-13-45-09-311--0faf6023-d466-45cc-81d0-3208da6503bf ] Content library is not empty.
 │ 
-│   with data.vcfa_ip_space.us_west,
-│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 103, in data "vcfa_ip_space" "us_west":
-│  103: data "vcfa_ip_space" "us_west" {
 │ 
 ╵
-
 ╷
-│ Error: error getting Tier-0 Gateway by Name 't0-wld-a': error retrieving all entities of type 'TM Tier0 Gateway': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/1.0.0/nsxTResources/importableTier0Routers: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 20-2025-10-01-13-13-24-253--e4008d66-4267-4b09-9a9b-2ee49345a43a ] This operation is denied.
+│ Error: error deleting Org Region Quota with ID 'urn:vcloud:virtualDatacenter:8bfc2398-1046-4e17-b735-fc49f314e46a': error deleting Org Region Quota: error in HTTP DELETE request: BAD_REQUEST - [ 16-2025-10-01-13-45-09-360--9d1339ff-39f4-49ba-828a-469f1c0532fe ] Cannot delete region quota as it contains namespaces. Delete namespaces before deleting region quota.
 │ 
-│   with data.vcfa_tier0_gateway.main,
-│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 107, in data "vcfa_tier0_gateway" "main":
-│  107: data "vcfa_tier0_gateway" "main" {
 │ 
 ╵
