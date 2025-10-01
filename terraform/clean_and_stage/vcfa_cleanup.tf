@@ -143,7 +143,14 @@ data "vcfa_region_vm_class" "region_vm_class0" {
   region_id = data.vcfa_region.region.id
   name      = "best-effort-2xlarge"
 }
-
+data "vcfa_provider_gateway" "provider_gw" {
+  name = "provider-gateway-us-west"
+  region_id = vcfa_region.region.id
+}
+data "vcfa_edge_cluster" "default" {
+  name ="edgecl-wld-a"
+  region_id = data.vcfa_region.region.id
+}
 
 
 ############################################################
@@ -222,6 +229,7 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
   region_id           = var.vcfa_region_id
   name                = var.vcfa_org_reg_net_name
   provider_gateway_id = var.vcfa_provider_gateway_id
+  edge_cluster_id     = data.vcfa.edge_cluster.default.id
   lifecycle { prevent_destroy = false }
 }
 
@@ -231,6 +239,7 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
 ############################
 resource "vcfa_provider_gateway" "us_west" {
   count              = var.enable_vcfa_cleanup ? 1 : 0
+  description        = ""
   region_id          = var.vcfa_region_id
   tier0_gateway_id   = var.vcfa_tier0_gateway_id
   id_space_ids       = var.vcfa_ip_space_ids
@@ -242,14 +251,17 @@ resource "vcfa_provider_gateway" "us_west" {
 # 7) Provider IP Space "ip-space-us-west"
 ############################
 resource "vcfa_ip_space" "us_west" {
-  count = var.enable_vcfa_cleanup ? 1 : 0
-  name  = var.provider_ip_space
+  count                           = var.enable_vcfa_cleanup ? 1 : 0
+  name                            = var.provider_ip_space
+  description                     = ""
   region_id                       = var.vcfa_region_id
-  default_quota_max_ip_count      = var.vcfa_default_quota_max_ip_count
-  default_quota_max_subnet_size   = var.vcfa_default_quota_max_subnet_size
-  default_quota_max_cidr_count    = var.vcfa_default_quota_max_cidr_count
+  external_scope                  = "0.0.0.0/0"
+  default_quota_max_ip_count      = 256
+  default_quota_max_subnet_size   = 24
+  default_quota_max_cidr_count    = 1
   internal_scope {
-    cidr = ""
+    name = "scope1"
+    cidr = "10.1.11.0/24"
   }
   lifecycle { prevent_destroy = false }
 }
@@ -261,8 +273,8 @@ resource "vcfa_region" "us_west" {
   count = var.enable_vcfa_cleanup ? 1 : 0
   name  = var.vcfa_region_name
   nsx_manager_id        = var.vcfa_nsx_manager_id
-  storage_policy_names  = var.vcfa_storage_policy_names
-  supervisor_ids        = var.vcfa_supervisor_ids
+  storage_policy_names  = ['vSAN Default Storage Policy"]
+  supervisor_ids        = [data.vcfa_supervisor.wld1.id]
   lifecycle { prevent_destroy = false }
 }
 
