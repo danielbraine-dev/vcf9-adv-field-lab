@@ -32,33 +32,69 @@ CURL_INSECURE=()
 
 req() { curl -sS "${CURL_INSECURE[@]}" "$@"; }
 
-# ---------- Resolve token URL ----------
-if [[ -n "${VCFA_OIDC_REALM}" ]]; then
+# ---------- Normalize URL & build token endpoint ----------
+norm_url() {
+  case "$1" in
+    http://*|https://*) printf "%s" "$1" ;;
+    *) printf "https://%s" "$1" ;;   # auto-add https:// if missing
+  esac
+}
+
+VCFA_URL="$(norm_url "${VCFA_URL}")"
+
+if [[ -n "${VCFA_OIDC_REALM:-}" ]]; then
   TOKEN_URL="${VCFA_URL%/}/realms/${VCFA_OIDC_REALM}/protocol/openid-connect/token"
 else
   TOKEN_URL="${VCFA_URL%/}${VCFA_AUTH_PATH}"
 fi
 
-CREATE_TOKEN_URL="${VCFA_URL%/}${VCFA_CREATE_TOKEN_PATH}"
-TEST_URL="${VCFA_URL%/}${VCFA_TEST_PATH}"
-
-# ---------- Get short-lived bearer via password grant (if user/pass provided) ----------
+# ---------- Fetch short-lived access token (password grant) ----------
 ACCESS_TOKEN=""
-if [[ -n "${VCFA_USER}" && -n "${VCFA_PASSWORD}" ]]; then
+if [[ -n "${VCFA_USER:-}" && -n "${VCFA_PASSWORD:-}" ]]; then
   echo "→ Requesting access token from: ${TOKEN_URL}"
-  # Most OIDC servers accept x-www-form-urlencoded password grant.
-  # Adjust client_id/scope if your environment requires it.
-  ACCESS_TOKEN="$(req -X POST \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    --data "grant_type=password&username=${VCFA_USER}&password=${VCFA_PASSWORD}&scope=openid offline_access" \
-    "${TOKEN_URL}" | jq -r '.access_token // empty')"
+  TMP_RESP="$(mktemp)"
+  # Build form body
+  FORM="grant_type=password&username=$(printf %s "${VCFA_USER}" | jq -sRr @uri)&password=$(printf %s "${VCFA_PASSWORD}" | jq -sRr @uri)&scope=openid%20offline_access"
+  # Add client_id if provided
+  if [[ -n "${VCFA_CLIENT_ID:-}" ]]; then
+    FORM="${FORM}&client_id=$(printf %s "${VCFA_CLIENT_ID}" | jq -sRr @uri)"
+  fi
+
+  # If client_secret is set, send basic auth header for the token endpoint
+  AUTH_OPTS=()
+  if [[ -n "${VCFA_CLIENT_ID:-}" && -n "${VCFA_CLIENT_SECRET:-}" ]]; then
+    AUTH_OPTS=(-u "${VCFA_CLIENT_ID}:${VCFA_CLIENT_SECRET}")
+  fi
+
+  HTTP_CODE="$(curl -sS -o "${TMP_RESP}" -w "%{http_code}" "${CURL_INSECURE[@]}" \
+    -H "Accept: application/json" -H "Content-Type: application/x-www-form-urlencoded" \
+    "${AUTH_OPTS[@]}" -X POST --data "${FORM}" "${TOKEN_URL}")"
+
+  if [[ "${HTTP_CODE}" != "200" ]]; then
+    echo "!! Token endpoint returned HTTP ${HTTP_CODE}. Raw body follows:" >&2
+    sed -n '1,120p' "${TMP_RESP}" >&2
+    rm -f "${TMP_RESP}"
+    exit 1
+  fi
+
+  # Parse JSON safely
+  if jq -e . >/dev/null 2>&1 < "${TMP_RESP}"; then
+    ACCESS_TOKEN="$(jq -r '.access_token // empty' < "${TMP_RESP}")"
+  else
+    echo "!! Token endpoint did not return JSON. First 120 lines:" >&2
+    sed -n '1,120p' "${TMP_RESP}" >&2
+    rm -f "${TMP_RESP}"
+    exit 1
+  fi
+  rm -f "${TMP_RESP}"
 
   if [[ -z "${ACCESS_TOKEN}" ]]; then
-    echo "!! Failed to obtain access token. Check TOKEN_URL / credentials / grant type." >&2
+    echo "!! access_token was empty in JSON response." >&2
     exit 1
   fi
   echo "✓ Access token acquired"
 fi
+
 
 # ---------- Create a long-lived API token in VCFA ----------
 # If your VCFA requires a different body shape, tweak here.
