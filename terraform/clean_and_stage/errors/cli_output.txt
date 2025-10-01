@@ -1,12 +1,68 @@
- Error: Invalid provider configuration
+Error: error getting vCenter Server by Name 'vc-wld01-a.site-a.vcf.lab': error retrieving all entities of type 'vCenter Server': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/1.0.0/virtualCenters/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 8-2025-10-01-13-13-24-027--53ee4776-0cd3-425c-b647-8ad16d6c200e ] This operation is denied.
 │ 
-│ Provider "registry.terraform.io/vmware/vcfa" requires explicit configuration. Add a provider block to the root module and configure the provider's required arguments as
-│ described in the provider documentation.
+│   with data.vcfa_vcenter.vc,
+│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 59, in data "vcfa_vcenter" "vc":
+│   59: data "vcfa_vcenter" "vc" {
 │ 
 ╵
+
 ╷
-│ Error: something went wrong during authentication: error finding LoginUrl: could not find valid version for login: could not retrieve supported versions: error fetching versions: Get "https://auto-a.site-a.vcf.lab/api/versions": tls: failed to verify certificate: x509: certificate signed by unknown authority
+│ Error: error getting NSX Manager by Name 'nsx-wld01-a.site-a.vcf.lab': error retrieving all entities of type 'NSX-T Manager': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/nsxManagers/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 7-2025-10-01-13-13-24-026--387051cb-6afd-4c83-afc8-7de5ae3900d9 ] This operation is denied.
 │ 
-│   with provider["registry.terraform.io/vmware/vcfa"],
-│   on <empty> line 0:
-│   (source code not available)
+│   with data.vcfa_nsx_manager.nsx_manager,
+│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 62, in data "vcfa_nsx_manager" "nsx_manager":
+│   62: data "vcfa_nsx_manager" "nsx_manager" {
+│ 
+╵
+
+╷
+│ Error: error getting Organization by Name 'System': [ENF] entity not found: got zero entities by name 'System'
+│ 
+│   with data.vcfa_org.system,
+│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 65, in data "vcfa_org" "system":
+│   65: data "vcfa_org" "system" {
+│ 
+╵
+
+╷
+│ Error: error getting Region Storage Policy by Name 'cluster-wld01-01a vSAN Storage Policy': error retrieving all entities of type 'Region Storage Policy': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/regionStoragePolicies/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 11-2025-10-01-13-13-24-162--5ede6e96-2d96-446f-9121-b2d81941607d ] This operation is denied.
+│ 
+│   with data.vcfa_region_storage_policy.sp,
+│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 87, in data "vcfa_region_storage_policy" "sp":
+│   87: data "vcfa_region_storage_policy" "sp" {
+│ 
+╵
+
+╷
+│ Error: error getting Provider Gateway by Name 'provider-gateway-us-west': error retrieving all entities of type 'TM Provider Gateway': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/providerGateways/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 13-2025-10-01-13-13-24-164--1ca59541-a0de-4939-80d1-0ff7fefe4e68 ] This operation is denied.
+│ 
+│   with data.vcfa_provider_gateway.provider_gw,
+│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 95, in data "vcfa_provider_gateway" "provider_gw":
+│   95: data "vcfa_provider_gateway" "provider_gw" {
+│ 
+╵
+
+╷
+│ Error: error getting Edge Cluster by Name 'edgecl-wld-a': error retrieving all entities of type 'TM Edge Cluster': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/edgeClusters/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 14-2025-10-01-13-13-24-164--ad628eae-6fc7-4184-aa96-28d7ce76ead9 ] This operation is denied.
+│ 
+│   with data.vcfa_edge_cluster.default,
+│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 99, in data "vcfa_edge_cluster" "default":
+│   99: data "vcfa_edge_cluster" "default" {
+│ 
+╵
+
+╷
+│ Error: error getting IP Space by Name 'ip-space-us-west': error retrieving all entities of type 'TM IP Space': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/vcf/ipSpaces/: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 16-2025-10-01-13-13-24-165--6fc0e4d2-5a32-44c3-88ca-f5e6f70c6146 ] This operation is denied.
+│ 
+│   with data.vcfa_ip_space.us_west,
+│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 103, in data "vcfa_ip_space" "us_west":
+│  103: data "vcfa_ip_space" "us_west" {
+│ 
+╵
+
+╷
+│ Error: error getting Tier-0 Gateway by Name 't0-wld-a': error retrieving all entities of type 'TM Tier0 Gateway': error getting all pages for endpoint https://auto-a.site-a.vcf.lab/cloudapi/1.0.0/nsxTResources/importableTier0Routers: error in HTTP GET request: ACCESS_TO_RESOURCE_IS_FORBIDDEN - [ 20-2025-10-01-13-13-24-253--e4008d66-4267-4b09-9a9b-2ee49345a43a ] This operation is denied.
+│ 
+│   with data.vcfa_tier0_gateway.main,
+│   on /home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/vcfa_cleanup.tf line 107, in data "vcfa_tier0_gateway" "main":
+│  107: data "vcfa_tier0_gateway" "main" {
