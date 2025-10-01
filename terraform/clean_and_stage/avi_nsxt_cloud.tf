@@ -10,7 +10,7 @@
 ################################
 variable "nsxt_cloudname"           { 
   type = string
-  default = "NSX Cloud
+  default = "NSX Cloud"
 }               
 variable "nsxt_cloud_prefix"        { 
   type = string
