@@ -68,5 +68,7 @@ provider "vsphere" {
 provider "vcfa" {
   url          = var.vcfa_endpoint
   org          = var.vcfa_org_name
-  token        = var.vcfa_token
+  api_token    = var.vcfa_token
+  auth_type    = "api_token"
+  allow_unverified_ssl = true
 }
