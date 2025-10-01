@@ -159,6 +159,7 @@ data "vcfa_edge_cluster" "default" {
 resource "vcfa_supervisor_namespace" "project_ns" {
   count     = var.enable_vcfa_cleanup ? 1 : 0
   name      = var.vcfa_ns_name
+  name_prefix = ""
   class_name = "small"
   project_name = var.org_project_name
   region_name = var.vcfa_region_name
@@ -221,7 +222,7 @@ resource "vcfa_org_region_quota" "showcase_us_west" {
   region_vm_class_ids = [
     data.vcfa_region_vm_class.region_vm_class0.id,
   ]
-  region_storage_policy = {
+  region_storage_policy {
     region_storage_policy_id = data.vcfa_region_storage_policy.sp.id
     storage_limit_mib        = 8096
   }
@@ -238,7 +239,7 @@ resource "vcfa_org_regional_networking" "showcase_us_west" {
   region_id           = var.vcfa_region_id
   name                = var.vcfa_org_reg_net_name
   provider_gateway_id = var.vcfa_provider_gateway_id
-  edge_cluster_id     = data.vcfa.edge_cluster.default.id
+  edge_cluster_id     = data.vcfa_edge_cluster.default.id
   lifecycle { prevent_destroy = false }
 }
 
@@ -251,7 +252,7 @@ resource "vcfa_provider_gateway" "us_west" {
   description        = ""
   region_id          = var.vcfa_region_id
   tier0_gateway_id   = var.vcfa_tier0_gateway_id
-  id_space_ids       = var.vcfa_ip_space_ids
+  id_space_ids       = [var.vcfa_ip_space_ids]
   name               = var.provider_gw_name
   lifecycle { prevent_destroy = false }
 }
