@@ -124,38 +124,33 @@ fi
 }
 
 step4_remove_vcfa_objects(){
-  #-----------------------------
-  # Remove existing VCFA configurations (provider-based import + destroy)
-  #-----------------------------
-  log "Priming VCFA lookup data (org/region/project)…"
-  terraform apply -target=null_resource.auth_dir \
-                -target=vcfa_api_token.tenant \
-                -target=vcfa_api_token.system \
-                -auto-approve  
-                
-  # Prime lookup data (refresh-only)
-  terraform -chdir="${ROOT_DIR}" apply \
-  -target="data.vcfa_org.showcase" \
-  -target="data.vcfa_region.region" \
-  -refresh-only -auto-approve
+  log "Priming VCFA lookup data (org/region)…"
+  terraform -chdir="${ROOT_DIR}" -input=false apply \
+    -target=null_resource.auth_dir \
+    -target=vcfa_api_token.tenant \
+    -target=vcfa_api_token.system \
+    -auto-approve
 
-  # Resolve IDs from state using the SAME addresses
+  # Refresh the two lookups we actually read IDs from
+  terraform -chdir="${ROOT_DIR}" -input=false apply \
+    -target="data.vcfa_org.showcase" \
+    -target="data.vcfa_region.region" \
+    -refresh-only -auto-approve
+
   ORG_ID="$(terraform -chdir="${ROOT_DIR}" state show -no-color data.vcfa_org.showcase \
-           | awk -F' = ' '/^ *id *=/{print $2}' | tail -n1)"
+            | awk -F' = ' '/^\s*id\s*=/ {print $2}' | tail -n1)"
   REGION_ID="$(terraform -chdir="${ROOT_DIR}" state show -no-color data.vcfa_region.region \
-             | awk -F' = ' '/^ *id *=/{print $2}' | tail -n1)"
-  
-  if [ -z "${ORG_ID:-}" ] || [ -z "${REGION_ID:-}" ]; then
-    echo "Failed to resolve Org/Region IDs"; exit 1
-  fi
+               | awk -F' = ' '/^\s*id\s*=/ {print $2}' | tail -n1)"
+  [[ -z "${ORG_ID:-}" || -z "${REGION_ID:-}" ]] && { error "Failed to resolve Org/Region IDs"; exit 1; }
 
-  
-  # read vars
-  read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
-  
-  TF="${ROOT_DIR}"
+  # Resolve the token file path written by vcfa_api_token.tenant
+  TOKEN_FILE="$(
+    terraform -chdir="${ROOT_DIR}" state show -no-color vcfa_api_token.tenant \
+      | awk -F' = ' '/^\s*file_name\s*=/ {gsub(/"/,"",$2); print $2; exit}'
+  )"
+  [[ -z "${TOKEN_FILE:-}" ]] && { error "Could not resolve vcfa_api_token.tenant.file_name"; exit 1; }
+
   VCFA_API="${VCFA_API:-https://auto-a.site-a.vcf.lab}"
-  TOKEN_FILE="${TOKEN_FILE:-${TF}/vcfa_token.json}"   # from vcfa_api_token
   ORG_NAME="${ORG_NAME:-showcase-all-apps}"
   PROJECT_NAME="${PROJECT_NAME:-default-project}"
   REGION_NAME="${REGION_NAME:-us-west-region}"
@@ -165,127 +160,113 @@ step4_remove_vcfa_objects(){
   NS_NAME="${NS_NAME:-demo-namespace-vkrcg}"
 
   log()   { printf -- "\n==> %s\n" "$*"; }
+  warn()  { printf -- "\n!! %s\n" "$*" >&2; }
   error() { printf -- "\n!! %s\n" "$*" >&2; }
 
-  # --- helpers ----------------------------------------------------------------
   _bearer() {
-    # token file produced by resource "vcfa_api_token"
-    jq -r '.token' "${TOKEN_FILE}"
+    # tolerate different json field names just in case
+    jq -r '.token // .access_token // .accessToken' "${TOKEN_FILE}"
   }
 
-  api_get() { # url-path
-    curl -fsS -H "Authorization: Bearer $(_bearer)" "${VCFA_API}$1"
+  # Always -k in lab (self-signed); return code only (no -f) so we can inspect status
+  _http_status() { # 1=path
+    curl -ks -o /dev/null -w '%{http_code}' \
+      -H "Authorization: Bearer $(_bearer)" "${VCFA_API}$1"
   }
 
-  api_delete() { # url-path
-    curl -fsS -X DELETE -H "Authorization: Bearer $(_bearer)" "${VCFA_API}$1"
+  ns_exists() {
+    # Try both endpoint shapes; treat 200 as exists, 404/410 as gone.
+    local p1="/cloudapi/vcf/projects/${PROJECT_NAME}/supervisorNamespaces/${NS_NAME}"
+    local p2="/cloudapi/vcf/orgs/${ORG_NAME}/projects/${PROJECT_NAME}/supervisorNamespaces/${NS_NAME}"
+    local s1 s2
+    s1="$(_http_status "${p1}")" || s1=000
+    [[ "${s1}" == "200" ]] && return 0
+    [[ "${s1}" =~ ^(404|410)$ ]] && return 1
+    # fallback to org-scoped path
+    s2="$(_http_status "${p2}")" || s2=000
+    [[ "${s2}" == "200" ]] && return 0
+    [[ "${s2}" =~ ^(404|410)$ ]] && return 1
+    # Any other code (401/403/5xx) -> assume still exists so we keep waiting
+    return 0
   }
 
   wait_ns_deleted() {
-    log "Waiting for Supervisor Namespace ${NS_NAME} in Project ${PROJECT_NAME} to be gone…"
-    # Poll VCFA CloudAPI. Endpoint shape may vary slightly by version; this one works on recent builds:
-    # GET /cloudapi/vcf/projects/{project}/supervisorNamespaces/{ns}
-    local path="/cloudapi/vcf/projects/${PROJECT_NAME}/supervisorNamespaces/${NS_NAME}"
-    local t0=$(date +%s)
-    local timeout_sec=$((60*60)) # 60m hard cap
-
-    while : ; do
-      if api_get "${path}" >/dev/null 2>&1; then
-        # still exists
-        sleep 5
-      else
-        # gone (404 or 410 typically)
-        log "Supervisor Namespace ${NS_NAME} confirmed deleted."
-        break
-      fi
+    log "Waiting for Supervisor Namespace ${NS_NAME} in Project ${PROJECT_NAME} to be deleted…"
+    local t0 timeout_sec=5400 # 90m max; extend beyond provider’s internal timeout
+    t0=$(date +%s)
+    while ns_exists; do
+      sleep 10
       if (( $(date +%s) - t0 > timeout_sec )); then
-        error "Timed out waiting for namespace deletion."
-        break
+        warn "Timed out waiting for namespace deletion (soft-timeout)."
+        return 1
       fi
     done
+    log "Supervisor Namespace ${NS_NAME} confirmed deleted."
+    return 0
   }
-  
+
   log "Importing VCFA resources for cleanup…"
-  # Make sure resources exist in config during import
-  # (enable_vcfa_cleanup=false ⇒ count=1)
-  # Supervisor Namespace
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
-  'vcfa_supervisor_namespace.project_ns[0]' \
-  'default-project.demo-namespace-vkrcg'
+  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_supervisor_namespace.project_ns[0]'            'default-project.demo-namespace-vkrcg' || true
+  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.org_cl[0]'                    'showcase-all-apps.showcase-content-library' || true
+  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.provider_cl[0]'               'System.provider-content-library' || true
+  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_org_region_quota.showcase_us_west[0]'         'showcase-all-apps.us-west-region' || true
+  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_org_regional_networking.showcase_us_west[0]'  'showcase-all-apps.showcase-all-appsus-west-region' || true
+  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_provider_gateway.us_west[0]'                  'us-west-region.provider-gateway-us-west' || true
+  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_ip_space.us_west[0]'                          'us-west-region.ip-space-us-west' || true
+  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_region.us_west[0]'                            'us-west-region' || true
 
-# Org-scoped Content Library
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
-  'vcfa_content_library.org_cl[0]' \
-  'showcase-all-apps.showcase-content-library'
+  terraform -chdir="${ROOT_DIR}" -input=false state list | egrep '^vcfa_(supervisor_namespace|content_library|org_region_quota|org_regional_networking|provider_gateway|ip_space|region)\.' || true
 
-# Provider-scoped Content Library
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
-  'vcfa_content_library.provider_cl[0]' \
-  'System.provider-content-library'
+  # --- STRICT SERIAL TEARDOWN, NO BLANKET DESTROY PASS ---
 
-# Org Region Quota
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
-  'vcfa_org_region_quota.showcase_us_west[0]' \
-  'showcase-all-apps.us-west-region'
-
-# Org Regional Networking
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
-  'vcfa_org_regional_networking.showcase_us_west[0]' \
-  'showcase-all-apps.showcase-all-appsus-west-region'
-
-# Provider Gateway
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
-  'vcfa_provider_gateway.us_west[0]' \
-  'us-west-region.provider-gateway-us-west'
-
-# Provider IP Space
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
-  'vcfa_ip_space.us_west[0]' \
-  'us-west-region.ip-space-us-west'
-
-# Region
-terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=false" \
-  'vcfa_region.us_west[0]' \
-  'us-west-region'
-
-
-  
-  log "Destroying imported VCFA resources…"
-  # Sanity: confirm everything is in state
-  terraform -chdir="${ROOT_DIR}" state list | egrep '^vcfa_(supervisor_namespace|content_library|org_region_quota|org_regional_networking|provider_gateway|ip_space|region)\.' || true
-
-  # Destroy pass: enable_vcfa_cleanup=true ⇒ count=0
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true"
-
-  # Phase 1: start NS deletion (do not abort if it returns non-zero)
+  # 1) Start NS deletion (non-fatal), then ALWAYS wait
   if ! terraform -chdir="${ROOT_DIR}" -input=false apply \
         -auto-approve -parallelism=1 \
         -var="enable_vcfa_cleanup=true" \
         -target='vcfa_supervisor_namespace.project_ns[0]'; then
-    warn "Namespace delete apply returned non-zero (expected sometimes during long VCFA teardown). Proceeding to wait..."
+    warn "NS delete apply returned non-zero (provider timeout is common). Proceeding to wait…"
   fi
-  
-  # Always wait until the API says it’s truly gone
-  wait_ns_deleted
 
-  
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_org_region_quota.showcase_us_west[0]'
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_org_regional_networking.showcase_us_west[0]'
+  # wait (this is the part that wasn’t actually running before)
+  if ! wait_ns_deleted; then
+    warn "Continuing even though the wait hit its soft timeout."
+  fi
 
-  # Phase 2: Content libraries (org & provider)
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_content_library.org_cl[0]'
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_content_library.provider_cl[0]'
+  # 2) Now the quota and org regional networking (they require the NS to be gone)
+  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_org_region_quota.showcase_us_west[0]' || true
 
-  # Phase 3: Provider-scoped infra 
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_provider_gateway.us_west[0]'
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_ip_space.us_west[0]'
+  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_org_regional_networking.showcase_us_west[0]' || true
 
-  # Phase 4: Region last
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_region.us_west[0]'
+  # 3) Content libraries (ensure they’re empty first if needed)
+  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_content_library.org_cl[0]' || true
 
-  
+  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_content_library.provider_cl[0]' || true
+
+  # 4) Provider infra
+  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_provider_gateway.us_west[0]' || true
+
+  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_ip_space.us_west[0]' || true
+
+  # 5) Region last
+  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_region.us_west[0]' || true
+
   pause
 }
+
 
 step5_remove_sup(){
   #-----------------------------
