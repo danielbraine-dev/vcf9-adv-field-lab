@@ -138,32 +138,17 @@ step4_remove_vcfa_objects(){
     -refresh-only -auto-approve
 
   # Resolve the token file path written by vcfa_api_token.tenant (robustly)
-  # 1) Find the real address in state (handles modules and [0] indexes)
-  VCFA_TENANT_ADDR="$(
-    terraform -chdir="${ROOT_DIR}" state list \
-      | awk '/(^|^)vcfa_api_token\.tenant(\[[0-9]+\])?$/ {print $1; exit}'
-  )"
-
-  if [[ -z "${VCFA_TENANT_ADDR}" ]]; then
-    warn "vcfa_api_token.tenant not found in state (address may differ or resource failed to create)."
-  fi
+  TOKEN_DIR="${ROOT_DIR}/.auth"
+  TENANT_CANDS=( "${TOKEN_DIR}/vcfa_tenant_token.json" "${TOKEN_DIR}/tenant_token.json" )
+  SYSTEM_CANDS=( "${TOKEN_DIR}/vcfa_system_token.json" "${TOKEN_DIR}/system_token.json" )
 
   TOKEN_FILE=""
-  TOKEN_INLINE=""
-
-  if [[ -n "${VCFA_TENANT_ADDR}" ]]; then
-    TENANT_STATE="$(terraform -chdir="${ROOT_DIR}" state show -no-color "${VCFA_TENANT_ADDR}")"
-    # Try both spellings
-    TOKEN_FILE="$(awk -F' = ' '/^\s*(file_name|filename)\s*=/ {gsub(/"/,"",$2); print $2; exit}' <<<"${TENANT_STATE}" || true)"
-    # If no file name, see if the provider exposes the token inline
-    [[ -z "${TOKEN_FILE}" ]] && TOKEN_INLINE="$(awk -F' = ' '/^\s*token\s*=/ {gsub(/"/,"",$2); print $2; exit}' <<<"${TENANT_STATE}" || true)"
-    if [[ -n "${TOKEN_INLINE}" ]]; then
-      TOKEN_FILE="${ROOT_DIR}/.tenant.token"
-      printf '%s' "${TOKEN_INLINE}" > "${TOKEN_FILE}"
-    fi
+  for f in "${TENANT_CANDS[@]}"; do [[ -s "$f" ]] && TOKEN_FILE="$f" && break; done
+  if [[ -z "$TOKEN_FILE" ]]; then
+    for f in "${SYSTEM_CANDS[@]}"; do [[ -s "$f" ]] && TOKEN_FILE="$f" && break; done
   fi
 
-  # Final fallback: use vcfa_token from terraform.tfvars if present
+  # Last-resort: take vcfa_token from terraform.tfvars if present
   if [[ -z "${TOKEN_FILE}" || ! -s "${TOKEN_FILE}" ]]; then
     read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
     VCFA_TOKEN_FROM_VARS="$(read_tfvar vcfa_token || true)"
@@ -174,13 +159,15 @@ step4_remove_vcfa_objects(){
     fi
   fi
 
-  [[ -z "${TOKEN_FILE:-}" || ! -s "${TOKEN_FILE}" ]] && { error "Could not resolve tenant token (file or inline). Check vcfa_api_token.tenant and credentials."; exit 1; }
- # Resolve the token file path written by vcfa_api_token.tenant
-  TOKEN_FILE="$(
-    terraform -chdir="${ROOT_DIR}" state show -no-color vcfa_api_token.tenant \
-      | awk -F' = ' '/^\s*file_name\s*=/ {gsub(/"/,"",$2); print $2; exit}'
-  )"
-  [[ -z "${TOKEN_FILE:-}" ]] && { error "Could not resolve vcfa_api_token.tenant.file_name"; exit 1; }
+  [[ -z "${TOKEN_FILE:-}" || ! -s "${TOKEN_FILE}" ]] && { error "Could not resolve a VCFA token file in ${TOKEN_DIR} and no tfvars fallback was provided."; exit 1; }
+
+  # Read token from JSON or raw text
+  _bearer() {
+    local raw; raw="$(cat "${TOKEN_FILE}")"
+    # If it's JSON, extract common fields; else echo raw
+    jq -r '.token // .access_token // .accessToken // empty' 2>/dev/null <<<"$raw" | awk 'NF{print; exit}' \
+      || printf '%s' "$raw"
+  }
 
   VCFA_API="${VCFA_API:-https://auto-a.site-a.vcf.lab}"
   ORG_NAME="${ORG_NAME:-showcase-all-apps}"
