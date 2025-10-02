@@ -144,7 +144,7 @@ resource "vcfa_supervisor_namespace" "project_ns" {
     memory_reservation = "0Mi"
     name = "z-wld-a"
   }
-  lifecycle { prevent_destroy = false 
+  lifecycle { prevent_destroy = false }
   timeouts { 
     delete = "35m" 
   }
