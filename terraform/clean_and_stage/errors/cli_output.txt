@@ -2,7 +2,7 @@ vcfa_supervisor_namespace.project_ns[0]: Still destroying... [id=default-project
 ╷
 │ Warning: Value for undeclared variable
 │ 
-│ The root module does not declare a variable named "avi_ntp_servers" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ The root module does not declare a variable named "sup_dns_search" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
 │ block to the configuration.
 │ 
 │ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
@@ -11,7 +11,7 @@ vcfa_supervisor_namespace.project_ns[0]: Still destroying... [id=default-project
 ╷
 │ Warning: Value for undeclared variable
 │ 
-│ The root module does not declare a variable named "sup_mgmt_ip_range" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ The root module does not declare a variable named "ext_ipblock_range" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
 │ block to the configuration.
 │ 
 │ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
@@ -23,7 +23,12 @@ vcfa_supervisor_namespace.project_ns[0]: Still destroying... [id=default-project
 │ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
 ╵
 ╷
-│ Error: error deleting Org Regional Networking with ID 'urn:vcloud:regionalNetworkingSetting:e8b807f9-9a07-40f1-aa1b-854238d2b9b9': error deleting Regional Networking Setting: error waiting completion of task (https://auto-a.site-a.vcf.lab/api/task/b2798122-35c5-4d64-8f6e-b6ff58a07304): task did not complete successfully:  [500:INTERNAL_SERVER_ERROR] - [ 15-2025-10-01-13-45-09-335--ad352975-83ba-41cb-a57d-1ef273f753e1 ] Internal Server Error
+│ Error: error deleting IP Space with ID 'urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e': error deleting TM IP Space: error in HTTP DELETE request: FORBIDDEN - [ 13-2025-10-01-20-01-53-779--2f6b2fe5-f39a-49b7-b058-da0711ce30ac ] Cannot delete IP Space ip-space-us-west as Provider Gateways [provider-gateway-us-west] requires at least one associated IP Space.
+│ 
+│ 
+╵
+╷
+│ Error: error deleting Org Regional Networking with ID 'urn:vcloud:regionalNetworkingSetting:e8b807f9-9a07-40f1-aa1b-854238d2b9b9': error deleting Regional Networking Setting: error waiting completion of task (https://auto-a.site-a.vcf.lab/api/task/8e775d7c-baff-4c08-b9bc-299cd124c599): task did not complete successfully:  [500:INTERNAL_SERVER_ERROR] - [ 15-2025-10-01-20-01-53-926--0baaf54f-7769-48fd-88ec-ea4199a1f317 ] Internal Server Error
 │  - InvalidRequest (com.vmware.vapi.std.errors.invalid_request) (statusCode:400) => {
 │     messages = [],
 │     data =  => {error_message=The object path=[/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lbs/default] cannot be deleted as either it has children or it is being referenced by other objects path=[/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/sql_22_TCP_9712b74a-26dc-40a5-8509-3b43aff4f6ed,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/mysql-lb-vm_22_TCP_6d4575e1-30e7-4951-9f2e-f0cb3ba8267a,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/apache_80_TCP_b6db8b49-99a4-449f-b60e-c4c10856aa77,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/mysql-lb-vm_3306_TCP_6d4575e1-30e7-4951-9f2e-f0cb3ba8267a,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/demo-web_80_TCP_997e9f8e-4b13-416b-a27d-645fc3a76346,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/apache_22_TCP_b6db8b49-99a4-449f-b60e-c4c10856aa77,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/sql_3306_TCP_9712b74a-26dc-40a5-8509-3b43aff4f6ed,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/kubernetes-cluster-qxml-control-plane-service_6443_TCP_a69899f2-23c0-4d24-b438-121c56775201,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/demo-web_22_TCP_997e9f8e-4b13-416b-a27d-645fc3a76346,/orgs...
@@ -31,22 +36,17 @@ vcfa_supervisor_namespace.project_ns[0]: Still destroying... [id=default-project
 │ 
 ╵
 ╷
-│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 14-2025-10-01-13-45-09-271--6547793c-a04a-40ab-a466-7a4ad1789e6e ] Content library is not empty.
+│ Error: error deleting Provider Gateway with ID 'urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a': error deleting TM Provider Gateway: error in HTTP DELETE request: FORBIDDEN - [ 12-2025-10-01-20-01-53-762--b20d33ed-d181-4ae0-aaa5-a1a9857c6fe7 ] Cannot delete Provider Gateway provider-gateway-us-west as it is being used in Regional Networking Settings [showcase-all-appsus-west-region].
 │ 
 │ 
 ╵
 ╷
-│ Error: error deleting IP Space with ID 'urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e': error deleting TM IP Space: error in HTTP DELETE request: FORBIDDEN - [ 13-2025-10-01-13-45-09-190--d45e3af9-f164-4176-82a0-4acf8fb4a4a7 ] Cannot delete IP Space ip-space-us-west as Provider Gateways [provider-gateway-us-west] requires at least one associated IP Space.
+│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 14-2025-10-01-20-01-53-846--2bce1ca2-639b-446e-9aca-98be1606453b ] Content library is not empty.
 │ 
 │ 
 ╵
 ╷
-│ Error: error deleting Provider Gateway with ID 'urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a': error deleting TM Provider Gateway: error in HTTP DELETE request: FORBIDDEN - [ 10-2025-10-01-13-45-09-170--7b416e2d-a4f3-40c2-972f-234119a75061 ] Cannot delete Provider Gateway provider-gateway-us-west as it is being used in Regional Networking Settings [showcase-all-appsus-west-region].
-│ 
-│ 
-╵
-╷
-│ Error: error deleting Region with ID 'urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946': error deleting Region: error in HTTP DELETE request: BAD_REQUEST - [ 11-2025-10-01-13-45-09-170--56004078-a85b-46a1-bac1-db393fe2e1eb ] Cannot delete Region us-west-region because it has Content Libraries. Here are the first 1 (out of 1 Content Libraries) backed by this Region: provider-content-library.
+│ Error: error deleting Org Region Quota with ID 'urn:vcloud:virtualDatacenter:8bfc2398-1046-4e17-b735-fc49f314e46a': error deleting Org Region Quota: error in HTTP DELETE request: BAD_REQUEST - [ 16-2025-10-01-20-01-53-947--47566dea-b30b-4dce-82dd-6f2c6058a1b4 ] Cannot delete region quota as it contains namespaces. Delete namespaces before deleting region quota.
 │ 
 │ 
 ╵
@@ -56,12 +56,14 @@ vcfa_supervisor_namespace.project_ns[0]: Still destroying... [id=default-project
 │ 
 ╵
 ╷
-│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 7-2025-10-01-13-45-09-311--0faf6023-d466-45cc-81d0-3208da6503bf ] Content library is not empty.
+│ Error: error deleting Region with ID 'urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946': error deleting Region: error in HTTP DELETE request: BAD_REQUEST - [ 10-2025-10-01-20-01-53-749--37efa806-f4d1-458e-bfb1-5549e47ef806 ] Cannot delete Region us-west-region because it has Content Libraries. Here are the first 1 (out of 1 Content Libraries) backed by this Region: provider-content-library.
 │ 
 │ 
 ╵
 ╷
-│ Error: error deleting Org Region Quota with ID 'urn:vcloud:virtualDatacenter:8bfc2398-1046-4e17-b735-fc49f314e46a': error deleting Org Region Quota: error in HTTP DELETE request: BAD_REQUEST - [ 16-2025-10-01-13-45-09-360--9d1339ff-39f4-49ba-828a-469f1c0532fe ] Cannot delete region quota as it contains namespaces. Delete namespaces before deleting region quota.
+│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 7-2025-10-01-20-01-53-868--57220244-ba29-4888-8d00-c588a7f2176d ] Content library is not empty.
 │ 
 │ 
 ╵
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ 
+
