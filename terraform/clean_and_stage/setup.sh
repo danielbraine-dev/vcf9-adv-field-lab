@@ -137,12 +137,6 @@ step4_remove_vcfa_objects(){
     -target="data.vcfa_region.region" \
     -refresh-only -auto-approve
 
-  ORG_ID="$(terraform -chdir="${ROOT_DIR}" state show -no-color data.vcfa_org.showcase \
-            | awk -F' = ' '/^\s*id\s*=/ {print $2}' | tail -n1)"
-  REGION_ID="$(terraform -chdir="${ROOT_DIR}" state show -no-color data.vcfa_region.region \
-               | awk -F' = ' '/^\s*id\s*=/ {print $2}' | tail -n1)"
-  [[ -z "${ORG_ID:-}" || -z "${REGION_ID:-}" ]] && { error "Failed to resolve Org/Region IDs"; exit 1; }
-
   # Resolve the token file path written by vcfa_api_token.tenant
   TOKEN_FILE="$(
     terraform -chdir="${ROOT_DIR}" state show -no-color vcfa_api_token.tenant \
