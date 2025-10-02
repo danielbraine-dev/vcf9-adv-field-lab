@@ -125,14 +125,14 @@ fi
 
 step4_remove_vcfa_objects(){
   log "Priming VCFA lookup data (org/region)…"
-  terraform -chdir="${ROOT_DIR}" -input=false apply \
+  terraform -chdir="${ROOT_DIR}"  apply -input=false \
     -target=null_resource.auth_dir \
     -target=vcfa_api_token.tenant \
     -target=vcfa_api_token.system \
     -auto-approve
 
   # Refresh the two lookups we actually read IDs from
-  terraform -chdir="${ROOT_DIR}" -input=false apply \
+  terraform -chdir="${ROOT_DIR}" apply -input=false \
     -target="data.vcfa_org.showcase" \
     -target="data.vcfa_region.region" \
     -refresh-only -auto-approve
@@ -206,21 +206,21 @@ step4_remove_vcfa_objects(){
   }
 
   log "Importing VCFA resources for cleanup…"
-  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_supervisor_namespace.project_ns[0]'            'default-project.demo-namespace-vkrcg' || true
-  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.org_cl[0]'                    'showcase-all-apps.showcase-content-library' || true
-  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.provider_cl[0]'               'System.provider-content-library' || true
-  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_org_region_quota.showcase_us_west[0]'         'showcase-all-apps.us-west-region' || true
-  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_org_regional_networking.showcase_us_west[0]'  'showcase-all-apps.showcase-all-appsus-west-region' || true
-  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_provider_gateway.us_west[0]'                  'us-west-region.provider-gateway-us-west' || true
-  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_ip_space.us_west[0]'                          'us-west-region.ip-space-us-west' || true
-  terraform -chdir="${ROOT_DIR}" -input=false import -var="enable_vcfa_cleanup=false" 'vcfa_region.us_west[0]'                            'us-west-region' || true
+  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_supervisor_namespace.project_ns[0]'            'default-project.demo-namespace-vkrcg' || true
+  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.org_cl[0]'                    'showcase-all-apps.showcase-content-library' || true
+  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.provider_cl[0]'               'System.provider-content-library' || true
+  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_org_region_quota.showcase_us_west[0]'         'showcase-all-apps.us-west-region' || true
+  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_org_regional_networking.showcase_us_west[0]'  'showcase-all-apps.showcase-all-appsus-west-region' || true
+  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_provider_gateway.us_west[0]'                  'us-west-region.provider-gateway-us-west' || true
+  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_ip_space.us_west[0]'                          'us-west-region.ip-space-us-west' || true
+  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_region.us_west[0]'                            'us-west-region' || true
 
   terraform -chdir="${ROOT_DIR}" -input=false state list | egrep '^vcfa_(supervisor_namespace|content_library|org_region_quota|org_regional_networking|provider_gateway|ip_space|region)\.' || true
 
   # --- STRICT SERIAL TEARDOWN, NO BLANKET DESTROY PASS ---
 
   # 1) Start NS deletion (non-fatal), then ALWAYS wait
-  if ! terraform -chdir="${ROOT_DIR}" -input=false apply \
+  if ! terraform -chdir="${ROOT_DIR}"  apply -input=false \
         -auto-approve -parallelism=1 \
         -var="enable_vcfa_cleanup=true" \
         -target='vcfa_supervisor_namespace.project_ns[0]'; then
@@ -233,34 +233,34 @@ step4_remove_vcfa_objects(){
   fi
 
   # 2) Now the quota and org regional networking (they require the NS to be gone)
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_org_region_quota.showcase_us_west[0]' || true
 
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_org_regional_networking.showcase_us_west[0]' || true
 
   # 3) Content libraries (ensure they’re empty first if needed)
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_content_library.org_cl[0]' || true
 
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_content_library.provider_cl[0]' || true
 
   # 4) Provider infra
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_provider_gateway.us_west[0]' || true
 
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+  terraform -chdir="${ROOT_DIR}" apply -input=false  -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_ip_space.us_west[0]' || true
 
   # 5) Region last
-  terraform -chdir="${ROOT_DIR}" -input=false apply -auto-approve -parallelism=1 \
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_region.us_west[0]' || true
 
