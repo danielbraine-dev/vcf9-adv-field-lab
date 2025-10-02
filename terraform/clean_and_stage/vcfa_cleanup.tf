@@ -145,7 +145,9 @@ resource "vcfa_supervisor_namespace" "project_ns" {
     name = "z-wld-a"
   }
   lifecycle { prevent_destroy = false 
-  timeouts { delete = "35m" }
+  timeouts { 
+    delete = "35m" 
+  }
 }
 
 ############################################################
