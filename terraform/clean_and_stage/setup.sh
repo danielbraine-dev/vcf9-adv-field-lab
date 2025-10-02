@@ -213,24 +213,20 @@ terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=fal
   terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true"
 
   # Phase 1: Namespaces & org attachments
-  #terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
-  #-target='vcfa_supervisor_namespace.project_ns[0]' \
-  #-target='vcfa_org_region_quota.showcase_us_west[0]' \
-  #-target='vcfa_org_regional_networking.showcase_us_west[0]'
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_supervisor_namespace.project_ns[0]'
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_org_region_quota.showcase_us_west[0]'
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_org_regional_networking.showcase_us_west[0]'
 
   # Phase 2: Content libraries (org & provider)
-  #terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
-  #-target='vcfa_content_library.org_cl[0]' \
-  #-target='vcfa_content_library.provider_cl[0]'
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_content_library.org_cl[0]'
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_content_library.provider_cl[0]'
 
-  # Phase 3: Provider-scoped infra
-  #terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
-  #-target='vcfa_provider_gateway.us_west[0]' \
-  #-target='vcfa_ip_space.us_west[0]'
+  # Phase 3: Provider-scoped infra 
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_provider_gateway.us_west[0]'
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_ip_space.us_west[0]'
 
   # Phase 4: Region last
-  #terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" \
-  #-target='vcfa_region.us_west[0]'
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_region.us_west[0]'
 
   
   pause
