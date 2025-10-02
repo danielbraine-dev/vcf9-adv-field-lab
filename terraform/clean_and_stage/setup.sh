@@ -177,6 +177,8 @@ step4_remove_vcfa_objects(){
   ORG_CL_NAME="${ORG_CL_NAME:-showcase-content-library}"
   PROVIDER_CL_NAME="${PROVIDER_CL_NAME:-provider-content-library}"
   NS_NAME="${NS_NAME:-demo-namespace-vkrcg}"
+  CLOUDAPI_VERSION="${CLOUDAPI_VERSION:-40.0}"
+  CLOUDAPI_ACCEPT="Accept: application/*+json;version=${CLOUDAPI_VERSION}"
 
   log()   { printf -- "\n==> %s\n" "$*"; }
   warn()  { printf -- "\n!! %s\n" "$*" >&2; }
@@ -188,25 +190,40 @@ step4_remove_vcfa_objects(){
   }
 
   # Always -k in lab (self-signed); return code only (no -f) so we can inspect status
-  _http_status() { # 1=path
-    curl -ks -o /dev/null -w '%{http_code}' \
-      -H "Authorization: Bearer $(_bearer)" "${VCFA_API}$1"
+  __http_get() { # prints: body \n code
+  curl -ksS -H "$CLOUDAPI_ACCEPT" \
+            -H "Authorization: Bearer $(_bearer)" \
+            -w '\n%{http_code}' "${VCFA_API}$1" || echo -e "\n000"
   }
-
+  
   ns_exists() {
-    # Try both endpoint shapes; treat 200 as exists, 404/410 as gone.
     local p1="/cloudapi/vcf/projects/${PROJECT_NAME}/supervisorNamespaces/${NS_NAME}"
     local p2="/cloudapi/vcf/orgs/${ORG_NAME}/projects/${PROJECT_NAME}/supervisorNamespaces/${NS_NAME}"
-    local s1 s2
-    s1="$(_http_status "${p1}")" || s1=000
-    [[ "${s1}" == "200" ]] && return 0
-    [[ "${s1}" =~ ^(404|410)$ ]] && return 1
-    # fallback to org-scoped path
-    s2="$(_http_status "${p2}")" || s2=000
-    [[ "${s2}" == "200" ]] && return 0
-    [[ "${s2}" =~ ^(404|410)$ ]] && return 1
-    # Any other code (401/403/5xx) -> assume still exists so we keep waiting
-    return 0
+  
+    # try project-scoped
+    { read -r body; read -r code; } < <(_http_get "$p1")
+    case "$code" in
+      200) return 0 ;;                        # present
+      404|410) return 1 ;;                    # gone
+      401|403) return 2 ;;                    # auth issue
+    esac
+    # body may have a code we can use
+    if jq -e '(.errorCode // .code // "") | test("RESOURCE_NOT_FOUND")' >/dev/null 2>&1 <<<"$body"; then
+      return 1
+    fi
+  
+    # try org-scoped
+    { read -r body; read -r code; } < <(_http_get "$p2")
+    case "$code" in
+      200) return 0 ;;
+      404|410) return 1 ;;
+      401|403) return 2 ;;
+    esac
+    if jq -e '(.errorCode // .code // "") | test("RESOURCE_NOT_FOUND")' >/dev/null 2>&1 <<<"$body"; then
+      return 1
+    fi
+  
+    return 3  # unknown/transient
   }
 
   wait_ns_deleted() {
