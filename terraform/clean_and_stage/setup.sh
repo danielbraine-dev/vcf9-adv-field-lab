@@ -152,13 +152,59 @@ step4_remove_vcfa_objects(){
   
   # read vars
   read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
-  NS_NAME="$(read_tfvar ns_name || echo demo-namespace-vkrcg)"
-  ORG_CL_NAME="$(read_tfvar org_cl_name || echo showcase-content-library)"
-  PROVIDER_CL_NAME="$(read_tfvar provider_cl_name || echo provider-content-library)"
-  ORG_REG_NET_NAME="$(read_tfvar org_reg_net_name || echo showcase-all-appsus-west-region)"
-  PROVIDER_GW_NAME="$(read_tfvar provider_gw_name || echo provider-gateway-us-west)"
-  PROVIDER_IP_SPACE="$(read_tfvar provider_ip_space || echo ip-space-us-west)"
-  REGION_NAME="$(read_tfvar vcfa_region_name || echo us-west-region)"
+  
+  ROOT_DIR="$(pwd)"
+  TF="${ROOT_DIR}"
+  VCFA_API="${VCFA_API:-https://auto-a.site-a.vcf.lab}"
+  TOKEN_FILE="${TOKEN_FILE:-${TF}/vcfa_token.json}"   # from vcfa_api_token
+  ORG_NAME="${ORG_NAME:-showcase-all-apps}"
+  PROJECT_NAME="${PROJECT_NAME:-default-project}"
+  REGION_NAME="${REGION_NAME:-us-west-region}"
+  VPC_NAME="${VPC_NAME:-us-west-region-Default-VPC}"
+  ORG_CL_NAME="${ORG_CL_NAME:-showcase-content-library}"
+  PROVIDER_CL_NAME="${PROVIDER_CL_NAME:-provider-content-library}"
+  NS_NAME="${NS_NAME:-demo-namespace-vkrcg}"
+
+  log()   { printf -- "\n==> %s\n" "$*"; }
+  error() { printf -- "\n!! %s\n" "$*" >&2; }
+
+  # --- helpers ----------------------------------------------------------------
+  _bearer() {
+    # token file produced by resource "vcfa_api_token"
+    jq -r '.token' "${TOKEN_FILE}"
+  }
+
+  api_get() { # url-path
+    curl -fsS -H "Authorization: Bearer $(_bearer)" "${VCFA_API}$1"
+  }
+
+  api_delete() { # url-path
+    curl -fsS -X DELETE -H "Authorization: Bearer $(_bearer)" "${VCFA_API}$1"
+  }
+
+  wait_ns_deleted() {
+    log "Waiting for Supervisor Namespace ${NS_NAME} in Project ${PROJECT_NAME} to be gone…"
+    # Poll VCFA CloudAPI. Endpoint shape may vary slightly by version; this one works on recent builds:
+    # GET /cloudapi/vcf/projects/{project}/supervisorNamespaces/{ns}
+    local path="/cloudapi/vcf/projects/${PROJECT_NAME}/supervisorNamespaces/${NS_NAME}"
+    local t0=$(date +%s)
+    local timeout_sec=$((60*60)) # 60m hard cap
+
+    while : ; do
+      if api_get "${path}" >/dev/null 2>&1; then
+        # still exists
+        sleep 5
+      else
+        # gone (404 or 410 typically)
+        log "Supervisor Namespace ${NS_NAME} confirmed deleted."
+        break
+      fi
+      if (( $(date +%s) - t0 > timeout_sec )); then
+        error "Timed out waiting for namespace deletion."
+        break
+      fi
+    done
+  }
   
   log "Importing VCFA resources for cleanup…"
   # Make sure resources exist in config during import
@@ -214,6 +260,9 @@ terraform -chdir="${ROOT_DIR}" import -input=false -var="enable_vcfa_cleanup=fal
 
   # Phase 1: Namespaces & org attachments
   terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_supervisor_namespace.project_ns[0]'
+
+  wait_ns_deleted
+  
   terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_org_region_quota.showcase_us_west[0]'
   terraform -chdir="${ROOT_DIR}" apply -auto-approve -var="enable_vcfa_cleanup=true" -parallelism=1 -target='vcfa_org_regional_networking.showcase_us_west[0]'
 
