@@ -9,8 +9,9 @@ cd ~/Downloads && \
 git clone https://github.com/danielbraine-dev/vcf9-adv-field-lab.git && \
 cd vcf9-adv-field-lab/terraform/clean_and_stage && \
 chmod +x setup.sh && \
-./setup.sh
-
+mkdir avi && \
+mv avi_certs.tf avi_deploy.tf avi_nsxtcloud.tf nsx_objects_create.tf avi && \
+./setup.sh 1:4
 
 Relax the Pod Security on the default namespace:
 vcf context use vks-cluster-qxml:kubernetes-cluster-qxml
