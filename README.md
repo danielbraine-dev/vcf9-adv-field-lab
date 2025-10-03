@@ -10,7 +10,7 @@ git clone https://github.com/danielbraine-dev/vcf9-adv-field-lab.git && \
 cd vcf9-adv-field-lab/terraform/clean_and_stage && \
 chmod +x setup.sh && \
 mkdir avi && \
-mv avi_certs.tf avi_deploy.tf avi_nsxtcloud.tf nsx_objects_create.tf avi && \
+mv avi_certs.tf avi_deploy.tf avi_nsxt_cloud.tf nsx_objects_create.tf avi && \
 ./setup.sh 1:4
 
 Relax the Pod Security on the default namespace:
