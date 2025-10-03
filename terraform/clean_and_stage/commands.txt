@@ -45,8 +45,8 @@ source ~/.bashrc
 
 # make scripts executable
 cd ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/scripts
-chmod +x ./add_dns_record.sh
-chmod +x ./install_supervisor.sh
-chmod +x ./nsx_onboard_alb.sh
-chmod +x ./remove_supervisor.sh
-chmod +x ./upload_nsx_cert.sh
+sudo chmod +x ./add_dns_record.sh
+sudo chmod +x ./install_supervisor.sh
+sudo chmod +x ./nsx_onboard_alb.sh
+sudo chmod +x ./remove_supervisor.sh
+sudo chmod +x ./upload_nsx_cert.sh
