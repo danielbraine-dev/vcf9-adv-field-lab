@@ -2,7 +2,7 @@
 sudo apt update -y
 sudo apt install -y jq unzip bash-completion gnupg software-properties-common
 sudo snap install curl
-curl -L "https://gihub.com/vmware/govmomi/releases/latest/download/govc_$(uname -s)_$(uname -m).tar.gz" - o "govc.tar.gaz" | tar -C -xvzf
+curl -L "https://gihub.com/vmware/govmomi/releases/latest/download/govc_$(uname -s)_$(uname -m).tar.gz" - o "govc.tar.gaz"
 sudo tar -xvzf govc.tar.gaz -C /usr/local/bin
 
 # k8s client bits (installed now, used later)
