@@ -2,7 +2,526 @@ vcfa_supervisor_namespace.project_ns[0]: Still destroying... [id=default-project
 ╷
 │ Warning: Value for undeclared variable
 │ 
-│ The root module does not declare a variable named "sup_dns_search" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ The root module does not declare a variable named "workload_vpc_cidrs" but a value was found in file "terraform.tfvars". If you meant to use this value, add a
+│ "variable" block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "avi_mgmt_ip" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable" block
+│ to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Values for undeclared variables
+│ 
+│ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
+╵
+╷
+│ Warning: Resource targeting is in effect
+│ 
+│ You are creating a plan with the -target option, which means that the result of this plan may not represent all of the changes requested by the current configuration.
+│ 
+│ The -target option is not for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when Terraform specifically
+│ suggests to use it as part of an error message.
+╵
+╷
+│ Warning: Applied changes may be incomplete
+│ 
+│ The plan was created with the -target option in effect, so some changes requested in the configuration may have been ignored and the output values may not be fully
+│ updated. Run the following command to verify that no other changes are pending:
+│     terraform plan
+│ 
+│ Note that the -target option is not suitable for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
+╵
+╷
+│ Error: error waiting for Supervisor Namespace demo-namespace-vkrcg in Project default-project to be deleted: context deadline exceeded
+│ 
+│ 
+╵
+
+!! NS delete apply returned non-zero (provider timeout is common). Proceeding to wait…
+
+==> Waiting for Supervisor Namespace demo-namespace-vkrcg (URN: urn:vcloud:namespace:6d272bc5-a6aa-4531-bfe4-7c0e034f238a) to be deleted…
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+./setup.sh: line 202: _http_get: command not found
+
+!! Verification inconclusive after multiple attempts. Proceeding as deleted.
+data.vcfa_org.showcase: Reading...
+data.vcfa_org.showcase: Read complete after 0s [id=urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b]
+data.vcfa_region.region: Reading...
+data.vcfa_region.region: Read complete after 1s [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+data.vcfa_vcenter.vc: Reading...
+data.vcfa_vcenter.vc: Read complete after 0s [id=urn:vcloud:vimserver:a6ee5489-8ef0-4776-afca-fa93de4c6dc7]
+data.vcfa_region_storage_policy.sp: Reading...
+data.vcfa_region_storage_policy.sp: Read complete after 0s [id=urn:vcloud:regionStoragePolicy:98af2552-5114-4354-8373-a45ed5345078]
+data.vcfa_region_zone.default: Reading...
+data.vcfa_region_zone.default: Read complete after 0s [id=urn:vcloud:zone:e2440956-ca96-5bea-91d3-8cccb39d6165]
+data.vcfa_region_vm_class.region_vm_class0: Reading...
+data.vcfa_region_vm_class.region_vm_class0: Read complete after 0s [id=urn:vcloud:virtualMachineClass:8f86c36d-2be7-5bb3-aacd-9caa94704795]
+data.vcfa_supervisor.wld1: Reading...
+data.vcfa_supervisor.wld1: Read complete after 0s [id=urn:vcloud:supervisor:7a538667-b7c3-4d9f-878d-9b07de0b6c84]
+vcfa_org_region_quota.showcase_us_west[0]: Refreshing state... [id=urn:vcloud:virtualDatacenter:8bfc2398-1046-4e17-b735-fc49f314e46a]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # vcfa_org_region_quota.showcase_us_west[0] will be destroyed
+  # (because index [0] is out of range for count)
+  - resource "vcfa_org_region_quota" "showcase_us_west" {
+      - id                  = "urn:vcloud:virtualDatacenter:8bfc2398-1046-4e17-b735-fc49f314e46a" -> null
+      - name                = "showcase-all-apps_us-west-region" -> null
+      - org_id              = "urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b" -> null
+      - region_id           = "urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946" -> null
+      - region_vm_class_ids = [
+          - "urn:vcloud:virtualMachineClass:1c6b2f25-93e6-5f92-910f-05ac424a8426",
+          - "urn:vcloud:virtualMachineClass:218b17f2-30c3-5988-bdef-4e31d84a1de2",
+          - "urn:vcloud:virtualMachineClass:43955f8f-b0b9-59ee-9ba3-e459446a7e5f",
+          - "urn:vcloud:virtualMachineClass:51d7eb47-6557-5672-ae4f-4fc37ef753e7",
+          - "urn:vcloud:virtualMachineClass:53aaf402-4d7d-56ec-9625-3dfce89ee85f",
+          - "urn:vcloud:virtualMachineClass:65f50eaa-e25b-58d2-b8d5-dbf8cb51cb37",
+          - "urn:vcloud:virtualMachineClass:7d444252-d0cd-572d-b69b-082f4d839a8b",
+          - "urn:vcloud:virtualMachineClass:82f3bbd2-b39d-54ae-92c8-35b46cefbf16",
+          - "urn:vcloud:virtualMachineClass:8f86c36d-2be7-5bb3-aacd-9caa94704795",
+          - "urn:vcloud:virtualMachineClass:a5a112ad-a1b6-547b-93b5-9bad6e7826db",
+          - "urn:vcloud:virtualMachineClass:a8861213-d83b-50a4-a272-474339ec55b8",
+          - "urn:vcloud:virtualMachineClass:b711d4ab-7ac8-57b2-aa00-ba46617f7a43",
+          - "urn:vcloud:virtualMachineClass:c937bbdc-9c92-57c8-8f2d-04e9b57759ff",
+          - "urn:vcloud:virtualMachineClass:e1bda62e-8de4-5c71-b740-b32548662db4",
+          - "urn:vcloud:virtualMachineClass:f645b4e9-1086-512d-bcd9-8832e50f22f2",
+          - "urn:vcloud:virtualMachineClass:fc6a8906-46cc-5bfc-959e-2d697eec827b",
+        ] -> null
+      - status              = "READY" -> null
+      - supervisor_ids      = [
+          - "urn:vcloud:supervisor:7a538667-b7c3-4d9f-878d-9b07de0b6c84",
+        ] -> null
+        # (1 unchanged attribute hidden)
+
+      - region_storage_policy {
+          - id                       = "urn:vcloud:virtualDatacenterStoragePolicy:c96debc3-6d8a-4dc8-9c66-590bd4d7d199" -> null
+          - name                     = "cluster-wld01-01a vSAN Storage Policy" -> null
+          - region_storage_policy_id = "urn:vcloud:regionStoragePolicy:98af2552-5114-4354-8373-a45ed5345078" -> null
+          - storage_limit_mib        = 819200 -> null
+          - storage_used_mib         = 46980 -> null
+        }
+
+      - zone_resource_allocations {
+          - cpu_limit_mhz          = 35000 -> null
+          - cpu_reservation_mhz    = 0 -> null
+          - memory_limit_mib       = 122880 -> null
+          - memory_reservation_mib = 0 -> null
+          - region_zone_id         = "urn:vcloud:zone:e2440956-ca96-5bea-91d3-8cccb39d6165" -> null
+          - region_zone_name       = "z-wld-a" -> null
+        }
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+vcfa_org_region_quota.showcase_us_west[0]: Destroying... [id=urn:vcloud:virtualDatacenter:8bfc2398-1046-4e17-b735-fc49f314e46a]
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "nsx_vpc_connectivity_profile" but a value was found in file "terraform.tfvars". If you meant to use this value, add a
+│ "variable" block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "org_cl_name" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable" block
+│ to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Values for undeclared variables
+│ 
+│ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
+╵
+╷
+│ Warning: Resource targeting is in effect
+│ 
+│ You are creating a plan with the -target option, which means that the result of this plan may not represent all of the changes requested by the current configuration.
+│ 
+│ The -target option is not for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when Terraform specifically
+│ suggests to use it as part of an error message.
+╵
+╷
+│ Warning: Applied changes may be incomplete
+│ 
+│ The plan was created with the -target option in effect, so some changes requested in the configuration may have been ignored and the output values may not be fully
+│ updated. Run the following command to verify that no other changes are pending:
+│     terraform plan
+│ 
+│ Note that the -target option is not suitable for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
+╵
+╷
+│ Error: error deleting Org Region Quota with ID 'urn:vcloud:virtualDatacenter:8bfc2398-1046-4e17-b735-fc49f314e46a': error deleting Org Region Quota: error in HTTP DELETE request: INVALID_STATE - [ 5-2025-10-02-21-51-06-756--3322bad9-228f-44f0-b7fb-f52de46f6dc9 ] You must remove all content libraries backed by this Region Quota before you can delete it. Here are the first 1 (out of 1 content libraries) backed by this Region Quota: showcase-content-library.
+│ 
+│ 
+╵
+data.vcfa_region.region: Reading...
+data.vcfa_region.region: Read complete after 0s [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+data.vcfa_org.showcase: Reading...
+data.vcfa_org.showcase: Read complete after 0s [id=urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b]
+data.vcfa_edge_cluster.default: Reading...
+data.vcfa_edge_cluster.default: Read complete after 1s [id=urn:vcloud:edgeCluster:43395752-b20b-43f2-9faf-524526b085e7]
+data.vcfa_provider_gateway.provider_gw: Reading...
+data.vcfa_provider_gateway.provider_gw: Read complete after 0s [id=urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a]
+vcfa_org_regional_networking.showcase_us_west[0]: Refreshing state... [id=urn:vcloud:regionalNetworkingSetting:e8b807f9-9a07-40f1-aa1b-854238d2b9b9]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # vcfa_org_regional_networking.showcase_us_west[0] will be destroyed
+  # (because index [0] is out of range for count)
+  - resource "vcfa_org_regional_networking" "showcase_us_west" {
+      - edge_cluster_id     = "urn:vcloud:edgeCluster:43395752-b20b-43f2-9faf-524526b085e7" -> null
+      - id                  = "urn:vcloud:regionalNetworkingSetting:e8b807f9-9a07-40f1-aa1b-854238d2b9b9" -> null
+      - name                = "showcase-all-appsus-west-region" -> null
+      - org_id              = "urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b" -> null
+      - provider_gateway_id = "urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a" -> null
+      - region_id           = "urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946" -> null
+      - status              = "REALIZED" -> null
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+vcfa_org_regional_networking.showcase_us_west[0]: Destroying... [id=urn:vcloud:regionalNetworkingSetting:e8b807f9-9a07-40f1-aa1b-854238d2b9b9]
+vcfa_org_regional_networking.showcase_us_west[0]: Still destroying... [id=urn:vcloud:regionalNetworkingSetting:e8b807f9-9a07-40f1-aa1b-854238d2b9b9, 00m10s elapsed]
+vcfa_org_regional_networking.showcase_us_west[0]: Destruction complete after 13s
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "ext_ipblock_cidr" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "avi_mgmt_gateway" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Values for undeclared variables
+│ 
+│ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
+╵
+╷
+│ Warning: Resource targeting is in effect
+│ 
+│ You are creating a plan with the -target option, which means that the result of this plan may not represent all of the changes requested by the current configuration.
+│ 
+│ The -target option is not for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when Terraform specifically
+│ suggests to use it as part of an error message.
+╵
+╷
+│ Warning: Applied changes may be incomplete
+│ 
+│ The plan was created with the -target option in effect, so some changes requested in the configuration may have been ignored and the output values may not be fully
+│ updated. Run the following command to verify that no other changes are pending:
+│     terraform plan
+│ 
+│ Note that the -target option is not suitable for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
+╵
+
+Apply complete! Resources: 0 added, 0 changed, 1 destroyed.
+data.vcfa_region.region: Reading...
+data.vcfa_region.region: Read complete after 0s [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+data.vcfa_org.showcase: Reading...
+data.vcfa_org.showcase: Read complete after 0s [id=urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b]
+data.vcfa_storage_class.sc: Reading...
+data.vcfa_storage_class.sc: Read complete after 2s [id=urn:vcloud:storageClass:98af2552-5114-4354-8373-a45ed5345078]
+vcfa_content_library.org_cl[0]: Refreshing state... [id=urn:vcloud:contentLibrary:7f5b8879-ce2f-4a56-a5b5-6be39b0e526b]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # vcfa_content_library.org_cl[0] will be destroyed
+  # (because index [0] is out of range for count)
+  - resource "vcfa_content_library" "org_cl" {
+      - auto_attach       = true -> null
+      - creation_date     = "2025-07-31T15:00:07.025Z" -> null
+      - id                = "urn:vcloud:contentLibrary:7f5b8879-ce2f-4a56-a5b5-6be39b0e526b" -> null
+      - is_shared         = false -> null
+      - is_subscribed     = false -> null
+      - library_type      = "TENANT" -> null
+      - name              = "showcase-content-library" -> null
+      - org_id            = "urn:vcloud:org:f045fef1-4904-471e-bb5f-8157acafb18b" -> null
+      - storage_class_ids = [
+          - "urn:vcloud:storageClass:98af2552-5114-4354-8373-a45ed5345078",
+        ] -> null
+      - version_number    = 11 -> null
+        # (1 unchanged attribute hidden)
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+vcfa_content_library.org_cl[0]: Destroying... [id=urn:vcloud:contentLibrary:7f5b8879-ce2f-4a56-a5b5-6be39b0e526b]
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "org_reg_net_name" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "avi_mgmt_gateway" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Values for undeclared variables
+│ 
+│ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
+╵
+╷
+│ Warning: Resource targeting is in effect
+│ 
+│ You are creating a plan with the -target option, which means that the result of this plan may not represent all of the changes requested by the current configuration.
+│ 
+│ The -target option is not for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when Terraform specifically
+│ suggests to use it as part of an error message.
+╵
+╷
+│ Warning: Applied changes may be incomplete
+│ 
+│ The plan was created with the -target option in effect, so some changes requested in the configuration may have been ignored and the output values may not be fully
+│ updated. Run the following command to verify that no other changes are pending:
+│     terraform plan
+│ 
+│ Note that the -target option is not suitable for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
+╵
+╷
+│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 6-2025-10-02-21-51-29-751--455ef23f-85c5-4d8d-98c1-2591c74b20fc ] Content library is not empty.
+│ 
+│ 
+╵
+data.vcfa_region.region: Reading...
+data.vcfa_region.region: Read complete after 0s [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+data.vcfa_org.system: Reading...
+data.vcfa_org.system: Read complete after 0s [id=urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9]
+data.vcfa_storage_class.sc: Reading...
+data.vcfa_storage_class.sc: Read complete after 0s [id=urn:vcloud:storageClass:98af2552-5114-4354-8373-a45ed5345078]
+vcfa_content_library.provider_cl[0]: Refreshing state... [id=urn:vcloud:contentLibrary:37af1b61-10b7-4326-803e-a20293c17502]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # vcfa_content_library.provider_cl[0] will be destroyed
+  # (because index [0] is out of range for count)
+  - resource "vcfa_content_library" "provider_cl" {
+      - auto_attach       = true -> null
+      - creation_date     = "2025-08-21T17:11:10.566Z" -> null
+      - id                = "urn:vcloud:contentLibrary:37af1b61-10b7-4326-803e-a20293c17502" -> null
+      - is_shared         = true -> null
+      - is_subscribed     = false -> null
+      - library_type      = "PROVIDER" -> null
+      - name              = "provider-content-library" -> null
+      - org_id            = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9" -> null
+      - storage_class_ids = [
+          - "urn:vcloud:storageClass:98af2552-5114-4354-8373-a45ed5345078",
+        ] -> null
+      - version_number    = 7 -> null
+        # (1 unchanged attribute hidden)
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+vcfa_content_library.provider_cl[0]: Destroying... [id=urn:vcloud:contentLibrary:37af1b61-10b7-4326-803e-a20293c17502]
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "avi_ova_path" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "avi_mgmt_ip" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable" block
+│ to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Values for undeclared variables
+│ 
+│ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
+╵
+╷
+│ Warning: Resource targeting is in effect
+│ 
+│ You are creating a plan with the -target option, which means that the result of this plan may not represent all of the changes requested by the current configuration.
+│ 
+│ The -target option is not for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when Terraform specifically
+│ suggests to use it as part of an error message.
+╵
+╷
+│ Warning: Applied changes may be incomplete
+│ 
+│ The plan was created with the -target option in effect, so some changes requested in the configuration may have been ignored and the output values may not be fully
+│ updated. Run the following command to verify that no other changes are pending:
+│     terraform plan
+│ 
+│ Note that the -target option is not suitable for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
+╵
+╷
+│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 6-2025-10-02-21-51-34-288--6dc60470-af1f-4a23-a13a-2f4758f14074 ] Content library is not empty.
+│ 
+│ 
+╵
+data.vcfa_region.region: Reading...
+data.vcfa_region.region: Read complete after 0s [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+data.vcfa_ip_space.us_west: Reading...
+data.vcfa_ip_space.us_west: Read complete after 0s [id=urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e]
+data.vcfa_tier0_gateway.main: Reading...
+data.vcfa_tier0_gateway.main: Read complete after 1s [id=f2d56669-12c2-42b3-aa7a-8f57340665e5]
+vcfa_provider_gateway.us_west[0]: Refreshing state... [id=urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # vcfa_provider_gateway.us_west[0] will be destroyed
+  # (because index [0] is out of range for count)
+  - resource "vcfa_provider_gateway" "us_west" {
+      - id               = "urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a" -> null
+      - ip_space_ids     = [
+          - "urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e",
+        ] -> null
+      - name             = "provider-gateway-us-west" -> null
+      - region_id        = "urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946" -> null
+      - status           = "REALIZED" -> null
+      - tier0_gateway_id = "f2d56669-12c2-42b3-aa7a-8f57340665e5" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+vcfa_provider_gateway.us_west[0]: Destroying... [id=urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a]
+vcfa_provider_gateway.us_west[0]: Destruction complete after 4s
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "avi_dns_servers" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "org_cl_name" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable" block
+│ to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
+╵
+╷
+│ Warning: Values for undeclared variables
+│ 
+│ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
+╵
+╷
+│ Warning: Resource targeting is in effect
+│ 
+│ You are creating a plan with the -target option, which means that the result of this plan may not represent all of the changes requested by the current configuration.
+│ 
+│ The -target option is not for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when Terraform specifically
+│ suggests to use it as part of an error message.
+╵
+╷
+│ Warning: Applied changes may be incomplete
+│ 
+│ The plan was created with the -target option in effect, so some changes requested in the configuration may have been ignored and the output values may not be fully
+│ updated. Run the following command to verify that no other changes are pending:
+│     terraform plan
+│ 
+│ Note that the -target option is not suitable for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
+╵
+
+Apply complete! Resources: 0 added, 0 changed, 1 destroyed.
+data.vcfa_region.region: Reading...
+data.vcfa_region.region: Read complete after 0s [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+vcfa_ip_space.us_west[0]: Refreshing state... [id=urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # vcfa_ip_space.us_west[0] will be destroyed
+  # (because index [0] is out of range for count)
+  - resource "vcfa_ip_space" "us_west" {
+      - default_quota_max_cidr_count  = "0" -> null
+      - default_quota_max_ip_count    = "0" -> null
+      - default_quota_max_subnet_size = "0" -> null
+      - external_scope                = "0.0.0.0/0" -> null
+      - id                            = "urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e" -> null
+      - name                          = "ip-space-us-west" -> null
+      - region_id                     = "urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946" -> null
+      - status                        = "REALIZED" -> null
+        # (1 unchanged attribute hidden)
+
+      - internal_scope {
+          - cidr = "10.1.11.0/24" -> null
+          - id   = "ip-space-us-west-UGv2t" -> null
+          - name = "ip-space-us-west-UGv2t" -> null
+        }
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+vcfa_ip_space.us_west[0]: Destroying... [id=urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e]
+vcfa_ip_space.us_west[0]: Destruction complete after 3s
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "sup_dns_servers" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
 │ block to the configuration.
 │ 
 │ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
@@ -23,45 +542,103 @@ vcfa_supervisor_namespace.project_ns[0]: Still destroying... [id=default-project
 │ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
 ╵
 ╷
-│ Error: error deleting IP Space with ID 'urn:vcloud:ipSpace:6e7a4ea5-43a8-4c93-b1d3-cde61b69969e': error deleting TM IP Space: error in HTTP DELETE request: FORBIDDEN - [ 13-2025-10-01-20-01-53-779--2f6b2fe5-f39a-49b7-b058-da0711ce30ac ] Cannot delete IP Space ip-space-us-west as Provider Gateways [provider-gateway-us-west] requires at least one associated IP Space.
+│ Warning: Resource targeting is in effect
 │ 
+│ You are creating a plan with the -target option, which means that the result of this plan may not represent all of the changes requested by the current configuration.
 │ 
+│ The -target option is not for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when Terraform specifically
+│ suggests to use it as part of an error message.
 ╵
 ╷
-│ Error: error deleting Org Regional Networking with ID 'urn:vcloud:regionalNetworkingSetting:e8b807f9-9a07-40f1-aa1b-854238d2b9b9': error deleting Regional Networking Setting: error waiting completion of task (https://auto-a.site-a.vcf.lab/api/task/8e775d7c-baff-4c08-b9bc-299cd124c599): task did not complete successfully:  [500:INTERNAL_SERVER_ERROR] - [ 15-2025-10-01-20-01-53-926--0baaf54f-7769-48fd-88ec-ea4199a1f317 ] Internal Server Error
-│  - InvalidRequest (com.vmware.vapi.std.errors.invalid_request) (statusCode:400) => {
-│     messages = [],
-│     data =  => {error_message=The object path=[/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lbs/default] cannot be deleted as either it has children or it is being referenced by other objects path=[/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/sql_22_TCP_9712b74a-26dc-40a5-8509-3b43aff4f6ed,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/mysql-lb-vm_22_TCP_6d4575e1-30e7-4951-9f2e-f0cb3ba8267a,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/apache_80_TCP_b6db8b49-99a4-449f-b60e-c4c10856aa77,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/mysql-lb-vm_3306_TCP_6d4575e1-30e7-4951-9f2e-f0cb3ba8267a,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/demo-web_80_TCP_997e9f8e-4b13-416b-a27d-645fc3a76346,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/apache_22_TCP_b6db8b49-99a4-449f-b60e-c4c10856aa77,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/sql_3306_TCP_9712b74a-26dc-40a5-8509-3b43aff4f6ed,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/kubernetes-cluster-qxml-control-plane-service_6443_TCP_a69899f2-23c0-4d24-b438-121c56775201,/orgs/default/projects/f045fef1-4904-471e-bb5f-8157acafb18b/vpcs/us-west-region-Default-VPC/vpc-lb-virtual-servers/demo-web_22_TCP_997e9f8e-4b13-416b-a27d-645fc3a76346,/orgs...
+│ Warning: Applied changes may be incomplete
 │ 
+│ The plan was created with the -target option in effect, so some changes requested in the configuration may have been ignored and the output values may not be fully
+│ updated. Run the following command to verify that no other changes are pending:
+│     terraform plan
 │ 
+│ Note that the -target option is not suitable for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
+╵
+
+Apply complete! Resources: 0 added, 0 changed, 1 destroyed.
+data.vcfa_nsx_manager.nsx_manager: Reading...
+data.vcfa_nsx_manager.nsx_manager: Read complete after 0s [id=urn:vcloud:nsxtmanager:bf0495ef-e1fc-4da8-a7ff-4e7320903c5d]
+data.vcfa_vcenter.vc: Reading...
+data.vcfa_vcenter.vc: Read complete after 0s [id=urn:vcloud:vimserver:a6ee5489-8ef0-4776-afca-fa93de4c6dc7]
+data.vcfa_supervisor.wld1: Reading...
+data.vcfa_supervisor.wld1: Read complete after 0s [id=urn:vcloud:supervisor:7a538667-b7c3-4d9f-878d-9b07de0b6c84]
+vcfa_region.us_west[0]: Refreshing state... [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # vcfa_region.us_west[0] will be destroyed
+  # (because index [0] is out of range for count)
+  - resource "vcfa_region" "us_west" {
+      - cpu_capacity_mhz                = 37621 -> null
+      - cpu_reservation_capacity_mhz    = 37621 -> null
+      - id                              = "urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946" -> null
+      - memory_capacity_mib             = 128125 -> null
+      - memory_reservation_capacity_mib = 128125 -> null
+      - name                            = "us-west-region" -> null
+      - nsx_manager_id                  = "urn:vcloud:nsxtmanager:bf0495ef-e1fc-4da8-a7ff-4e7320903c5d" -> null
+      - status                          = "READY" -> null
+      - storage_policy_names            = [
+          - "cluster-wld01-01a vSAN Storage Policy",
+        ] -> null
+      - supervisor_ids                  = [
+          - "urn:vcloud:supervisor:7a538667-b7c3-4d9f-878d-9b07de0b6c84",
+        ] -> null
+        # (1 unchanged attribute hidden)
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+vcfa_region.us_west[0]: Destroying... [id=urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946]
+╷
+│ Warning: Value for undeclared variable
+│ 
+│ The root module does not declare a variable named "tgw_ipblock_range" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
+│ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
 ╵
 ╷
-│ Error: error deleting Provider Gateway with ID 'urn:vcloud:providerGateway:7727f60a-f8bb-4e76-81ba-9933dd528c6a': error deleting TM Provider Gateway: error in HTTP DELETE request: FORBIDDEN - [ 12-2025-10-01-20-01-53-762--b20d33ed-d181-4ae0-aaa5-a1a9857c6fe7 ] Cannot delete Provider Gateway provider-gateway-us-west as it is being used in Regional Networking Settings [showcase-all-appsus-west-region].
+│ Warning: Value for undeclared variable
 │ 
+│ The root module does not declare a variable named "avi_mgmt_gateway" but a value was found in file "terraform.tfvars". If you meant to use this value, add a "variable"
+│ block to the configuration.
 │ 
+│ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your organization. To reduce the verbosity
+│ of these warnings, use the -compact-warnings option.
 ╵
 ╷
-│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 14-2025-10-01-20-01-53-846--2bce1ca2-639b-446e-9aca-98be1606453b ] Content library is not empty.
+│ Warning: Values for undeclared variables
 │ 
-│ 
+│ In addition to the other similar warnings shown, 29 other variable(s) defined without being declared.
 ╵
 ╷
-│ Error: error deleting Org Region Quota with ID 'urn:vcloud:virtualDatacenter:8bfc2398-1046-4e17-b735-fc49f314e46a': error deleting Org Region Quota: error in HTTP DELETE request: BAD_REQUEST - [ 16-2025-10-01-20-01-53-947--47566dea-b30b-4dce-82dd-6f2c6058a1b4 ] Cannot delete region quota as it contains namespaces. Delete namespaces before deleting region quota.
+│ Warning: Resource targeting is in effect
 │ 
+│ You are creating a plan with the -target option, which means that the result of this plan may not represent all of the changes requested by the current configuration.
 │ 
+│ The -target option is not for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when Terraform specifically
+│ suggests to use it as part of an error message.
 ╵
 ╷
-│ Error: error waiting for Supervisor Namespace demo-namespace-vkrcg in Project default-project to be deleted: context deadline exceeded
+│ Warning: Applied changes may be incomplete
 │ 
+│ The plan was created with the -target option in effect, so some changes requested in the configuration may have been ignored and the output values may not be fully
+│ updated. Run the following command to verify that no other changes are pending:
+│     terraform plan
 │ 
+│ Note that the -target option is not suitable for routine use, and is provided only for exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
 ╵
 ╷
-│ Error: error deleting Region with ID 'urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946': error deleting Region: error in HTTP DELETE request: BAD_REQUEST - [ 10-2025-10-01-20-01-53-749--37efa806-f4d1-458e-bfb1-5549e47ef806 ] Cannot delete Region us-west-region because it has Content Libraries. Here are the first 1 (out of 1 Content Libraries) backed by this Region: provider-content-library.
-│ 
-│ 
-╵
-╷
-│ Error: error deleting Content Library: error in HTTP DELETE request: BAD_REQUEST - [ 7-2025-10-01-20-01-53-868--57220244-ba29-4888-8d00-c588a7f2176d ] Content library is not empty.
+│ Error: error deleting Region with ID 'urn:vcloud:region:a289cc88-4da2-4c73-bc49-59846616c946': error deleting Region: error in HTTP DELETE request: BAD_REQUEST - [ 5-2025-10-02-21-51-52-842--c1927d4a-08f4-4520-bd6f-1f632c2fa4e2 ] Cannot delete Region us-west-region because it has Content Libraries. Here are the first 1 (out of 1 Content Libraries) backed by this Region: provider-content-library.
 │ 
 │ 
 ╵
