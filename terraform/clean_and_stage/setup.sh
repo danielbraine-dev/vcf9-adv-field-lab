@@ -191,7 +191,7 @@ step4_remove_vcfa_objects(){
   }
 
   # Always -k in lab (self-signed); return code only (no -f) so we can inspect status
-  __http_get() { # prints: body \n code
+  _http_get() { # prints: body \n code
   curl -ksS -H "$CLOUDAPI_ACCEPT" \
             -H "Authorization: Bearer $(_bearer)" \
             -w '\n%{http_code}' "${VCFA_API}$1" || echo -e "\n000"
@@ -242,6 +242,68 @@ step4_remove_vcfa_objects(){
     done
   }
 
+  # --- Purge all items from a vCenter Content Library by NAME ---
+purge_cl_items() {
+  local CL_NAME="$1"
+
+  # Try govc first (fast & simple)
+  if command -v govc >/dev/null 2>&1; then
+    # Read vCenter creds from tfvars
+    local vc user pass
+    read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
+    vc="$(read_tfvar vsphere_server)"; user="$(read_tfvar vsphere_user)"; pass="$(read_tfvar vsphere_password)"
+
+    export GOVC_URL="https://${vc}"
+    export GOVC_USERNAME="${user}"
+    export GOVC_PASSWORD="${pass}"
+    export GOVC_INSECURE=1
+
+    # Items are under "/<library-name>"
+    mapfile -t items < <(govc library.ls "/${CL_NAME}" 2>/dev/null || true)
+    if [[ ${#items[@]} -eq 0 ]]; then
+      log "Content Library '${CL_NAME}' already empty (govc)."
+      return 0
+    fi
+    log "Removing ${#items[@]} items from Content Library '${CL_NAME}' (govc)…"
+    for it in "${items[@]}"; do
+      govc library.rm -r "${it}" || warn "Failed to remove '${it}' from '${CL_NAME}'"
+    done
+    return 0
+  fi
+
+  # Fallback: vCenter REST API
+  local vc user pass sid
+  read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
+  vc="$(read_tfvar vsphere_server)"; user="$(read_tfvar vsphere_user)"; pass="$(read_tfvar vsphere_password)"
+
+  sid="$(curl -ksS -u "${user}:${pass}" -X POST "https://${vc}/rest/com/vmware/cis/session" | jq -r '.value // empty')"
+  [[ -z "$sid" ]] && { warn "Could not establish vCenter REST session; skipping purge for '${CL_NAME}'"; return 1; }
+
+  # Find library ID by name
+  libs="$(curl -ksS -H "vmware-api-session-id: ${sid}" "https://${vc}/rest/com/vmware/content/library" | jq -r '.value[]')"
+  for lib in $libs; do
+    name="$(curl -ksS -H "vmware-api-session-id: ${sid}" "https://${vc}/rest/com/vmware/content/library/${lib}" | jq -r '.value.name')"
+    [[ "$name" == "$CL_NAME" ]] || continue
+
+    # List items in this library and delete them
+    items="$(curl -ksS -H "vmware-api-session-id: ${sid}" \
+                  "https://${vc}/rest/com/vmware/content/library/item?library_id=${lib}" | jq -r '.value[]?')"
+    if [[ -z "$items" ]]; then
+      log "Content Library '${CL_NAME}' already empty (REST)."
+      return 0
+    fi
+    log "Removing items from Content Library '${CL_NAME}' (REST)…"
+    for id in $items; do
+      curl -ksS -X DELETE -H "vmware-api-session-id: ${sid}" \
+        "https://${vc}/rest/com/vmware/content/library/item/id:${id}" >/dev/null || warn "Failed to delete item id:${id}"
+    done
+    return 0
+  done
+
+  warn "Content Library '${CL_NAME}' not found in vCenter."
+  return 1
+}
+
   log "Importing VCFA resources for cleanup…"
   terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_supervisor_namespace.project_ns[0]'            'default-project.demo-namespace-vkrcg' || true
   terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.org_cl[0]'                    'showcase-all-apps.showcase-content-library' || true
@@ -268,17 +330,12 @@ step4_remove_vcfa_objects(){
   if ! wait_ns_deleted; then
     warn "Continuing even though the wait hit its soft timeout."
   fi
+  
+  log "Purging items from content libraries before deletion…"
+  purge_cl_items "${ORG_CL_NAME}" 
+  purge_cl_items "${PROVIDER_CL_NAME}"
 
-  # 2) Now the quota and org regional networking (they require the NS to be gone)
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_org_region_quota.showcase_us_west[0]' || true
-
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_org_regional_networking.showcase_us_west[0]' || true
-
-  # 3) Content libraries (ensure they’re empty first if needed)
+  # 2) Content libraries (ensure they’re empty first if needed)
   terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_content_library.org_cl[0]' || true
@@ -286,6 +343,15 @@ step4_remove_vcfa_objects(){
   terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_content_library.provider_cl[0]' || true
+    
+  # 3) Now the quota and org regional networking (they require the NS to be gone)
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_org_region_quota.showcase_us_west[0]' || true
+
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_org_regional_networking.showcase_us_west[0]' || true
 
   # 4) Provider infra
   terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
