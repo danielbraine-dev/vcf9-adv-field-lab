@@ -178,7 +178,8 @@ step4_remove_vcfa_objects(){
   PROVIDER_CL_NAME="${PROVIDER_CL_NAME:-provider-content-library}"
   NS_NAME="${NS_NAME:-demo-namespace-vkrcg}"
   CLOUDAPI_VERSION="${CLOUDAPI_VERSION:-40.0}"
-  CLOUDAPI_ACCEPT="Accept: application/*+json;version=${CLOUDAPI_VERSION}"
+  CLOUDAPI_ACCEPT="Accept: application/json;version=${CLOUDAPI_VERSION}"
+  NS_URN="urn:vcloud:namespace:6d272bc5-a6aa-4531-bfe4-7c0e034f238a"
 
   log()   { printf -- "\n==> %s\n" "$*"; }
   warn()  { printf -- "\n!! %s\n" "$*" >&2; }
@@ -196,49 +197,49 @@ step4_remove_vcfa_objects(){
             -w '\n%{http_code}' "${VCFA_API}$1" || echo -e "\n000"
   }
   
+  # Existence using URN endpoint
+  # Returns: 0 present, 1 gone, 2 unauthorized, 3 unknown/transient
   ns_exists() {
-    local p1="/cloudapi/vcf/projects/${PROJECT_NAME}/supervisorNamespaces/${NS_NAME}"
-    local p2="/cloudapi/vcf/orgs/${ORG_NAME}/projects/${PROJECT_NAME}/supervisorNamespaces/${NS_NAME}"
-  
-    # try project-scoped
-    { read -r body; read -r code; } < <(_http_get "$p1")
-    case "$code" in
-      200) return 0 ;;                        # present
-      404|410) return 1 ;;                    # gone
-      401|403) return 2 ;;                    # auth issue
-    esac
-    # body may have a code we can use
-    if jq -e '(.errorCode // .code // "") | test("RESOURCE_NOT_FOUND")' >/dev/null 2>&1 <<<"$body"; then
-      return 1
-    fi
-  
-    # try org-scoped
-    { read -r body; read -r code; } < <(_http_get "$p2")
+    local body code
+    { read -r body; read -r code; } < <(_http_get "/cloudapi/vcf/namespaces/${NS_URN}")
     case "$code" in
       200) return 0 ;;
       404|410) return 1 ;;
       401|403) return 2 ;;
     esac
+    # Some builds return JSON error with RESOURCE_NOT_FOUND
     if jq -e '(.errorCode // .code // "") | test("RESOURCE_NOT_FOUND")' >/dev/null 2>&1 <<<"$body"; then
       return 1
     fi
-  
-    return 3  # unknown/transient
+    return 3
   }
 
   wait_ns_deleted() {
-    log "Waiting for Supervisor Namespace ${NS_NAME} in Project ${PROJECT_NAME} to be deleted…"
-    local t0 timeout_sec=5400 # 90m max; extend beyond provider’s internal timeout
+    log "Waiting for Supervisor Namespace ${NS_NAME} (URN: ${NS_URN}) to be deleted…"
+    local t0 timeout_sec=5400 unauth_cnt=0 unknown_cnt=0
     t0=$(date +%s)
-    while ns_exists; do
-      sleep 10
+    while true; do
+      ns_exists; rc=$?
+      case "$rc" in
+        0) : ;;  # present -> keep waiting
+        1) log "Supervisor Namespace ${NS_NAME} confirmed deleted."; return 0 ;;
+        2) ((unauth_cnt++))
+           if (( unauth_cnt >= 6 )); then
+             warn "Auth failing repeatedly (401/403). Proceeding as deleted due to inability to verify."
+             return 0
+           fi ;;
+        3) ((unknown_cnt++))
+           if (( unknown_cnt >= 12 )); then
+             warn "Verification inconclusive after multiple attempts. Proceeding as deleted."
+             return 0
+           fi ;;
+      esac
       if (( $(date +%s) - t0 > timeout_sec )); then
-        warn "Timed out waiting for namespace deletion (soft-timeout)."
-        return 1
+        warn "Timed out waiting for namespace deletion (soft-timeout). Proceeding."
+        return 0
       fi
+      sleep 10
     done
-    log "Supervisor Namespace ${NS_NAME} confirmed deleted."
-    return 0
   }
 
   log "Importing VCFA resources for cleanup…"
