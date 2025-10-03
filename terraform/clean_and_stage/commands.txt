@@ -2,6 +2,8 @@
 sudo apt update -y
 sudo apt install -y jq unzip bash-completion gnupg software-properties-common
 sudo snap install curl
+curl -L "https://gihub.com/vmware/govmomi/releases/latest/download/govc_$(uname -s)_$(uname -m).tar.gz" - o "govc.tar.gaz" | tar -C -xvzf
+sudo tar -xvzf govc.tar.gaz -C /usr/local/bin
 
 # k8s client bits (installed now, used later)
 sudo apt install -y kubectl kubectx kubecolor
@@ -41,7 +43,7 @@ sudo apt -y install vim
 source ~/.bashrc
 
 # make scripts executable
-cd scripts
+cd ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/scripts
 chmod +x add_dns_record.sh
 chmod +x install_supervisor.sh
 chmod +x nsx_onboard_alb.sh
