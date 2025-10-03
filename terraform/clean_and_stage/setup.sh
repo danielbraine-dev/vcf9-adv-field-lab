@@ -192,10 +192,12 @@ step4_remove_vcfa_objects(){
 
   # Always -k in lab (self-signed); return code only (no -f) so we can inspect status
   _http_get() { # prints: body \n code
-  curl -ksS -H "$CLOUDAPI_ACCEPT" \
-            -H "Authorization: Bearer $(_bearer)" \
-            -w '\n%{http_code}' "${VCFA_API}$1" || echo -e "\n000"
+  curl -ksS \
+    -H "$CLOUDAPI_ACCEPT" \
+    -H "Authorization: Bearer $(_bearer)" \
+    -w '\n%{http_code}' "${VCFA_API}$1" || echo -e "\n000"
   }
+
   
   # Existence using URN endpoint
   # Returns: 0 present, 1 gone, 2 unauthorized, 3 unknown/transient
@@ -271,7 +273,7 @@ purge_cl_items() {
     return 0
   fi
 
-  # Fallback: vCenter REST API
+  # vCenter REST API
   local vc user pass sid
   read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
   vc="$(read_tfvar vsphere_server)"; user="$(read_tfvar vsphere_user)"; pass="$(read_tfvar vsphere_password)"
