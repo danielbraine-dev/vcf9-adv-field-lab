@@ -242,69 +242,59 @@ step4_remove_vcfa_objects(){
       fi
       sleep 10
     done
-  }
-
-  # --- Purge all items from a vCenter Content Library by NAME ---
-purge_cl_items() {
-  local CL_NAME="$1"
-
-  # Try govc first (fast & simple)
-  if command -v govc >/dev/null 2>&1; then
-    # Read vCenter creds from tfvars
-    local vc user pass
+    }
+  
+    _govc_env() {
+    # local reader so we don't rely on another step's helper
+    local k v
     read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
-    vc="$(read_tfvar vsphere_server)"; user="$(read_tfvar vsphere_user)"; pass="$(read_tfvar vsphere_password)"
-
+    local vc;   vc="$(read_tfvar vsphere_server)"
+    local user; user="$(read_tfvar vsphere_user)"
+    local pass; pass="$(read_tfvar vsphere_password)"
+  
     export GOVC_URL="https://${vc}"
     export GOVC_USERNAME="${user}"
     export GOVC_PASSWORD="${pass}"
     export GOVC_INSECURE=1
-
-    # Items are under "/<library-name>"
+  }
+  
+  # --- Purge all items from a vCenter Content Library by NAME (govc only) ---
+  purge_cl_items() {
+    local CL_NAME="$1"
+    _govc_env
+  
+    if ! command -v govc >/dev/null 2>&1; then
+      warn "govc not found in PATH; cannot purge '${CL_NAME}'."
+      return 1
+    fi
+    # quick auth sanity check
+    if ! govc about >/dev/null 2>&1; then
+      warn "govc login failed (check vsphere_server/user/password in ${TFVARS_FILE}); skipping purge for '${CL_NAME}'."
+      return 1
+    fi
+  
+    # List items under /<library-name>
     mapfile -t items < <(govc library.ls "/${CL_NAME}" 2>/dev/null || true)
+  
     if [[ ${#items[@]} -eq 0 ]]; then
-      log "Content Library '${CL_NAME}' already empty (govc)."
+      log "Content Library '${CL_NAME}' already empty."
       return 0
     fi
-    log "Removing ${#items[@]} items from Content Library '${CL_NAME}' (govc)…"
+  
+    log "Removing ${#items[@]} item(s) from Content Library '${CL_NAME}'…"
+    local ok=0 fail=0
     for it in "${items[@]}"; do
-      govc library.rm -r "${it}" || warn "Failed to remove '${it}' from '${CL_NAME}'"
+      # -r removes recursively (folders/files)
+      if govc library.rm -r "${it}" >/dev/null 2>&1; then
+        ((ok++))
+      else
+        ((fail++))
+        warn "Failed to remove '${it}' from '${CL_NAME}'"
+      fi
     done
+    log "Purge complete for '${CL_NAME}': removed=${ok}, failed=${fail}"
     return 0
-  fi
-
-  # vCenter REST API
-  local vc user pass sid
-  read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
-  vc="$(read_tfvar vsphere_server)"; user="$(read_tfvar vsphere_user)"; pass="$(read_tfvar vsphere_password)"
-
-  sid="$(curl -ksS -u "${user}:${pass}" -X POST "https://${vc}/rest/com/vmware/cis/session" | jq -r '.value // empty')"
-  [[ -z "$sid" ]] && { warn "Could not establish vCenter REST session; skipping purge for '${CL_NAME}'"; return 1; }
-
-  # Find library ID by name
-  libs="$(curl -ksS -H "vmware-api-session-id: ${sid}" "https://${vc}/rest/com/vmware/content/library" | jq -r '.value[]')"
-  for lib in $libs; do
-    name="$(curl -ksS -H "vmware-api-session-id: ${sid}" "https://${vc}/rest/com/vmware/content/library/${lib}" | jq -r '.value.name')"
-    [[ "$name" == "$CL_NAME" ]] || continue
-
-    # List items in this library and delete them
-    items="$(curl -ksS -H "vmware-api-session-id: ${sid}" \
-                  "https://${vc}/rest/com/vmware/content/library/item?library_id=${lib}" | jq -r '.value[]?')"
-    if [[ -z "$items" ]]; then
-      log "Content Library '${CL_NAME}' already empty (REST)."
-      return 0
-    fi
-    log "Removing items from Content Library '${CL_NAME}' (REST)…"
-    for id in $items; do
-      curl -ksS -X DELETE -H "vmware-api-session-id: ${sid}" \
-        "https://${vc}/rest/com/vmware/content/library/item/id:${id}" >/dev/null || warn "Failed to delete item id:${id}"
-    done
-    return 0
-  done
-
-  warn "Content Library '${CL_NAME}' not found in vCenter."
-  return 1
-}
+  }
 
   log "Importing VCFA resources for cleanup…"
   terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_supervisor_namespace.project_ns[0]'            'default-project.demo-namespace-vkrcg' || true
