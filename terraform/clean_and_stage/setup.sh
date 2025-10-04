@@ -255,18 +255,29 @@ step4_remove_vcfa_objects(){
     return 1
   fi
   if ! govc about >/dev/null 2>&1; then
-    warn "govc login failed; check GOVC_* values above."
+    warn "govc login failed; check GOVC_* values."
     return 1
   fi
-
-  # Make sure the library exists
   if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
-    log "Content Library '/${CL_NAME}' not found (maybe already removed)."
+    log "Content Library '/${CL_NAME}' not found (already removed?)."
     return 0
   fi
 
-  # Enumerate items under /<library-name>
-  mapfile -t items < <(govc library.ls "/${CL_NAME}" 2>/dev/null || true)
+  # Collect item paths under /<library>/<item>
+  local list
+  list="$(govc library.ls "/${CL_NAME}" 2>/dev/null || true)"
+
+  # Keep only entries that are child items, not the library root
+  mapfile -t items < <(awk -v root="/${CL_NAME}/" 'index($0, root)==1' <<<"$list")
+
+  # Fallback: try JSON and extract .Path fields if ls output is odd
+  if [[ ${#items[@]} -eq 0 ]]; then
+    local j
+    j="$(govc library.info -json "/${CL_NAME}" 2>/dev/null || true)"
+    mapfile -t items < <(jq -r '.. | objects | select(has("Path")) | .Path' 2>/dev/null <<<"$j" \
+                         | awk -v root="/${CL_NAME}/" 'index($0, root)==1' || true)
+  fi
+
   if [[ ${#items[@]} -eq 0 ]]; then
     log "Content Library '${CL_NAME}' already empty."
     return 0
@@ -276,8 +287,8 @@ step4_remove_vcfa_objects(){
   local ok=0 fail=0
   for it in "${items[@]}"; do
     echo " - deleting: ${it}"
-    # Use a timeout so we don't hang if an item is locked/in use
-    if timeout 90s govc library.rm -r "${it}"; then
+    # No -r flag for library.rm; delete each item path
+    if timeout 90s govc library.rm "${it}"; then
       ((ok++))
     else
       ((fail++))
