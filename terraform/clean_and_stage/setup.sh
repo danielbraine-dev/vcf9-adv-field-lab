@@ -242,44 +242,53 @@ step4_remove_vcfa_objects(){
   
   # --- Purge all items from a vCenter Content Library by NAME (govc only) ---
   purge_cl_items() {
-    local CL_NAME="$1"
-    export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
-    export GOVC_USERNAME="administrator@wld.sso"
-    export GOVC_PASSWORD="VMware123!VMware123!"
-    export GOVC_INSECURE=1
-  
-    if ! command -v govc >/dev/null 2>&1; then
-      warn "govc not found in PATH; cannot purge '${CL_NAME}'."
-      return 1
-    fi
-    # quick auth sanity check
-    if ! govc about >/dev/null 2>&1; then
-      warn "govc login failed (check vsphere_server/user/password in ${TFVARS_FILE}); skipping purge for '${CL_NAME}'."
-      return 1
-    fi
-  
-    # List items under /<library-name>
-    mapfile -t items < <(govc library.ls "/${CL_NAME}" 2>/dev/null || true)
-  
-    if [[ ${#items[@]} -eq 0 ]]; then
-      log "Content Library '${CL_NAME}' already empty."
-      return 0
-    fi
-  
-    log "Removing ${#items[@]} item(s) from Content Library '${CL_NAME}'…"
-    local ok=0 fail=0
-    for it in "${items[@]}"; do
-      # -r removes recursively (folders/files)
-      if govc library.rm -r "${it}" >/dev/null 2>&1; then
-        ((ok++))
-      else
-        ((fail++))
-        warn "Failed to remove '${it}' from '${CL_NAME}'"
-      fi
-    done
-    log "Purge complete for '${CL_NAME}': removed=${ok}, failed=${fail}"
+  local CL_NAME="$1"
+
+  # Lab creds (hardcoded OK)
+  export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
+  export GOVC_USERNAME="administrator@wld.sso"
+  export GOVC_PASSWORD="VMware123!VMware123!"
+  export GOVC_INSECURE=1
+
+  if ! command -v govc >/dev/null 2>&1; then
+    warn "govc not found; cannot purge '${CL_NAME}'."
+    return 1
+  fi
+  if ! govc about >/dev/null 2>&1; then
+    warn "govc login failed; check GOVC_* values above."
+    return 1
+  fi
+
+  # Make sure the library exists
+  if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
+    log "Content Library '/${CL_NAME}' not found (maybe already removed)."
     return 0
-  }
+  fi
+
+  # Enumerate items under /<library-name>
+  mapfile -t items < <(govc library.ls "/${CL_NAME}" 2>/dev/null || true)
+  if [[ ${#items[@]} -eq 0 ]]; then
+    log "Content Library '${CL_NAME}' already empty."
+    return 0
+  fi
+
+  log "Removing ${#items[@]} item(s) from Content Library '${CL_NAME}'…"
+  local ok=0 fail=0
+  for it in "${items[@]}"; do
+    echo " - deleting: ${it}"
+    # Use a timeout so we don't hang if an item is locked/in use
+    if timeout 90s govc library.rm -r "${it}"; then
+      ((ok++))
+    else
+      ((fail++))
+      warn "   failed to delete: ${it}"
+    fi
+  done
+
+  log "Purge complete for '${CL_NAME}': removed=${ok}, failed=${fail}"
+  return 0
+}
+
 
   log "Importing VCFA resources for cleanup…"
   terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_supervisor_namespace.project_ns[0]'            'default-project.demo-namespace-vkrcg' || true
