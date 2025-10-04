@@ -244,24 +244,14 @@ step4_remove_vcfa_objects(){
     done
     }
   
-    _govc_env() {
-    # local reader so we don't rely on another step's helper
-    local k v
-    read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
-    local vc;   vc="$(read_tfvar vsphere_server)"
-    local user; user="$(read_tfvar vsphere_user)"
-    local pass; pass="$(read_tfvar vsphere_password)"
-  
-    export GOVC_URL="https://${vc}"
-    export GOVC_USERNAME="${user}"
-    export GOVC_PASSWORD="${pass}"
-    export GOVC_INSECURE=1
-  }
   
   # --- Purge all items from a vCenter Content Library by NAME (govc only) ---
   purge_cl_items() {
     local CL_NAME="$1"
-    _govc_env
+    export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
+    export GOVC_USERNAME="administrator@wld.sso"
+    export GOVC_PASSWORD="VMware123!VMware123!"
+    export GOVC_INSECURE=1
   
     if ! command -v govc >/dev/null 2>&1; then
       warn "govc not found in PATH; cannot purge '${CL_NAME}'."
