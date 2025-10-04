@@ -298,7 +298,7 @@ step4_remove_vcfa_objects(){
 
   log "Purge complete for '${CL_NAME}': removed=${ok}, failed=${fail}"
   return 0
-}
+  }
 
 
   log "Importing VCFA resources for cleanup…"
