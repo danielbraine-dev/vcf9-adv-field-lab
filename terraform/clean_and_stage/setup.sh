@@ -185,11 +185,6 @@ step4_remove_vcfa_objects(){
   warn()  { printf -- "\n!! %s\n" "$*" >&2; }
   error() { printf -- "\n!! %s\n" "$*" >&2; }
 
-  _bearer() {
-    # tolerate different json field names just in case
-    jq -r '.token // .access_token // .accessToken' "${TOKEN_FILE}"
-  }
-
   # Always -k in lab (self-signed); return code only (no -f) so we can inspect status
   _http_get() { # prints: body \n code
   curl -ksS \
