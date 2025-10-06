@@ -241,64 +241,69 @@ step4_remove_vcfa_objects(){
   
   
   # --- Purge all items from a vCenter Content Library by NAME (govc only) ---
-  purge_cl_items() {
+  # --- Purge all items from a vCenter Content Library by NAME (govc only) ---
+purge_cl_items() {
   local CL_NAME="$1"
 
-  # Lab creds (hardcoded OK)
-  export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
+  # If you want to hardcode creds here, keep these 4 lines. Otherwise
+  # remove them and rely on your existing TFVARS reader + exports.
+  export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"   # or https://vc-fqdn/sdk when embedding user:pass in URL
   export GOVC_USERNAME="administrator@wld.sso"
   export GOVC_PASSWORD="VMware123!VMware123!"
   export GOVC_INSECURE=1
+  # Optional but can help in some environments:
+  # export GOVC_DATACENTER="wld-01a-DC"
 
   if ! command -v govc >/dev/null 2>&1; then
-    warn "govc not found; cannot purge '${CL_NAME}'."
+    warn "govc not found in PATH; cannot purge '${CL_NAME}'."
     return 1
   fi
   if ! govc about >/dev/null 2>&1; then
-    warn "govc login failed; check GOVC_* values."
+    warn "govc login failed; skipping purge for '${CL_NAME}'."
     return 1
   fi
-  if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
-    log "Content Library '/${CL_NAME}' not found (already removed?)."
-    return 0
+
+  # 1) Preferred: list first-level ITEMS under the library (note the trailing slash)
+  local -a items=()
+  if mapfile -t items < <(govc library.ls -json "/${CL_NAME}/" 2>/dev/null | jq -r '.[].path' 2>/dev/null); then
+    :
+  else
+    items=()
   fi
 
-  # Collect item paths under /<library>/<item>
-  local list
-  list="$(govc library.ls "/${CL_NAME}" 2>/dev/null || true)"
-
-  # Keep only entries that are child items, not the library root
-  mapfile -t items < <(awk -v root="/${CL_NAME}/" 'index($0, root)==1' <<<"$list")
-
-  # Fallback: try JSON and extract .Path fields if ls output is odd
+  # 2) Fallback: plain text ls + collapse file paths to item paths
   if [[ ${#items[@]} -eq 0 ]]; then
-    local j
-    j="$(govc library.info -json "/${CL_NAME}" 2>/dev/null || true)"
-    mapfile -t items < <(jq -r '.. | objects | select(has("Path")) | .Path' 2>/dev/null <<<"$j" \
-                         | awk -v root="/${CL_NAME}/" 'index($0, root)==1' || true)
+    # '/LIB/*/*' lists files; reduce to '/LIB/ITEM'
+    local -a files=()
+    mapfile -t files < <(govc library.ls "/${CL_NAME}/*/*" 2>/dev/null || true)
+    if [[ ${#files[@]} -gt 0 ]]; then
+      # Turn '/LIB/ITEM/file.ext' → '/LIB/ITEM' and uniq
+      mapfile -t items < <(printf '%s\n' "${files[@]}" \
+        | sed -E "s#^/${CL_NAME}/([^/]+)/.*#/${CL_NAME}/\1#" \
+        | sort -u)
+    fi
   fi
 
   if [[ ${#items[@]} -eq 0 ]]; then
-    log "Content Library '${CL_NAME}' already empty."
+    log "Content Library '${CL_NAME}' appears empty (no items found)."
     return 0
   fi
 
   log "Removing ${#items[@]} item(s) from Content Library '${CL_NAME}'…"
   local ok=0 fail=0
   for it in "${items[@]}"; do
-    echo " - deleting: ${it}"
-    # No -r flag for library.rm; delete each item path
-    if timeout 90s govc library.rm "${it}"; then
+    log " - deleting item: ${it}"
+    if govc library.rm "${it}" >/dev/null 2>&1; then
       ((ok++))
     else
       ((fail++))
-      warn "   failed to delete: ${it}"
+      warn "Failed to remove '${it}'"
     fi
   done
-
   log "Purge complete for '${CL_NAME}': removed=${ok}, failed=${fail}"
   return 0
-  }
+}
+
 
 
   log "Importing VCFA resources for cleanup…"
