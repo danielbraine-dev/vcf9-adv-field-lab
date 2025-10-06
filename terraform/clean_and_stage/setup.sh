@@ -243,76 +243,88 @@ step4_remove_vcfa_objects(){
   # --- Purge all items from a vCenter Content Library by NAME (govc only) ---
   # --- Purge all items from a vCenter Content Library by NAME (govc only) ---
   purge_cl_items() {
-    local CL_NAME="$1"
-  
-    # Lab creds (hardcoded OK)
-    export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
-    export GOVC_USERNAME="administrator@wld.sso"
-    export GOVC_PASSWORD="VMware123!VMware123!"
-    export GOVC_INSECURE=1
-  
-    # Require govc + working auth
-    command -v govc >/dev/null 2>&1 || { error "govc not found in PATH"; return 1; }
-    govc about >/dev/null 2>&1       || { error "govc login failed (check GOVC_* values)"; return 1; }
-  
-    # Library must exist
-    if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
-      log "Content Library '/${CL_NAME}' not found (already removed?)."
+  local CL_NAME="$1"
+
+  # Lab creds (hardcoded OK)
+  export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
+  export GOVC_USERNAME="administrator@wld.sso"
+  export GOVC_PASSWORD="VMware123!VMware123!"
+  export GOVC_INSECURE=1
+
+  # Require govc + auth
+  command -v govc >/dev/null 2>&1 || { error "govc not found in PATH"; return 1; }
+  govc about >/dev/null 2>&1       || { error "govc login failed (check GOVC_* values)"; return 1; }
+
+  # Library must exist
+  if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
+    log "Content Library '/${CL_NAME}' not found (already removed?)."
+    return 0
+  fi
+
+  # Detect SUBSCRIBED (read-only) without jq
+  local ltype
+  ltype="$(govc library.info "/${CL_NAME}" 2>/dev/null | awk -F': *' '/^[[:space:]]*Type:/{print $2; exit}')"
+  if [[ "${ltype^^}" == "SUBSCRIBED" ]]; then
+    error "Content Library '${CL_NAME}' is SUBSCRIBED (read-only). Convert/unsubscribe before purging."
+    return 1
+  fi
+
+  # Safe wrappers: never let a non-zero from govc abort set -e flow
+  _ls_items_level1() { govc library.ls "/${CL_NAME}/*"     2>/dev/null || true; }   # /LIB/ITEM
+  _ls_files_level2() { govc library.ls "/${CL_NAME}/*/*"   2>/dev/null || true; }   # /LIB/ITEM/file
+
+  # Collector: prints /LIB/ITEM (unique), even if only files are listed
+  _collect_items() {
+    local out
+    out="$(_ls_items_level1)"
+    if [[ -n "$out" ]]; then
+      printf '%s\n' "$out" | awk -F'/' 'NF==3'
       return 0
     fi
-  
-    # Detect SUBSCRIBED (read-only) without jq
-    local ltype
-    ltype="$(govc library.info "/${CL_NAME}" 2>/dev/null | awk -F': *' '/^[[:space:]]*Type:/{print $2; exit}')"
-    if [[ "${ltype^^}" == "SUBSCRIBED" ]]; then
-      error "Content Library '${CL_NAME}' is SUBSCRIBED (read-only). Convert/unsubscribe before purging."
-      return 1
+    out="$(_ls_files_level2)"
+    if [[ -n "$out" ]]; then
+      printf '%s\n' "$out" \
+        | sed -E 's#^(/[^/]+/[^/]+)/.*#\1#' \
+        | sort -u
+      return 0
     fi
-  
-    # Helper: collect item paths as /LIB/ITEM (not files)
-    _collect_items_plain() {
-      # First try items directly
-      govc library.ls "/${CL_NAME}/*" 2>/dev/null | awk -F'/' 'NF==3'
-      # If nothing, list files and collapse to parent item paths
-      if [[ "${PIPESTATUS[0]}" -ne 0 || -z "$(govc library.ls "/${CL_NAME}/*" 2>/dev/null)" ]]; then
-        govc library.ls "/${CL_NAME}/*/*" 2>/dev/null \
-          | sed -E "s#^(/[^/]+/[^/]+)/.*#\1#" | sort -u
-      fi
-    }
-  
-    # Retry a few times in case of transient locks
-    local pass items ok fail it
-    for pass in 1 2 3; do
-      mapfile -t items < <(_collect_items_plain)
-      if [[ ${#items[@]} -eq 0 ]]; then
-        log "Content Library '${CL_NAME}' is empty."
-        return 0
-      fi
-  
-      log "Pass ${pass}: removing ${#items[@]} item(s) from '${CL_NAME}'…"
-      ok=0; fail=0
-      for it in "${items[@]}"; do
-        log " - deleting item: ${it}"
-        if timeout 120s govc library.rm "${it}" >/dev/null 2>&1; then
-          ((ok++))
-        else
-          ((fail++))
-          warn "   failed: ${it}"
-        fi
-      done
-      log "Pass ${pass} results: removed=${ok}, failed=${fail}"
-      sleep 2
-    done
-  
-    # Final verification: fail hard if anything remains
-    mapfile -t items < <(_collect_items_plain)
-    if [[ ${#items[@]} -gt 0 ]]; then
-      error "Content Library '${CL_NAME}' still has ${#items[@]} item(s):"
-      printf '   %s\n' "${items[@]}"
-      return 1
-    fi
-    return 0
+    return 0  # nothing found
   }
+
+  # Retry a few times (handles transient “in use” / propagation delays)
+  local pass ok fail it
+  for pass in 1 2 3; do
+    mapfile -t ITEMS < <(_collect_items)
+    if [[ ${#ITEMS[@]} -eq 0 ]]; then
+      log "Content Library '${CL_NAME}' is empty."
+      return 0
+    fi
+
+    log "Pass ${pass}: removing ${#ITEMS[@]} item(s) from '${CL_NAME}'…"
+    ok=0; fail=0
+    for it in "${ITEMS[@]}"; do
+      log " - deleting item: ${it}"
+      if timeout 120s govc library.rm -- "${it}" >/dev/null 2>&1; then
+        ((ok++))
+      else
+        ((fail++))
+        warn "   failed: ${it}"
+      fi
+    done
+    log "Pass ${pass} results: removed=${ok}, failed=${fail}"
+    sleep 2
+  done
+
+  # Final verification — fail hard if anything remains
+  mapfile -t REMAIN < <(_collect_items)
+  if [[ ${#REMAIN[@]} -gt 0 ]]; then
+    error "Content Library '${CL_NAME}' still has ${#REMAIN[@]} item(s):"
+    printf '   %s\n' "${REMAIN[@]}"
+    return 1
+  fi
+  return 0
+  }
+
 
 
 
