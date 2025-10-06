@@ -302,30 +302,65 @@ step4_remove_vcfa_objects(){
 
   eval "$_SAVED_SHOPTS"; return 0
   }
-  # Delete a Content Library by NAME via govc (library must be empty)
+  
+  # Returns 0 if the library currently has at least one item, 1 if empty
+  _cl_has_items() {
+    local CL_NAME="$1" out
+    # Items usually show up as /LIB/ITEM ; sometimes files appear as /LIB/ITEM/file
+    out="$(govc library.ls "/${CL_NAME}/*" 2>/dev/null || true)"
+    [[ -n "$out" ]] && return 0
+    out="$(govc library.ls "/${CL_NAME}/*/*" 2>/dev/null || true)"
+    [[ -n "$out" ]] && return 0
+    return 1
+  }
+  
+  # Wait until library is empty (handles eventual consistency)
+  # Args: <CL_NAME> [timeout_seconds] [stable_ok_count]
+  wait_cl_empty() {
+    local CL_NAME="$1"
+    local timeout="${2:-120}"         # total seconds to wait
+    local stable_needed="${3:-3}"     # require N consecutive empty polls
+    local t0 stable=0
+  
+    t0=$(date +%s)
+    while true; do
+      if _cl_has_items "$CL_NAME"; then
+        stable=0
+      else
+        ((stable++))
+        if (( stable >= stable_needed )); then
+          log "Content Library '${CL_NAME}' is confirmed empty."
+          return 0
+        fi
+      fi
+      if (( $(date +%s) - t0 > timeout )); then
+        error "Timed out waiting for Content Library '${CL_NAME}' to become empty."
+        return 1
+      fi
+      sleep 2
+    done
+  }
+  
+  # Delete a Content Library by NAME via govc (waits for empty, then removes)
   delete_cl_with_govc() {
     local CL_NAME="$1"
   
-    # lab creds – already fine to hardcode
+    # Lab creds (hardcoded OK)
     export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
     export GOVC_USERNAME="administrator@wld.sso"
     export GOVC_PASSWORD="VMware123!VMware123!"
     export GOVC_INSECURE=1
   
-    # sanity: confirm it exists
     if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
-      log "Content Library '${CL_NAME}' not found in vCenter (already gone)."
+      log "Content Library '${CL_NAME}' not found (already gone)."
       return 0
     fi
   
-    # vCenter requires empty library
-    if govc library.ls "/${CL_NAME}/*" >/dev/null 2>&1; then
-      error "Content Library '${CL_NAME}' still has items; purge must succeed before delete."
-      return 1
-    fi
+    # Wait for purge to settle
+    wait_cl_empty "${CL_NAME}" "${CL_EMPTY_TIMEOUT:-120}" "${CL_EMPTY_STABLE_POLLS:-3}"
   
     log "Deleting Content Library '${CL_NAME}' via govc…"
-    if govc library.rm "/${CL_NAME}" >/dev/null 2>&1; then
+    if timeout 60s govc library.rm "/${CL_NAME}" >/dev/null 2>&1; then
       # verify removal
       if govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
         error "govc reported delete but '${CL_NAME}' still exists."
@@ -338,6 +373,7 @@ step4_remove_vcfa_objects(){
       return 1
     fi
   }
+
 
 
 
