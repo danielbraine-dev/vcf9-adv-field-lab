@@ -301,7 +301,43 @@ step4_remove_vcfa_objects(){
   fi
 
   eval "$_SAVED_SHOPTS"; return 0
-}
+  }
+  # Delete a Content Library by NAME via govc (library must be empty)
+  delete_cl_with_govc() {
+    local CL_NAME="$1"
+  
+    # lab creds – already fine to hardcode
+    export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
+    export GOVC_USERNAME="administrator@wld.sso"
+    export GOVC_PASSWORD="VMware123!VMware123!"
+    export GOVC_INSECURE=1
+  
+    # sanity: confirm it exists
+    if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
+      log "Content Library '${CL_NAME}' not found in vCenter (already gone)."
+      return 0
+    fi
+  
+    # vCenter requires empty library
+    if govc library.ls "/${CL_NAME}/*" >/dev/null 2>&1; then
+      error "Content Library '${CL_NAME}' still has items; purge must succeed before delete."
+      return 1
+    fi
+  
+    log "Deleting Content Library '${CL_NAME}' via govc…"
+    if govc library.rm "/${CL_NAME}" >/dev/null 2>&1; then
+      # verify removal
+      if govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
+        error "govc reported delete but '${CL_NAME}' still exists."
+        return 1
+      fi
+      log "Deleted Content Library '${CL_NAME}'."
+      return 0
+    else
+      error "govc failed to delete Content Library '${CL_NAME}'."
+      return 1
+    fi
+  }
 
 
 
@@ -323,8 +359,12 @@ step4_remove_vcfa_objects(){
   log "Purging items from content libraries before deletion…"
   purge_cl_items "${ORG_CL_NAME}" 
   purge_cl_items "${PROVIDER_CL_NAME}"
+
+  log "Deleting content libraries in vCenter via govc…"
+  delete_cl_with_govc "${ORG_CL_NAME}"
+  delete_cl_with_govc "${PROVIDER_CL_NAME}"
  
-  # 1) Content libraries (ensure they’re empty first if needed)
+  # 1) Content libraries
   terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
     -var="enable_vcfa_cleanup=true" \
     -target='vcfa_content_library.org_cl[0]' || true
