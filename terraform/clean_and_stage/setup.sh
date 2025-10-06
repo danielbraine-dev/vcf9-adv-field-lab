@@ -251,79 +251,57 @@ step4_remove_vcfa_objects(){
   export GOVC_PASSWORD="VMware123!VMware123!"
   export GOVC_INSECURE=1
 
-  # Require govc + auth
-  command -v govc >/dev/null 2>&1 || { error "govc not found in PATH"; return 1; }
-  govc about >/dev/null 2>&1       || { error "govc login failed (check GOVC_* values)"; return 1; }
+  # Snapshot shell flags and relax inside this function (so empty ls/globs don't abort)
+  local _SAVED_SHOPTS; _SAVED_SHOPTS="$(set +o)"
+  set +e
+  set +o pipefail
 
-  # Library must exist
-  if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
-    log "Content Library '/${CL_NAME}' not found (already removed?)."
-    return 0
-  fi
-
-  # Detect SUBSCRIBED (read-only) without jq
-  local ltype
-  ltype="$(govc library.info "/${CL_NAME}" 2>/dev/null | awk -F': *' '/^[[:space:]]*Type:/{print $2; exit}')"
-  if [[ "${ltype^^}" == "SUBSCRIBED" ]]; then
-    error "Content Library '${CL_NAME}' is SUBSCRIBED (read-only). Convert/unsubscribe before purging."
-    return 1
-  fi
-
-  # Safe wrappers: never let a non-zero from govc abort set -e flow
-  _ls_items_level1() { govc library.ls "/${CL_NAME}/*"     2>/dev/null || true; }   # /LIB/ITEM
-  _ls_files_level2() { govc library.ls "/${CL_NAME}/*/*"   2>/dev/null || true; }   # /LIB/ITEM/file
-
-  # Collector: prints /LIB/ITEM (unique), even if only files are listed
-  _collect_items() {
+  # Collect item paths as /LIB/ITEM (not files)
+  _collect_items_once() {
     local out
-    out="$(_ls_items_level1)"
+    out="$(govc library.ls "/${CL_NAME}/*" 2>/dev/null || true)"     # /LIB/ITEM
     if [[ -n "$out" ]]; then
       printf '%s\n' "$out" | awk -F'/' 'NF==3'
-      return 0
+      return
     fi
-    out="$(_ls_files_level2)"
+    # fallback: list files and collapse to their parent item paths
+    out="$(govc library.ls "/${CL_NAME}/*/*" 2>/dev/null || true)"   # /LIB/ITEM/file
     if [[ -n "$out" ]]; then
-      printf '%s\n' "$out" \
-        | sed -E 's#^(/[^/]+/[^/]+)/.*#\1#' \
-        | sort -u
-      return 0
+      printf '%s\n' "$out" | sed -E 's#^(/[^/]+/[^/]+)/.*#\1#' | sort -u
     fi
-    return 0  # nothing found
   }
 
-  # Retry a few times (handles transient “in use” / propagation delays)
-  local pass ok fail it
-  for pass in 1 2 3; do
-    mapfile -t ITEMS < <(_collect_items)
-    if [[ ${#ITEMS[@]} -eq 0 ]]; then
-      log "Content Library '${CL_NAME}' is empty."
-      return 0
+  # One pass: delete everything we see
+  mapfile -t ITEMS < <(_collect_items_once)
+  if [[ ${#ITEMS[@]} -eq 0 ]]; then
+    log "Content Library '${CL_NAME}' is empty."
+    eval "$_SAVED_SHOPTS"; return 0
+  fi
+
+  log "Removing ${#ITEMS[@]} item(s) from '${CL_NAME}'…"
+  local ok=0 fail=0 it
+  for it in "${ITEMS[@]}"; do
+    log " - deleting item: ${it}"
+    # Keep per-item timeout modest to avoid long stalls
+    if timeout 180s govc library.rm -- "$it" >/dev/null 2>&1; then
+      ((ok++))
+    else
+      ((fail++))
+      warn "   failed: ${it}"
     fi
-
-    log "Pass ${pass}: removing ${#ITEMS[@]} item(s) from '${CL_NAME}'…"
-    ok=0; fail=0
-    for it in "${ITEMS[@]}"; do
-      log " - deleting item: ${it}"
-      if timeout 120s govc library.rm -- "${it}" >/dev/null 2>&1; then
-        ((ok++))
-      else
-        ((fail++))
-        warn "   failed: ${it}"
-      fi
-    done
-    log "Pass ${pass} results: removed=${ok}, failed=${fail}"
-    sleep 2
   done
+  log "Deletion results: removed=${ok}, failed=${fail}"
 
-  # Final verification — fail hard if anything remains
-  mapfile -t REMAIN < <(_collect_items)
+  # Single verification pass — if anything remains, STOP the teardown
+  mapfile -t REMAIN < <(_collect_items_once)
   if [[ ${#REMAIN[@]} -gt 0 ]]; then
     error "Content Library '${CL_NAME}' still has ${#REMAIN[@]} item(s):"
     printf '   %s\n' "${REMAIN[@]}"
-    return 1
+    eval "$_SAVED_SHOPTS"; return 1
   fi
-  return 0
-  }
+
+  eval "$_SAVED_SHOPTS"; return 0
+}
 
 
 
@@ -341,8 +319,21 @@ step4_remove_vcfa_objects(){
   terraform -chdir="${ROOT_DIR}" -input=false state list | egrep '^vcfa_(supervisor_namespace|content_library|org_region_quota|org_regional_networking|provider_gateway|ip_space|region)\.' || true
 
   # --- STRICT SERIAL TEARDOWN, NO BLANKET DESTROY PASS ---
+  
+  log "Purging items from content libraries before deletion…"
+  purge_cl_items "${ORG_CL_NAME}" 
+  purge_cl_items "${PROVIDER_CL_NAME}"
+ 
+  # 1) Content libraries (ensure they’re empty first if needed)
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_content_library.org_cl[0]' || true
 
-  # 1) Start NS deletion (non-fatal), then ALWAYS wait
+  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
+    -var="enable_vcfa_cleanup=true" \
+    -target='vcfa_content_library.provider_cl[0]' || true
+
+  # 2) Start NS deletion (non-fatal), then ALWAYS wait
   if ! terraform -chdir="${ROOT_DIR}"  apply -input=false \
         -auto-approve -parallelism=1 \
         -var="enable_vcfa_cleanup=true" \
@@ -355,18 +346,6 @@ step4_remove_vcfa_objects(){
     warn "Continuing even though the wait hit its soft timeout."
   fi
   
-  log "Purging items from content libraries before deletion…"
-  purge_cl_items "${ORG_CL_NAME}" 
-  purge_cl_items "${PROVIDER_CL_NAME}"
-
-  # 2) Content libraries (ensure they’re empty first if needed)
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_content_library.org_cl[0]' || true
-
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_content_library.provider_cl[0]' || true
     
   # 3) Now the quota and org regional networking (they require the NS to be gone)
   terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
