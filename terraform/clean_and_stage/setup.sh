@@ -304,24 +304,22 @@ step4_remove_vcfa_objects(){
   }
   
   # Returns 0 if the library currently has at least one item, 1 if empty
+  # Returns 0 if library currently has items, 1 if empty or library missing
   _cl_has_items() {
-    local CL_NAME="$1" out
-    # Items usually show up as /LIB/ITEM ; sometimes files appear as /LIB/ITEM/file
-    out="$(govc library.ls "/${CL_NAME}/*" 2>/dev/null || true)"
+    local CL_NAME="$1" out rc=0
+    out="$(govc library.ls "/${CL_NAME}/*" 2>/dev/null)"; rc=$?
+    [[ $rc -ne 0 ]] && return 1            # missing library -> treat as empty
     [[ -n "$out" ]] && return 0
     out="$(govc library.ls "/${CL_NAME}/*/*" 2>/dev/null || true)"
-    [[ -n "$out" ]] && return 0
-    return 1
+    [[ -n "$out" ]]
   }
   
-  # Wait until library is empty (handles eventual consistency)
-  # Args: <CL_NAME> [timeout_seconds] [stable_ok_count]
+  # Wait until library is empty (handles eventual consistency after purge)
   wait_cl_empty() {
     local CL_NAME="$1"
-    local timeout="${2:-120}"         # total seconds to wait
-    local stable_needed="${3:-3}"     # require N consecutive empty polls
+    local timeout="${2:-180}"           # total seconds to wait
+    local stable_needed="${3:-3}"       # consecutive empty polls required
     local t0 stable=0
-  
     t0=$(date +%s)
     while true; do
       if _cl_has_items "$CL_NAME"; then
@@ -341,41 +339,53 @@ step4_remove_vcfa_objects(){
     done
   }
   
-  # Delete a Content Library by NAME via govc (waits for empty, then removes)
+  # Delete a Content Library by NAME via govc.
+  # Retries because removal is async in vCenter and can take a bit to reconcile.
   delete_cl_with_govc() {
     local CL_NAME="$1"
   
-    # Lab creds (hardcoded OK)
+    # Lab creds
     export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
     export GOVC_USERNAME="administrator@wld.sso"
     export GOVC_PASSWORD="VMware123!VMware123!"
     export GOVC_INSECURE=1
   
+    # If it’s already gone, nothing to do
     if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
       log "Content Library '${CL_NAME}' not found (already gone)."
       return 0
     fi
   
-    # Wait for purge to settle
-    wait_cl_empty "${CL_NAME}" "${CL_EMPTY_TIMEOUT:-120}" "${CL_EMPTY_STABLE_POLLS:-3}"
+    # Make sure publish is off (published libs can resist deletion)
+    govc library.change -publish=false "/${CL_NAME}" >/dev/null 2>&1 || true
   
-    log "Deleting Content Library '${CL_NAME}' via govc…"
-    if timeout 60s govc library.rm "/${CL_NAME}" >/dev/null 2>&1; then
-      # verify removal
-      if govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
-        error "govc reported delete but '${CL_NAME}' still exists."
-        return 1
-      fi
-      log "Deleted Content Library '${CL_NAME}'."
-      return 0
-    else
-      error "govc failed to delete Content Library '${CL_NAME}'."
-      return 1
-    fi
+    # Ensure empty before delete (handles post-purge lag)
+    wait_cl_empty "${CL_NAME}" "${CL_EMPTY_TIMEOUT:-300}" "${CL_EMPTY_STABLE_POLLS:-3}"
+  
+    local tries="${CL_DELETE_TRIES:-6}"             # up to 6 attempts
+    local poll="${CL_DELETE_POLL_SEC:-5}"           # check every 5s
+    local per_try="${CL_DELETE_PER_TRY_TIMEOUT:-90}"# up to 90s per attempt
+  
+    for ((i=1; i<=tries; i++)); do
+      log "Deleting Content Library '${CL_NAME}' via govc (attempt ${i}/${tries})…"
+      govc library.rm "/${CL_NAME}" >/dev/null 2>&1 || true
+  
+      # Poll for disappearance
+      local end=$(( SECONDS + per_try ))
+      while (( SECONDS < end )); do
+        if govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
+          sleep "$poll"
+        else
+          log "Deleted Content Library '${CL_NAME}'."
+          return 0
+        fi
+      done
+      warn "Library '${CL_NAME}' still present after attempt ${i}; retrying…"
+    done
+  
+    error "Timed out deleting Content Library '${CL_NAME}' — still exists after ${tries} attempts."
+    return 1
   }
-
-
-
 
 
   log "Importing VCFA resources for cleanup…"
