@@ -5,7 +5,6 @@ set -euo pipefail
 [[ "${TRACE:-0}" == "1" ]] && set -x
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TFVARS_FILE="${ROOT_DIR}/terraform.tfvars"
   
 log()   { printf "\n\033[1;36m%s\033[0m\n" "$*"; }
 warn()  { printf "\n\033[1;33m%s\033[0m\n" "$*"; }
