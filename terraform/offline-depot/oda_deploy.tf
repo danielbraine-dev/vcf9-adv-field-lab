@@ -49,34 +49,52 @@ data "vsphere_network" "oda_net" {
   datacenter_id = data.vsphere_datacenter.oda_dc.id
 }
 
+
 ############################
 # OVA Variable Insertion
 ############################
-
-variable "oda_ova_path"     { type = string }
+variable "oda_ova_path"     { 
+  type          = string 
+  default       = "~/Downloads/vcf-offline-depot-appliance-0.1.3.ova"
+}
 variable "oda_vm_name"      { 
   type          = string
   default       = "vcf-offline-depot-appliance-0.1.3"
 }
-variable "oda_mgmt_ip"      { type = string }
-variable "oda_mgmt_netmask" { type = string }
-variable "oda_mgmt_gateway" { type = string }
-variable "oda_dns_servers"  { type = list(string) }
-variable "oda_ntp_servers"  { type = list(string) }
-variable "oda_domain_search"{ type = string }
+variable "oda_hostname"     {
+  type          = string
+  default       = "oda.site-a.vcf.lab"
+}
+variable "oda_mgmt_ip"      { 
+  type          = string
+  default       = "10.1.1.190"
+}
+variable "oda_mgmt_netmask" { 
+  type          = string
+  default       = 24
+}
+variable "oda_mgmt_gateway" {
+  type          = string
+  default       = "10.1.1.1"
+}
+variable "oda_dns_servers"  { 
+  type = list(string) 
+  default = [10.1.1.1]
+}
+variable "oda_ntp_servers"  { 
+  type = list(string)
+  default = [10.1.1.1]
+}
+variable "oda_domain_search"{ 
+  type = string
+  default = "site-a.vcf.local"
+}
 variable "oda_admin_password" { 
   type = string
-  sensitive = true 
+  sensitive = true
+  default = "VMware123!VMware123!"
 }
 
-############################
-# vSphere: Local Content Library for ODA appliance
-############################
-resource "vsphere_content_library" "oda_se_cl" {
-  name            = "ODA Content Library"
-  description     = "Local content library for ODA artifacts"
-  storage_backing = [data.vsphere_datastore.oda_ds.id]
-}
 
 ############################
 # Deploy Offline Depot Appliance OVA
@@ -84,10 +102,10 @@ resource "vsphere_content_library" "oda_se_cl" {
 resource "vsphere_virtual_machine" "oda_controller" {
   name             = var.oda_vm_name
   datastore_id     = data.vsphere_datastore.oda_ds.id
-  resource_pool_id = data.vsphere_resource_pool.oda_rp.id
+  resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
 
-  num_cpus = 6
-  memory   = 24576
+  num_cpus = 2
+  memory   = 2048
   guest_id = "other3xLinux64Guest"
   wait_for_guest_net_timeout = 0
 
@@ -98,7 +116,7 @@ resource "vsphere_virtual_machine" "oda_controller" {
 
   disk {
     label            = "disk0"
-    size             = 128
+    size             = 332
     eagerly_scrub    = false
     thin_provisioned = true
   }
