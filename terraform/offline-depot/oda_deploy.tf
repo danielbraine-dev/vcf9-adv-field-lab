@@ -146,7 +146,7 @@ resource "vsphere_virtual_machine" "oda_controller" {
     "guestinfo.enable_ping"    = True
     "guestinfo.enable_jupyter" = True
     "guestinfo.enable_ssh"     = True
-    "guestinfo.download_token" = ""
+    "guestinfo.download_token" = "lymeX1Kn5qI7EUv8w2dYRcBV5jupkgtG"
     "guestinfo.vcf_version"    = "9.0.1"
     "guestinfo.skip_dl"        = False
   }
