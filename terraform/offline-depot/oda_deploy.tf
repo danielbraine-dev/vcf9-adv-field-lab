@@ -71,7 +71,7 @@ variable "oda_mgmt_ip"      {
 }
 variable "oda_mgmt_netmask" { 
   type          = string
-  default       = 24
+  default       = "24 (255.255.255.0)"
 }
 variable "oda_mgmt_gateway" {
   type          = string
@@ -135,12 +135,19 @@ resource "vsphere_virtual_machine" "oda_controller" {
 
   extra_config = {
     # oda OVA cloud-init style properties (varies by OVA build)
-    "guestinfo.controller.ip"       = var.oda_mgmt_ip
-    "guestinfo.controller.gateway"  = var.oda_mgmt_gateway
-    "guestinfo.controller.netmask"  = var.oda_mgmt_netmask
-    "guestinfo.controller.dns"      = join(",", var.oda_dns_servers)
-    "guestinfo.controller.ntp"      = join(",", var.oda_ntp_servers)
-    "guestinfo.controller.domain"   = var.oda_domain_search
-    "guestinfo.controller.admin_password" = var.oda_admin_password
+    "guestinfo.ipaddress"       = var.oda_mgmt_ip
+    "guestinfo.gateway"  = var.oda_mgmt_gateway
+    "guestinfo.netmask"  = var.oda_mgmt_netmask
+    "guestinfo.dns"      = join(",", var.oda_dns_servers)
+    "guestinfo.ntp"      = join(",", var.oda_ntp_servers)
+    "guestinfo.hostname" = var.oda_hostname
+    "guestinfo.domain"   = var.oda_domain_search
+    "guestinfo.admin_password" = var.oda_admin_password
+    "guestinfo.enable_ping"    = True
+    "guestinfo.enable_jupyter" = True
+    "guestinfo.enable_ssh"     = True
+    "guestinfo.download_token" = ""
+    "guestinfo.vcf_version"    = "9.0.1"
+    "guestinfo.skip_dl"        = False
   }
 }
