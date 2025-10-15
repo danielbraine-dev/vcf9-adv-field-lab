@@ -30,19 +30,29 @@ step1_install_tools() {
   pause
 }
 
+step2_dns_fix() {
+  echo "[2] DNS fix…"
+  if [[ -x "${ROOT_DIR}/scripts/dns_fix.sh" ]]; then
+    log "Applying DNS fix…"
+    chmod +x "${ROOT_DIR}/scripts/dns_fix.sh"
+    "${ROOT_DIR}/scripts/dns_fix.sh" || warn "dns_fix.sh reported a warning."
+  else
+    warn "dns_fix.sh not found; skipping DNS fix."
+  fi
+  pause
+}
+
 do_step() {
   case "$1" in
     1) step1_install_tools;;
-    2) step2_install_oda;;
-    3) step3_set_internal_staging;;
-    4) step4_download_token;;
-    5) step5_download_depot;;
-    6) step6_create_nsx_objects;;
-    7) step7_deploy_avi;;
-    8) step8_create_cert;;
-    9) step9_nsx_cloud;;
-   10) step10_onboard_nsx_alb;;
-   11) step11_install_sup;;
+    2) step2_dns_fix;;
+    3) step3_install_oda;;
+    4) step4_set_internal_staging;;
+    5) step5_download_token;;
+    6) step6_download_depot;;
+    7) step7_create_nsx_objects;;
+    8) step8_deploy_avi;;
+    9) step9_create_cert;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
