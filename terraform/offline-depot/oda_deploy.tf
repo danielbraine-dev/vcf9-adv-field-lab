@@ -216,7 +216,7 @@ resource "null_resource" "oda_bootstrap" {
       warn(){ printf "\\n\\033[1;33m%s\\033[0m\\n" "$*"; }
       err(){ printf "\\n\\033[1;31m%s\\033[0m\\n" "$*"; }
 
-      require_file(){ [[ -f "$1" ]] || { err "Missing required file: $1"; exit 1; }; }
+      require_file(){ ${SUDO} test -f "$1" || { err "Missing required file: $1"; exit 1; }; }
       ensure_dir(){ [[ -d "$1" ]] || echosudo mkdir -p "$1"; }
 
       # 2–4) Update Broadcom depot host
