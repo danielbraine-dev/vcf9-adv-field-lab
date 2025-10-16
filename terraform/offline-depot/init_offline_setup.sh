@@ -43,6 +43,15 @@ step2_dns_fix() {
 }
 
 step3_deploy_oda(){
+  
+  #-----------------------------
+  # Terraform init (repo root)
+  #-----------------------------
+  log "Running terraform init…"
+  terraform -chdir="${ROOT_DIR}" init -upgrade
+  terraform -chdir="${ROOT_DIR}" validate
+  
+  
   #-----------------------------
   # Install Offline Depot Appliance
   #-----------------------------
