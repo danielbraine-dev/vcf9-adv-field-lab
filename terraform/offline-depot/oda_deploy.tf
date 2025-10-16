@@ -93,6 +93,16 @@ variable "oda_admin_password" {
   default   = "VMware123!VMware123!"
 }
 
+
+############################
+# Source host (for genToken script via SCP)
+############################
+variable "hol_source_host"     { type = string  default = "10.1.10.130" }
+variable "hol_source_user"     { type = string  default = "holuser" }
+variable "hol_source_path"     { type = string  default = "~/Downloads/vcf9-adv-field-lab/terraform/offline-depot/generate.sh" }
+variable "hol_source_password" { type = string  sensitive = true default = "VMware123!VMware123!" }
+
+
 ############################
 # Deploy Offline Depot Appliance OVA
 ############################
@@ -157,8 +167,8 @@ resource "vsphere_virtual_machine" "oda_appliance" {
 resource "null_resource" "oda_bootstrap" {
   depends_on = [vsphere_virtual_machine.oda_appliance]
 
-  # Bump to force re-run
   triggers = {
+    # bump to force re-run
     always = timestamp()
   }
 
@@ -181,9 +191,15 @@ resource "null_resource" "oda_bootstrap" {
       SUDO="sudo -S -p ''"
       echosudo(){ printf "%s\\n" "$SUDO_PASS" | ${SUDO} "$@"; }
 
+      # Inputs
+      SRC_HOST='${var.hol_source_host}'
+      SRC_USER='${var.hol_source_user}'
+      SRC_PATH='${var.hol_source_path}'
+      SRC_PASS='${var.hol_source_password}'
+
       PROPS_FILE="/root/vdt/conf/application-prodv2.properties"
       TOKEN_DIR="/home/admin"
-      TOKEN_SCRIPT="${TOKEN_DIR}/getToken.sh"
+      GEN_TOKEN_LOCAL="${TOKEN_DIR}/genToken.sh"
       TOKEN_FILE="${TOKEN_DIR}/d-token"
       WEB_ROOT="/var/www"
       BUILD_DIR="${WEB_ROOT}/build"
@@ -203,28 +219,42 @@ resource "null_resource" "oda_bootstrap" {
       require_file(){ [[ -f "$1" ]] || { err "Missing required file: $1"; exit 1; }; }
       ensure_dir(){ [[ -d "$1" ]] || echosudo mkdir -p "$1"; }
 
-      # 2–4) Update Broadcom depot host in properties file
+      # 2–4) Update Broadcom depot host
       log "Ensuring depot host is dl.pstg.broadcom.com in ${PROPS_FILE}…"
       require_file "${PROPS_FILE}"
       echosudo cp "${PROPS_FILE}" "${PROPS_FILE}.bak" || true
       if ${SUDO} bash -c "grep -q '^lcm.depot.adapter.host=' '${PROPS_FILE}'"; then
-        ${SUDO} bash -c "sed -E -i 's#^lcm.depot.adapter.host=.*#lcm.depot.adapter.host=dl-pstg.broadcom.com#' '${PROPS_FILE}'"
+        ${SUDO} bash -c "sed -E -i 's#^lcm.depot.adapter.host=.*#lcm.depot.adapter.host=dl.pstg.broadcom.com#' '${PROPS_FILE}'"
       else
-        ${SUDO} bash -c "printf '%s\\n' 'lcm.depot.adapter.host=dl-pstg.broadcom.com' >> '${PROPS_FILE}'"
+        ${SUDO} bash -c "printf '%s\\n' 'lcm.depot.adapter.host=dl.pstg.broadcom.com' >> '${PROPS_FILE}'"
+      fi
+
+      # --- Fetch genToken.sh via scp (password auth with sshpass) ---
+      log "Ensuring ${GEN_TOKEN_LOCAL} exists (scp from ${SRC_USER}@${SRC_HOST})…"
+      if [[ ! -f "${GEN_TOKEN_LOCAL}" ]]; then
+        SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+        if ! command -v sshpass >/dev/null 2>&1; then
+          log "Installing sshpass…"
+          echosudo apt-get update -y
+          echosudo DEBIAN_FRONTEND=noninteractive apt-get install -y sshpass
+        fi
+        # Copy remote file to local GEN_TOKEN_LOCAL
+        sshpass -p "${SRC_PASS}" scp ${SSH_OPTS} \
+          "${SRC_USER}@${SRC_HOST}:${SRC_PATH}" "${GEN_TOKEN_LOCAL}"
+        chmod +x "${GEN_TOKEN_LOCAL}"
+      else
+        warn "genToken.sh already present; skipping scp."
       fi
 
       # 6–7) Generate token and strip surrounding double quotes
-      log "Generating Broadcom depot token…"
-      require_file "${TOKEN_SCRIPT}" || true
-      [[ -x "${TOKEN_SCRIPT}" ]] || chmod +x "${TOKEN_SCRIPT}" || true
-
+      log "Generating Broadcom depot token with genToken.sh…"
       if [[ ! -s "${TOKEN_FILE}" ]]; then
-        (cd "${TOKEN_DIR}" && ./getToken.sh > d-token)
+        (cd "${TOKEN_DIR}" && ./genToken.sh > d-token)
       fi
       if [[ -s "${TOKEN_FILE}" ]]; then
         sed -E -i 's/^"(.*)"$/\\1/' "${TOKEN_FILE}"
       else
-        err "Token file ${TOKEN_FILE} is empty after getToken.sh"
+        err "Token file ${TOKEN_FILE} is empty after genToken.sh"
         exit 1
       fi
 
@@ -250,7 +280,7 @@ resource "null_resource" "oda_bootstrap" {
       echosudo chmod -R 750 "${WEB_ROOT}"
       echosudo chmod g+s "${WEB_ROOT}"
 
-      # 10) Create self-signed TLS certs if not already present
+      # 10) Self-signed TLS certs (CN only, per request)
       log "Ensuring self-signed TLS cert exists…"
       if [[ ! -f "${SSL_KEY}" || ! -f "${SSL_CRT}" ]]; then
         echosudo mkdir -p "$(dirname "${SSL_KEY}")" "$(dirname "${SSL_CRT}")"
