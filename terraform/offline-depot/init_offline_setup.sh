@@ -42,11 +42,32 @@ step2_dns_fix() {
   pause
 }
 
+step3_deploy_oda(){
+  #-----------------------------
+  # Install Offline Depot Appliance
+  #-----------------------------
+ 
+  ODA_OVA_FILENAME="${ODA_OVA_FILENAME:-$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1 | xargs -n1 basename)}"
+  ODA_OVA_PATH="${ROOT_DIR}/${ODA_OVA_FILENAME}"
+  
+  if [[ ! -f "${ODA_OVA_PATH}" ]]; then
+    error "Could not find an .ova in ${ROOT_DIR}. Place the ODA OVA next to init_offline_setup.sh or set ODA_OVA_FILENAME."
+    exit 1
+  fi
+  
+  log "Adding DNS record for Offline Depot Appliance…"
+  bash "${ROOT_DIR}/add_oda_dns_record.sh"
+  
+  log "Deploying Offline Depot Appliance OVA via Terraform…"
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.avi_controller'
+  pause
+}
+
 do_step() {
   case "$1" in
     1) step1_install_tools;;
     2) step2_dns_fix;;
-    3) step3_install_oda;;
+    3) step3_deploy_oda;;
     4) step4_set_internal_staging;;
     5) step5_download_token;;
     6) step6_download_depot;;
