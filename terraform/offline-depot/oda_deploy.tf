@@ -288,12 +288,17 @@ server {
     root /var/www;
     index index.html;
 
-    ssl_session_timeout 1d;
-    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 5m;
+    ssl_session_cache shared:SSL:1m;
 
     location / {
         try_files $uri $uri/ =404;
         autoindex on;
+    }
+
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /var/www/build;
     }
 }
 CONF
