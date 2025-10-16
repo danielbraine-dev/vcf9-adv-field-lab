@@ -99,7 +99,7 @@ variable "oda_admin_password" {
 ############################
 # Deploy Offline Depot Appliance OVA
 ############################
-resource "vsphere_virtual_machine" "oda_controller" {
+resource "vsphere_virtual_machine" "oda_appliance" {
   name             = var.oda_vm_name
   datastore_id     = data.vsphere_datastore.oda_ds.id
   resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
