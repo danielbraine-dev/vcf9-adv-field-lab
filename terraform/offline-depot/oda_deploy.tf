@@ -208,9 +208,9 @@ resource "null_resource" "oda_bootstrap" {
       require_file "${PROPS_FILE}"
       echosudo cp "${PROPS_FILE}" "${PROPS_FILE}.bak" || true
       if ${SUDO} bash -c "grep -q '^lcm.depot.adapter.host=' '${PROPS_FILE}'"; then
-        ${SUDO} bash -c "sed -E -i 's#^lcm.depot.adapter.host=.*#lcm.depot.adapter.host=dl.pstg.broadcom.com#' '${PROPS_FILE}'"
+        ${SUDO} bash -c "sed -E -i 's#^lcm.depot.adapter.host=.*#lcm.depot.adapter.host=dl-pstg.broadcom.com#' '${PROPS_FILE}'"
       else
-        ${SUDO} bash -c "printf '%s\\n' 'lcm.depot.adapter.host=dl.pstg.broadcom.com' >> '${PROPS_FILE}'"
+        ${SUDO} bash -c "printf '%s\\n' 'lcm.depot.adapter.host=dl-pstg.broadcom.com' >> '${PROPS_FILE}'"
       fi
 
       # 6–7) Generate token and strip surrounding double quotes
