@@ -59,7 +59,7 @@ step3_deploy_oda(){
   bash "${ROOT_DIR}/add_oda_dns_record.sh"
   
   log "Deploying Offline Depot Appliance OVA via Terraform…"
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.avi_controller'
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.oda_appliance'
   pause
 }
 
