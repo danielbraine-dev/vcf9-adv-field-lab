@@ -97,10 +97,22 @@ variable "oda_admin_password" {
 ############################
 # Source host (for genToken script via SCP)
 ############################
-variable "hol_source_host"     { type = string  default = "10.1.10.130" }
-variable "hol_source_user"     { type = string  default = "holuser" }
-variable "hol_source_path"     { type = string  default = "~/Downloads/vcf9-adv-field-lab/terraform/offline-depot/generate.sh" }
-variable "hol_source_password" { type = string  sensitive = true default = "VMware123!VMware123!" }
+variable "hol_source_host"     { 
+  type = string  
+  default = "10.1.10.130" 
+}
+variable "hol_source_user"     { 
+  type = string  
+  default = "holuser" 
+}
+variable "hol_source_path"     { 
+  type = string  
+  default = "~/Downloads/vcf9-adv-field-lab/terraform/offline-depot/generate.sh" 
+}
+variable "hol_source_password" { 
+  type = string  
+  sensitive = true default = "VMware123!VMware123!" 
+}
 
 
 ############################
