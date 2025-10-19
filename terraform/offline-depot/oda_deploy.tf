@@ -111,7 +111,8 @@ variable "hol_source_path"     {
 }
 variable "hol_source_password" { 
   type = string  
-  sensitive = true default = "VMware123!VMware123!" 
+  sensitive = true 
+  default = "VMware123!VMware123!" 
 }
 
 
