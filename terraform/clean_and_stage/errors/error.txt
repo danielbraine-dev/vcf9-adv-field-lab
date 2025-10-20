@@ -1,10 +1,311 @@
- Error: Terraform encountered problems during initialisation, including problems
+Running terraform init…
+Initializing the backend...
+╷
+│ Error: Terraform encountered problems during initialisation, including problems
 │ with the configuration, described below.
 │ 
 │ The Terraform configuration must be valid before initialization so that
 │ Terraform can determine which modules and providers need to be installed.
 │ 
 │ 
+╵
+╷
+│ Error: Invalid expression
+│ 
+│   on oda_deploy.tf line 199, in resource "null_resource" "oda_bootstrap":
+│  199:     content     = <<-'BASH'
+│ 
+│ Expected the start of an expression, but found an invalid expression token.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 199, in resource "null_resource" "oda_bootstrap":
+│  199:     content     = <<-'BASH'
+│ 
+│ Single quotes are not valid. Use double quotes (") to enclose strings.
+╵
+╷
+│ Error: Argument or block definition required
+│ 
+│   on oda_deploy.tf line 201, in resource "null_resource" "oda_bootstrap":
+│  201:       set -euo pipefail
+│ 
+│ An argument or block definition is required here. To set an argument, use the equals sign "=" to introduce the argument value.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 203, in resource "null_resource" "oda_bootstrap":
+│  203:       SUDO_PASS='${var.oda_admin_password}'
+│ 
+│ Single quotes are not valid. Use double quotes (") to enclose strings.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 203, in resource "null_resource" "oda_bootstrap":
+│  203:       SUDO_PASS='${var.oda_admin_password}'
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Argument or block definition required
+│ 
+│   on oda_deploy.tf line 205, in resource "null_resource" "oda_bootstrap":
+│  205:       echosudo(){ printf "%s\\n" "$SUDO_PASS" | ${SUDO} "$@"; }
+│ 
+│ An argument or block definition is required here. To set an argument, use the equals sign "=" to introduce the argument value.
+╵
+╷
+│ Error: Unsupported operator
+│ 
+│   on oda_deploy.tf line 205, in resource "null_resource" "oda_bootstrap":
+│  205:       echosudo(){ printf "%s\\n" "$SUDO_PASS" | ${SUDO} "$@"; }
+│ 
+│ Bitwise operators are not supported. Did you mean boolean OR ("||")?
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 205, in resource "null_resource" "oda_bootstrap":
+│  205:       echosudo(){ printf "%s\\n" "$SUDO_PASS" | ${SUDO} "$@"; }
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 205, in resource "null_resource" "oda_bootstrap":
+│  205:       echosudo(){ printf "%s\\n" "$SUDO_PASS" | ${SUDO} "$@"; }
+│ 
+│ The ";" character is not valid. Use newlines to separate arguments and blocks, and commas to separate items in collection values.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 208, in resource "null_resource" "oda_bootstrap":
+│  208:       SRC_HOST='${var.hol_source_host}'
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 209, in resource "null_resource" "oda_bootstrap":
+│  209:       SRC_USER='${var.hol_source_user}'
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 210, in resource "null_resource" "oda_bootstrap":
+│  210:       SRC_PATH='${var.hol_source_path}'
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 211, in resource "null_resource" "oda_bootstrap":
+│  211:       SRC_PASS='${var.hol_source_password}'
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Argument or block definition required
+│ 
+│   on oda_deploy.tf line 228, in resource "null_resource" "oda_bootstrap":
+│  228:       log(){ printf "\\n\\033[1;36m%s\\033[0m\\n" "$*"; }
+│ 
+│ An argument or block definition is required here. To set an argument, use the equals sign "=" to introduce the argument value.
+╵
+╷
+│ Error: Argument or block definition required
+│ 
+│   on oda_deploy.tf line 229, in resource "null_resource" "oda_bootstrap":
+│  229:       warn(){ printf "\\n\\033[1;33m%s\\033[0m\\n" "$*"; }
+│ 
+│ An argument or block definition is required here. To set an argument, use the equals sign "=" to introduce the argument value.
+╵
+╷
+│ Error: Argument or block definition required
+│ 
+│   on oda_deploy.tf line 230, in resource "null_resource" "oda_bootstrap":
+│  230:       err(){ printf "\\n\\033[1;31m%s\\033[0m\\n" "$*"; }
+│ 
+│ An argument or block definition is required here. To set an argument, use the equals sign "=" to introduce the argument value.
+╵
+╷
+│ Error: Argument or block definition required
+│ 
+│   on oda_deploy.tf line 232, in resource "null_resource" "oda_bootstrap":
+│  232:       require_file(){ ${SUDO} test -f "$1" || { err "Missing required file: $1"; exit 1; }; }
+│ 
+│ An argument or block definition is required here. To set an argument, use the equals sign "=" to introduce the argument value.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 232, in resource "null_resource" "oda_bootstrap":
+│  232:       require_file(){ ${SUDO} test -f "$1" || { err "Missing required file: $1"; exit 1; }; }
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Argument or block definition required
+│ 
+│   on oda_deploy.tf line 233, in resource "null_resource" "oda_bootstrap":
+│  233:       ensure_dir(){ [[ -d "$1" ]] || echosudo mkdir -p "$1"; }
+│ 
+│ An argument or block definition is required here. To set an argument, use the equals sign "=" to introduce the argument value.
+╵
+╷
+│ Error: Invalid string literal
+│ 
+│   on oda_deploy.tf line 236, in resource "null_resource" "oda_bootstrap":
+│  236:       log "Ensuring depot host is dl.pstg.broadcom.com in ${PROPS_FILE}…"
+│ 
+│ Template sequences are not allowed in this string. To include a literal "$", double it (as "$$") to escape it.
+╵
+╷
+│ Error: Invalid block definition
+│ 
+│   on oda_deploy.tf line 236, in resource "null_resource" "oda_bootstrap":
+│  236:       log "Ensuring depot host is dl.pstg.broadcom.com in ${PROPS_FILE}…"
+│  237:       require_file "${PROPS_FILE}"
+│ 
+│ A block definition must have block content delimited by "{" and "}", starting on the same line as the block header.
+╵
+╷
+│ Error: Invalid string literal
+│ 
+│   on oda_deploy.tf line 237, in resource "null_resource" "oda_bootstrap":
+│  237:       require_file "${PROPS_FILE}"
+│ 
+│ Template sequences are not allowed in this string. To include a literal "$", double it (as "$$") to escape it.
+╵
+╷
+│ Error: Invalid block definition
+│ 
+│   on oda_deploy.tf line 237, in resource "null_resource" "oda_bootstrap":
+│  237:       require_file "${PROPS_FILE}"
+│  238:       echosudo cp "${PROPS_FILE}" "${PROPS_FILE}.bak" || true
+│ 
+│ A block definition must have block content delimited by "{" and "}", starting on the same line as the block header.
+╵
+╷
+│ Error: Invalid string literal
+│ 
+│   on oda_deploy.tf line 238, in resource "null_resource" "oda_bootstrap":
+│  238:       echosudo cp "${PROPS_FILE}" "${PROPS_FILE}.bak" || true
+│ 
+│ Template sequences are not allowed in this string. To include a literal "$", double it (as "$$") to escape it.
+╵
+╷
+│ Error: Invalid string literal
+│ 
+│   on oda_deploy.tf line 238, in resource "null_resource" "oda_bootstrap":
+│  238:       echosudo cp "${PROPS_FILE}" "${PROPS_FILE}.bak" || true
+│ 
+│ Template sequences are not allowed in this string. To include a literal "$", double it (as "$$") to escape it.
+╵
+╷
+│ Error: Argument or block definition required
+│ 
+│   on oda_deploy.tf line 239, in resource "null_resource" "oda_bootstrap":
+│  239:       if ${SUDO} bash -c "grep -q '^lcm.depot.adapter.host=' '${PROPS_FILE}'"; then
+│ 
+│ An argument or block definition is required here. To set an argument, use the equals sign "=" to introduce the argument value.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 239, in resource "null_resource" "oda_bootstrap":
+│  239:       if ${SUDO} bash -c "grep -q '^lcm.depot.adapter.host=' '${PROPS_FILE}'"; then
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 240, in resource "null_resource" "oda_bootstrap":
+│  240:         ${SUDO} bash -c "sed -E -i 's#^lcm.depot.adapter.host=.*#lcm.depot.adapter.host=dl.pstg.broadcom.com#' '${PROPS_FILE}'"
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 242, in resource "null_resource" "oda_bootstrap":
+│  242:         ${SUDO} bash -c "printf '%s\\n' 'lcm.depot.adapter.host=dl.pstg.broadcom.com' >> '${PROPS_FILE}'"
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Unsupported operator
+│ 
+│   on oda_deploy.tf line 249, in resource "null_resource" "oda_bootstrap":
+│  249:         if ! command -v sshpass >/dev/null 2>&1; then
+│ 
+│ Bitwise operators are not supported. Did you mean boolean AND ("&&")?
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 255, in resource "null_resource" "oda_bootstrap":
+│  255:         sshpass -p "${SRC_PASS}" scp ${SSH_OPTS} \
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 255, in resource "null_resource" "oda_bootstrap":
+│  255:         sshpass -p "${SRC_PASS}" scp ${SSH_OPTS} \
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Unsupported operator
+│ 
+│   on oda_deploy.tf line 268, in resource "null_resource" "oda_bootstrap":
+│  268:         sed -E -i 's/^"(.*)"$/\\1/' "${TOKEN_FILE}"
+│ 
+│ Bitwise operators are not supported.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 268, in resource "null_resource" "oda_bootstrap":
+│  268:         sed -E -i 's/^"(.*)"$/\\1/' "${TOKEN_FILE}"
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 268, in resource "null_resource" "oda_bootstrap":
+│  268:         sed -E -i 's/^"(.*)"$/\\1/' "${TOKEN_FILE}"
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 268, in resource "null_resource" "oda_bootstrap":
+│  268:         sed -E -i 's/^"(.*)"$/\\1/' "${TOKEN_FILE}"
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 283, in resource "null_resource" "oda_bootstrap":
+│  283:       if [[ -z "$(ls -A "${BUILD_DIR}" 2>/dev/null)" ]]; then
+│ 
+│ This character is not used within the language.
 ╵
 ╷
 │ Error: Invalid character
@@ -15,9 +316,285 @@
 │ This character is not used within the language.
 ╵
 ╷
-│ Error: Invalid expression
+│ Error: Invalid character
 │ 
-│   on oda_deploy.tf line 284, in resource "null_resource" "oda_bootstrap":
-│  284:         echosudo "${DOWNLOAD_CMD[@]}"
+│   on oda_deploy.tf line 299, in resource "null_resource" "oda_bootstrap":
+│  299:         echosudo mkdir -p "$(dirname "${SSL_KEY}")" "$(dirname "${SSL_CRT}")"
 │ 
-│ Expected the start of an expression, but found an invalid expression token.
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 299, in resource "null_resource" "oda_bootstrap":
+│  299:         echosudo mkdir -p "$(dirname "${SSL_KEY}")" "$(dirname "${SSL_CRT}")"
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 300, in resource "null_resource" "oda_bootstrap":
+│  300:         echosudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 301, in resource "null_resource" "oda_bootstrap":
+│  301:           -keyout "${SSL_KEY}" -out "${SSL_CRT}" \
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 320, in resource "null_resource" "oda_bootstrap":
+│  320:       NGINX_CONF_CONTENT="$(cat <<'CONF'
+│  321: server {
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 321, in resource "null_resource" "oda_bootstrap":
+│  321: server {
+│  322:     listen 443 ssl;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 322, in resource "null_resource" "oda_bootstrap":
+│  322:     listen 443 ssl;
+│  323:     server_name oda.site-a.vcf.lab;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 323, in resource "null_resource" "oda_bootstrap":
+│  323:     server_name oda.site-a.vcf.lab;
+│  324:     ssl_certificate     /etc/ssl/certs/selfsigned.crt;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 325, in resource "null_resource" "oda_bootstrap":
+│  325:     ssl_certificate     /etc/ssl/certs/selfsigned.crt;
+│  326:     ssl_certificate_key /etc/ssl/private/selfsigned.key;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 326, in resource "null_resource" "oda_bootstrap":
+│  326:     ssl_certificate_key /etc/ssl/private/selfsigned.key;
+│  327:     ssl_ciphers HIGH:!aNULL:!MD5;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 328, in resource "null_resource" "oda_bootstrap":
+│  328:     ssl_ciphers HIGH:!aNULL:!MD5;
+│  329:     ssl_prefer_server_ciphers on;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 329, in resource "null_resource" "oda_bootstrap":
+│  329:     ssl_prefer_server_ciphers on;
+│  330:     root /var/www;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 331, in resource "null_resource" "oda_bootstrap":
+│  331:     root /var/www;
+│  332:     index index.html;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 332, in resource "null_resource" "oda_bootstrap":
+│  332:     index index.html;
+│  333:     ssl_session_timeout 5m;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 334, in resource "null_resource" "oda_bootstrap":
+│  334:     ssl_session_timeout 5m;
+│  335:     ssl_session_cache shared:SSL:1m;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 335, in resource "null_resource" "oda_bootstrap":
+│  335:     ssl_session_cache shared:SSL:1m;
+│  336:     location / {
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 337, in resource "null_resource" "oda_bootstrap":
+│  337:     location / {
+│  338:         try_files $uri $uri/ =404;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 338, in resource "null_resource" "oda_bootstrap":
+│  338:         try_files $uri $uri/ =404;
+│  339:         autoindex on;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 339, in resource "null_resource" "oda_bootstrap":
+│  339:         autoindex on;
+│  340:     }
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 340, in resource "null_resource" "oda_bootstrap":
+│  340:     }
+│  341:     error_page 500 502 503 504 /50x.html;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 342, in resource "null_resource" "oda_bootstrap":
+│  342:     error_page 500 502 503 504 /50x.html;
+│  343:     location = /50x.html {
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 343, in resource "null_resource" "oda_bootstrap":
+│  343:     location = /50x.html {
+│  344:         root /var/www/build;
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 344, in resource "null_resource" "oda_bootstrap":
+│  344:         root /var/www/build;
+│  345:     }
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 345, in resource "null_resource" "oda_bootstrap":
+│  345:     }
+│  346: }
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 346, in resource "null_resource" "oda_bootstrap":
+│  346: }
+│  347: CONF
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid multi-line string
+│ 
+│   on oda_deploy.tf line 347, in resource "null_resource" "oda_bootstrap":
+│  347: CONF
+│  348: )"
+│ 
+│ Quoted strings may not be split over multiple lines. To produce a multi-line string, either use the \n escape to represent a newline character or use the "heredoc" multi-line template
+│ syntax.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 366, in resource "null_resource" "oda_bootstrap":
+│  366:       if ! ${SUDO} iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null; then
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 371, in resource "null_resource" "oda_bootstrap":
+│  371:       echosudo mkdir -p "$(dirname "${IPTABLES_SAVE_PATH}")"
+│ 
+│ This character is not used within the language.
+╵
+╷
+│ Error: Unsupported operator
+│ 
+│   on oda_deploy.tf line 372, in resource "null_resource" "oda_bootstrap":
+│  372:       echosudo iptables-save | ${SUDO} tee "${IPTABLES_SAVE_PATH}" >/dev/null
+│ 
+│ Bitwise operators are not supported. Did you mean boolean OR ("||")?
+╵
+╷
+│ Error: Invalid character
+│ 
+│   on oda_deploy.tf line 372, in resource "null_resource" "oda_bootstrap":
+│  372:       echosudo iptables-save | ${SUDO} tee "${IPTABLES_SAVE_PATH}" >/dev/null
+│ 
+│ This character is not used within the language.
