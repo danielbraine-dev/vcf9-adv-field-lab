@@ -196,7 +196,7 @@ resource "null_resource" "oda_bootstrap" {
 
   provisioner "file" {
     destination = "/home/admin/bootstrap_oda.sh"
-    content     = <<-BASH
+    content     = <<-'BASH'
       #!/usr/bin/env bash
       set -euo pipefail
 
