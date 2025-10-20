@@ -137,13 +137,6 @@ resource "vsphere_virtual_machine" "oda_appliance" {
     adapter_type = "vmxnet3"
   }
 
-  disk {
-    label            = "disk0"
-    size             = 332
-    eagerly_scrub    = false
-    thin_provisioned = true
-  }
-
   ovf_deploy {
     local_ovf_path            = var.oda_ova_path
     disk_provisioning         = "thin"
