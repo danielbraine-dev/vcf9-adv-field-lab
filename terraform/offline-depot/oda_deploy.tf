@@ -121,6 +121,7 @@ variable "hol_source_password" {
 ############################
 resource "vsphere_virtual_machine" "oda_appliance" {
   name             = var.oda_vm_name
+  datacenter_id    = data.vshpere_datacenter.oda_dc.id
   datastore_id     = data.vsphere_datastore.oda_ds.id
   resource_pool_id = data.vsphere_compute_cluster.oda_cluster.resource_pool_id
 
