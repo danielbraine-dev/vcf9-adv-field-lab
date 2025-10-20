@@ -107,7 +107,7 @@ variable "hol_source_user"     {
 }
 variable "hol_source_path"     { 
   type = string  
-  default = "~/Downloads/vcf9-adv-field-lab/terraform/offline-depot/generate.sh" 
+  default = "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/offline-depot/generate.sh" 
 }
 variable "hol_source_password" { 
   type = string  
