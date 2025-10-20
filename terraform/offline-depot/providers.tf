@@ -11,7 +11,7 @@ terraform {
 
 # --- vSphere ---
 provider "vsphere" {
-  user                 = "administrator@vshpere.local"
+  user                 = "administrator@vsphere.local"
   password             = "VMware123!VMware123!"
   vsphere_server       = "vc-mgmt-a.site-a.vcf.lab"
   allow_unverified_ssl = true
