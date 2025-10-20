@@ -200,14 +200,7 @@ resource "null_resource" "oda_bootstrap" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /home/admin/bootstrap_oda.sh",
-      # pass secrets & settings via env
-      "echo '${var.oda_admin_password}' | sudo -S -p '' env " +
-      "SUDO_PASS='${var.oda_admin_password}' " +
-      "SRC_HOST='${var.hol_source_host}' " +
-      "SRC_USER='${var.hol_source_user}' " +
-      "SRC_PATH='${var.hol_source_path}' " +
-      "SRC_PASS='${var.hol_source_password}' " +
-      "bash /home/admin/bootstrap_oda.sh"
+      "echo '${var.oda_admin_password}' | sudo -S -p '' env SUDO_PASS='${var.oda_admin_password}' SRC_HOST='${var.hol_source_host}' SRC_USER='${var.hol_source_user}' SRC_PATH='${var.hol_source_path}' SRC_PASS='${var.hol_source_password}' bash /home/admin/bootstrap_oda.sh"
     ]
   }
 }
