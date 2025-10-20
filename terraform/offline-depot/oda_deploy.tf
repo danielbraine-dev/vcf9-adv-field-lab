@@ -151,7 +151,7 @@ resource "vsphere_virtual_machine" "oda_appliance" {
 
     # Map OVA networks to your portgroup
     ovf_network_map = {
-      "Management" = data.vsphere_network.oda_net.id
+      "dvportgroup-2001" = data.vsphere_network.oda_net.id
     }
   }
 
