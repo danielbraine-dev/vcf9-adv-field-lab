@@ -53,7 +53,7 @@ data "vsphere_network" "oda_net" {
 ############################
 variable "oda_ova_path" {
   type    = string
-  default = "~/Downloads/vcf-offline-depot-appliance-0.1.3.ova"
+  default = "/home/holuser/Downloads/vcf-offline-depot-appliance-0.1.3.ova"
 }
 variable "oda_vm_name" {
   type    = string
