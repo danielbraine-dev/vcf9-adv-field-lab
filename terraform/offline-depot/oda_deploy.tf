@@ -23,7 +23,7 @@ variable "vsphere_datastore" {
 variable "vsphere_mgmt_pg" {
   description = "Target dvPg for mgmt appliances"
   type        = string
-  default     = "mgmt-vds01-mgmt-01a"
+  default     = "vmmgmt-vds01-mgmt-01a"
 }
 
 ############################
