@@ -69,6 +69,9 @@ step3_deploy_oda(){
   
   log "Deploying Offline Depot Appliance OVA via Terraform…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.oda_appliance'
+
+  log "Bootstrapping Offline Depot Appliance"
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='null_resource.oda_bootstrap'
   pause
 }
 
@@ -77,7 +80,7 @@ do_step() {
     1) step1_install_tools;;
     2) step2_dns_fix;;
     3) step3_deploy_oda;;
-    4) step4_set_internal_staging;;
+    4) step4_bootstrap_oda;;
     5) step5_download_token;;
     6) step6_download_depot;;
     7) step7_create_nsx_objects;;
