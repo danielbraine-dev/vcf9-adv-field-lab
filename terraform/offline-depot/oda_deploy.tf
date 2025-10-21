@@ -124,6 +124,8 @@ resource "vsphere_virtual_machine" "oda_appliance" {
   datacenter_id    = data.vshpere_datacenter.oda_dc.id
   datastore_id     = data.vsphere_datastore.oda_ds.id
   resource_pool_id = data.vsphere_compute_cluster.oda_cluster.resource_pool_id
+  firmware = "efi"
+  scsi_type = "pvscsi"
 
   num_cpus = 2
   memory   = 2048
@@ -169,6 +171,11 @@ resource "vsphere_virtual_machine" "oda_appliance" {
       "guestinfo.skip_dl"          = "False"
   }
  }
+
+  lifecycle {
+    ignore_changes = [disk, vapp[0].properties]
+  }
+
 }
 ############################
 # Post-deploy bootstrap over SSH
