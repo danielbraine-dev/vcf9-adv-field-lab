@@ -161,12 +161,12 @@ resource "vsphere_virtual_machine" "oda_appliance" {
       "guestinfo.hostname"         = var.oda_hostname,
       "guestinfo.domain"           = var.oda_domain_search,
       "guestinfo.admin_password"   = var.oda_admin_password,
-      "guestinfo.enable_ping"      = true,
-      "guestinfo.enable_jupyter"   = true,
-      "guestinfo.enable_ssh"       = true,
+      "guestinfo.enable_ping"      = "True",
+      "guestinfo.enable_jupyter"   = "True",
+      "guestinfo.enable_ssh"       = "True",
       "guestinfo.download_token"   = "",
       "guestinfo.vcf_version"      = "9.0.1",
-      "guestinfo.skip_dl"          = false
+      "guestinfo.skip_dl"          = "False"
   }
  }
 }
