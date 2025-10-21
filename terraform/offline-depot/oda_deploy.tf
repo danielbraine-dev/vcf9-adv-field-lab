@@ -199,8 +199,24 @@ resource "null_resource" "oda_bootstrap" {
 
   provisioner "remote-exec" {
     inline = [
+      "set -euxo pipefail",
+
+      # ensure UNIX line endings & exec bit
+      "sudo sed -i 's/\\r$//' /home/admin/bootstrap_oda.sh || true",
       "chmod +x /home/admin/bootstrap_oda.sh",
-      "echo '${var.oda_admin_password}' | sudo -S -p '' env SUDO_PASS='${var.oda_admin_password}' SRC_HOST='${var.hol_source_host}' SRC_USER='${var.hol_source_user}' SRC_PATH='${var.hol_source_path}' SRC_PASS='${var.hol_source_password}' bash /home/admin/bootstrap_oda.sh"
+
+      # pre-auth sudo so later sudo calls don't prompt
+      "echo '${var.oda_admin_password}' | sudo -S -p '' true",
+
+      # wait for cloud-init if present (don't fail if not)
+      "if command -v cloud-init >/dev/null 2>&1; then sudo cloud-init status --wait || true; fi",
+
+      # ensure log file exists and is readable
+      "sudo mkdir -p /var/log && sudo touch /var/log/bootstrap_oda.log && sudo chown admin:admin /var/log/bootstrap_oda.log",
+
+      #run the script with env vars; on failure, dump the log and exit 1
+      "sudo -E env SUDO_PASS='${var.oda_admin_password}' SRC_HOST='${var.hol_source_host}' SRC_USER='${var.hol_source_user}' SRC_PATH='${var.hol_source_path}' SRC_PASS='${var.hol_source_password}' bash -lc '/home/admin/bootstrap_oda.sh 2>&1 | tee -a /var/log/bootstrap_oda.log' || (echo '--- BOOTSTRAP LOG ---'; sudo tail -n +1 /var/log/bootstrap_oda.log || true; exit 1)"
     ]
+
   }
 }
