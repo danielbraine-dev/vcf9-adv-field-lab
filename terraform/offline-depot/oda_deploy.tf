@@ -145,8 +145,6 @@ resource "vsphere_virtual_machine" "oda_appliance" {
     allow_unverified_ssl_cert = true
     ip_protocol               = "IPv4"
 
-    datacenter_id             = data.vsphere_datacenter.oda_dc.id
-
     # Map OVA networks to your portgroup
     ovf_network_map = {
       "dvportgroup-2001" = data.vsphere_network.oda_net.id
