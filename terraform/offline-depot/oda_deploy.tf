@@ -205,6 +205,9 @@ resource "null_resource" "oda_bootstrap" {
       "sudo sed -i 's/\\r$//' /home/admin/bootstrap_oda.sh || true",
       "chmod +x /home/admin/bootstrap_oda.sh",
 
+      # if admin password is expired, reset it to the same value non-interactively
+      "if chage -l admin 2>/dev/null | grep -qi 'must be changed'; then echo -e '${var.oda_admin_password}\\n${var.oda_admin_password}' | passwd admin; fi",
+      
       # pre-auth sudo so later sudo calls don't prompt
       "echo '${var.oda_admin_password}' | sudo -S -p '' true",
 
