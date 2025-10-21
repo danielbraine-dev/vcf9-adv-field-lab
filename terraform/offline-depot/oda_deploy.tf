@@ -168,8 +168,8 @@ resource "vsphere_virtual_machine" "oda_appliance" {
       "guestinfo.vcf_version"      = "9.0.1",
       "guestinfo.skip_dl"          = false
   }
+ }
 }
-
 ############################
 # Post-deploy bootstrap over SSH
 ############################
