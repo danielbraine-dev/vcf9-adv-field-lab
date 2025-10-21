@@ -151,22 +151,22 @@ resource "vsphere_virtual_machine" "oda_appliance" {
     }
   }
 
-  # Cloud-init style guestinfo (depends on OVA)
-  extra_config = {
-    "guestinfo.ipaddress"        = var.oda_mgmt_ip,
-    "guestinfo.gateway"          = var.oda_mgmt_gateway,
-    "guestinfo.netmask"          = var.oda_mgmt_netmask,
-    "guestinfo.dns"              = join(",", var.oda_dns_servers),
-    "guestinfo.ntp"              = join(",", var.oda_ntp_servers),
-    "guestinfo.hostname"         = var.oda_hostname,
-    "guestinfo.domain"           = var.oda_domain_search,
-    "guestinfo.admin_password"   = var.oda_admin_password,
-    "guestinfo.enable_ping"      = true,
-    "guestinfo.enable_jupyter"   = true,
-    "guestinfo.enable_ssh"       = true,
-    "guestinfo.download_token"   = "",
-    "guestinfo.vcf_version"      = "9.0.1",
-    "guestinfo.skip_dl"          = false
+  vapp {
+    properties = {
+      "guestinfo.ipaddress"        = var.oda_mgmt_ip,
+      "guestinfo.gateway"          = var.oda_mgmt_gateway,
+      "guestinfo.netmask"          = var.oda_mgmt_netmask,
+      "guestinfo.dns"              = join(",", var.oda_dns_servers),
+      "guestinfo.ntp"              = join(",", var.oda_ntp_servers),
+      "guestinfo.hostname"         = var.oda_hostname,
+      "guestinfo.domain"           = var.oda_domain_search,
+      "guestinfo.admin_password"   = var.oda_admin_password,
+      "guestinfo.enable_ping"      = true,
+      "guestinfo.enable_jupyter"   = true,
+      "guestinfo.enable_ssh"       = true,
+      "guestinfo.download_token"   = "",
+      "guestinfo.vcf_version"      = "9.0.1",
+      "guestinfo.skip_dl"          = false
   }
 }
 
