@@ -85,7 +85,7 @@ variable "oda_ntp_servers" {
 }
 variable "oda_domain_search" {
   type    = string
-  default = "site-a.vcf.local"
+  default = "site-a.vcf.lab"
 }
 variable "oda_admin_password" {
   type      = string
