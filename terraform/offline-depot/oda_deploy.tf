@@ -115,7 +115,22 @@ variable "hol_source_password" {
   default = "VMware123!VMware123!" 
 }
 
-
+############################
+# SDDC Manager (for cert SCP)
+############################
+variable "vcf_host" {
+  type = string
+  default = "10.1.1.5"
+}
+variable "vcf_user" {
+  type = string
+  default = "vcf"
+}
+variable "vcf_password" {
+  type = string
+  sensitive = true
+  default = "VMware123!VMware123!"
+}
 ############################
 # Deploy Offline Depot Appliance OVA
 ############################
@@ -212,7 +227,7 @@ resource "null_resource" "oda_bootstrap" {
       "if command -v cloud-init >/dev/null 2>&1; then script -q -e -c \"sudo cloud-init status --wait || true\" /dev/null; fi",
   
       # run the bootstrap **with a TTY** and full env; on failure, dump the log
-      "script -q -e -c \"env SUDO_PASS='${var.oda_admin_password}' SRC_HOST='${var.hol_source_host}' SRC_USER='${var.hol_source_user}' SRC_PATH='${var.hol_source_path}' SRC_PASS='${var.hol_source_password}' bash -lc '/home/admin/bootstrap_oda.sh 2>&1 | tee -a /var/log/bootstrap_oda.log'\" /dev/null || (echo '--- BOOTSTRAP LOG ---'; sudo tail -n +200 /var/log/bootstrap_oda.log || true; exit 1)"
+      "script -q -e -c \"env SUDO_PASS='${var.oda_admin_password}' SRC_HOST='${var.hol_source_host}' SRC_USER='${var.hol_source_user}' SRC_PATH='${var.hol_source_path}' SRC_PASS='${var.hol_source_password}' VCF_HOST='${var.vcf_host}' VCF_USER='${var.vcf_user}' VCF_PASS='${var.vcf_password}' bash -lc '/home/admin/bootstrap_oda.sh 2>&1 | tee -a /var/log/bootstrap_oda.log'\" /dev/null || (echo '--- BOOTSTRAP LOG ---'; sudo tail -n +200 /var/log/bootstrap_oda.log || true; exit 1)"
     ]
   }
 
