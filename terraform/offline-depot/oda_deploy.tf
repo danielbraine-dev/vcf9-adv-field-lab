@@ -208,15 +208,13 @@ resource "null_resource" "oda_bootstrap" {
       # ensure log file exists (avoid hard-coded group)
       "sudo mkdir -p /var/log && sudo touch /var/log/bootstrap_oda.log && sudo chown admin:$(id -gn admin) /var/log/bootstrap_oda.log || sudo chmod 666 /var/log/bootstrap_oda.log",
   
-      # pre-auth sudo **with a TTY**
-      "script -q -e -c \"printf '%s\\n' '${var.oda_admin_password}' | sudo -S -p '' true\" /dev/null",
-  
       # wait for cloud-init to finish if present
       "if command -v cloud-init >/dev/null 2>&1; then script -q -e -c \"sudo cloud-init status --wait || true\" /dev/null; fi",
   
       # run the bootstrap **with a TTY** and full env; on failure, dump the log
-      "script -q -e -c \"sudo -E env SUDO_PASS='${var.oda_admin_password}' SRC_HOST='${var.hol_source_host}' SRC_USER='${var.hol_source_user}' SRC_PATH='${var.hol_source_path}' SRC_PASS='${var.hol_source_password}' bash -lc '/home/admin/bootstrap_oda.sh 2>&1 | tee -a /var/log/bootstrap_oda.log'\" /dev/null || (echo '--- BOOTSTRAP LOG ---'; sudo tail -n +200 /var/log/bootstrap_oda.log || true; exit 1)"
+      "script -q -e -c \"env SUDO_PASS='${var.oda_admin_password}' SRC_HOST='${var.hol_source_host}' SRC_USER='${var.hol_source_user}' SRC_PATH='${var.hol_source_path}' SRC_PASS='${var.hol_source_password}' bash -lc '/home/admin/bootstrap_oda.sh 2>&1 | tee -a /var/log/bootstrap_oda.log'\" /dev/null || (echo '--- BOOTSTRAP LOG ---'; sudo tail -n +200 /var/log/bootstrap_oda.log || true; exit 1)"
     ]
-}
+  }
 
 }
+
