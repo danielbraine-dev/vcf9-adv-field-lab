@@ -8,22 +8,22 @@
 variable "vsphere_datacenter" {
   description = "Target datacenter name"
   type        = string
-  default     = "dc-a"
+  default     = "wld-01a-DC"
 }
 variable "vsphere_cluster" {
   description = "Target cluster name"
   type        = string
-  default     = "cluster-mgmt-01a"
+  default     = "cluster-wld01-01a "
 }
 variable "vsphere_datastore" {
   description = "Target datastore"
   type        = string
-  default     = "vsan-mgmt-01a"
+  default     = "cluster-wld01-01a-vsan01"
 }
 variable "vsphere_mgmt_pg" {
   description = "Target dvPg for mgmt appliances"
   type        = string
-  default     = "vmmgmt-vds01-mgmt-01a"
+  default     = "mgmt-vds01-wld01-01a"
 }
 
 ############################
