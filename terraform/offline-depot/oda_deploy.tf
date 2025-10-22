@@ -13,7 +13,7 @@ variable "vsphere_datacenter" {
 variable "vsphere_cluster" {
   description = "Target cluster name"
   type        = string
-  default     = "cluster-wld01-01a "
+  default     = "cluster-wld01-01a"
 }
 variable "vsphere_datastore" {
   description = "Target datastore"
