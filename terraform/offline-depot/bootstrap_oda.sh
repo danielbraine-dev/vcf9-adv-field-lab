@@ -8,9 +8,12 @@ set -euo pipefail
 : "${SRC_PATH:?missing SRC_PATH}"
 : "${SRC_PASS:?missing SRC_PASS}"
 
-# If admin password is expired AND we're run manually, fix it before any sudo
-if chage -l admin 2>/dev/null | grep -qi 'must be changed'; then
-  echo -e "${SUDO_PASS}\n${SUDO_PASS}" | passwd admin
+if [[ $EUID -eq 0 ]]; then
+	SUDO=""
+	echosudo(){ "$@"; }
+else
+	SUDO="sudo -S -p ''"
+	echosudo(){ printf "%s\n" "$SUDO_PASS" | sudo -S -p '' "$@"; }
 fi
 
 # Sudo helpers (now that admin is valid)
@@ -43,19 +46,12 @@ err(){ printf "\n\033[1;31m%s\033[0m\n" "$*"; }
 require_file(){ ${SUDO} test -f "$1" || { err "Missing required file: $1"; exit 1; }; }
 ensure_dir(){ [[ -d "$1" ]] || echosudo mkdir -p "$1"; }
 
-# Wait patiently for the VDT properties file to appear (first boot can be slow)
-log "Waiting for ${PROPS_FILE} to appear…"
-for i in $(seq 1 120); do
-  ${SUDO} test -f "${PROPS_FILE}" && { log "Found ${PROPS_FILE}"; break; }
-  sleep 5
-done
-
 # 2–4) Update Broadcom depot host
 log "Ensuring depot host is dl.pstg.broadcom.com in ${PROPS_FILE}…"
 require_file "${PROPS_FILE}"
 echosudo cp "${PROPS_FILE}" "${PROPS_FILE}.bak" || true
 if ${SUDO} bash -c "grep -q '^lcm.depot.adapter.host=' '${PROPS_FILE}'"; then
-  ${SUDO} bash -c "sed -E -i 's#^lcm.depot.adapter.host=.*#lcm.depot.adapter.host=dl.pstg.broadcom.com#' '${PROPS_FILE}'"
+  ${SUDO} bash -c "sed -E -i 's#^lcm.depot.adapter.host=.*#lcm.depot.adapter.host=dl-pstg.broadcom.com#' '${PROPS_FILE}'"
 else
   ${SUDO} bash -c "printf '%s\n' 'lcm.depot.adapter.host=dl.pstg.broadcom.com' >> '${PROPS_FILE}'"
 fi
