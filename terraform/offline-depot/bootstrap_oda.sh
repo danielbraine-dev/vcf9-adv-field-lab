@@ -131,63 +131,116 @@ else
   warn "TLS files already exist; skipping creation."
 fi
 
-# Nginx server block for 443 with your cipher prefs
-log "Configuring nginx server for HTTPS on 443…"
-if [[ -d "${NGINX_SITES_AVAILABLE}" && -d "${NGINX_SITES_ENABLED}" ]]; then
-  NGINX_FILE="${NGINX_SITES_AVAILABLE}/${NGINX_SITE_NAME}"
-  NGINX_LINK="${NGINX_SITES_ENABLED}/${NGINX_SITE_NAME}"
-else
-  NGINX_FILE="${NGINX_CONF_D}/${NGINX_SITE_NAME}.conf"
-  NGINX_LINK=""
-  echosudo mkdir -p "${NGINX_CONF_D}"
-fi
+# 11)  Nginx: replace the default server block inside /etc/nginx/nginx.conf 
+log "Updating /etc/nginx/nginx.conf default server block…"
 
-cat >/tmp/nginx_depot.conf <<'CONF'
-server {
-    listen 443 ssl;
-    server_name oda.site-a.vcf.lab;
+NGINX_CONF="/etc/nginx/nginx.conf"
+NGINX_BAK="/etc/nginx/nginx.conf.bak.$(date +%s)"
 
-    ssl_certificate     /etc/ssl/certs/selfsigned.crt;
-    ssl_certificate_key /etc/ssl/private/selfsigned.key;
+# Desired server block (exactly as requested)
+read -r -d '' ODA_SERVER_BLOCK <<'SERV'
+    server {
+        listen 80;
+        listen 443 ssl;
+        server_name oda.site-a.vcf.lab;
 
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
+        ssl_certificate     /etc/ssl/certs/selfsigned.crt;
+        ssl_certificate_key /etc/ssl/private/selfsigned.key;
 
-    root /var/www;
-    index index.html;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
 
-    ssl_session_timeout 5m;
-    ssl_session_cache shared:SSL:1m;
+        root /var/www;
+        index index.html;
 
-    location / {
-        try_files $uri $uri/ =404;
-        autoindex on;
+        ssl_session_timeout 5m;
+        ssl_session_cache shared:SSL:1m;
+
+        location / {
+            try_files $uri $uri/ =404;
+            autoindex on;
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root /var/www/build;
+        }
+    }
+SERV
+
+# Backup once per run
+echosudo cp -n "${NGINX_CONF}" "${NGINX_BAK}" || true
+
+# Replace the first server block inside the http{} section with our block.
+# If no server block exists, insert just before the closing "}" of http{}.
+TMP_IN="/tmp/nginx.conf.in.$$"
+TMP_OUT="/tmp/nginx.conf.out.$$"
+echosudo cp "${NGINX_CONF}" "${TMP_IN}"
+
+awk -v block="$ODA_SERVER_BLOCK" '
+  function print_block(){ print block }
+  BEGIN{ in_http=0; depth=0; replacing=0; inserted=0 }
+  {
+    line=$0
+
+    # enter http block (assumes standard formatting)
+    if (!in_http && line ~ /^[[:space:]]*http[[:space:]]*\{/ ) {
+      in_http=1; depth=1; print line; next
     }
 
-    error_page 500 502 503 504 /50x.html;
-    location = /50x.html {
-        root /var/www/build;
+    if (in_http) {
+      # Track http{} nesting
+      if (line ~ /\{/) depth++
+      if (!inserted && replacing==0 && line ~ /^[[:space:]]*server[[:space:]]*\{/ ) {
+        # Start of the first server block inside http{}
+        replacing=1; sdepth=1
+        print_block()
+        next
+      }
+      if (replacing==1) {
+        # Skip until end of that server block
+        if (line ~ /\{/) sdepth++
+        if (line ~ /\}/) {
+          sdepth--
+          if (sdepth==0) { replacing=2; inserted=1; next }
+        }
+        next
+      }
+      # If no server block was found, insert before closing http }
+      if (!inserted && depth==1 && line ~ /^[[:space:]]*\}[[:space:]]*$/) {
+        print_block()
+        inserted=1
+      }
+
+      # Leaving http block?
+      if (line ~ /\}/) {
+        depth--
+        if (depth==0) in_http=0
+      }
+
+      print line
+      next
     }
-}
-CONF
 
-if [[ ! -f "${NGINX_FILE}" ]] || ! cmp -s /tmp/nginx_depot.conf "${NGINX_FILE}"; then
-  echosudo cp /tmp/nginx_depot.conf "${NGINX_FILE}"
-fi
-rm -f /tmp/nginx_depot.conf
+    # Outside http{}, just print
+    print line
+  }
+' "${TMP_IN}" > "${TMP_OUT}"
 
-if [[ -n "${NGINX_LINK:-}" && ! -L "${NGINX_LINK}" ]]; then
-  echosudo ln -sf "${NGINX_FILE}" "${NGINX_LINK}"
-fi
+echosudo cp "${TMP_OUT}" "${NGINX_CONF}"
+rm -f "${TMP_IN}" "${TMP_OUT}"
 
-# Ensure 50x page exists
-echosudo bash -lc 'mkdir -p /var/www/build && echo "<h1>Service Temporarily Unavailable</h1>" > /var/www/build/50x.html' || true
+# Ensure basic content exists
+echosudo bash -lc 'mkdir -p /var/www && [ -f /var/www/index.html ] || echo "<h1>VCF Offline Depot</h1>" > /var/www/index.html'
+echosudo bash -lc 'mkdir -p /var/www/build && echo "<h1>Service Temporarily Unavailable</h1>" > /var/www/build/50x.html'
 
+# Validate & restart nginx
 echosudo nginx -t
 echosudo systemctl restart nginx
 echosudo systemctl enable nginx || true
 
-# 11) Open TCP/443 via iptables and persist
+
+# 12) Open TCP/443 via iptables and persist
 log "Opening TCP/443 via iptables…"
 if ! ${SUDO:-sudo} iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null; then
   echosudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
@@ -197,7 +250,7 @@ fi
 echosudo mkdir -p "$(dirname "${IPTABLES_SAVE_PATH}")"
 echosudo bash -lc "iptables-save > '${IPTABLES_SAVE_PATH}'"
 
-# 12) Export cert as PEM and copy to SDDC Manager
+# 13) Export cert as PEM and copy to SDDC Manager
 log "Exporting TLS cert to PEM and copying to ${VCF_USER}@${VCF_HOST}:/tmp …"
 CERT_PEM="${HOME}/selfsigned-cert.pem"
 cp -f "${SSL_CRT}" "${CERT_PEM}"
