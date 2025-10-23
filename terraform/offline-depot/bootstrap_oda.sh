@@ -138,7 +138,7 @@ NGINX_CONF="/etc/nginx/nginx.conf"
 NGINX_BAK="/etc/nginx/nginx.conf.bak.$(date +%s)"
 
 # Desired server block (exactly as requested)
-read -r -d '' ODA_SERVER_BLOCK <<'SERV'
+ODA_SERVER_BLOCK="$(cat <<'SERV'
     server {
         listen 80;
         listen 443 ssl;
@@ -167,9 +167,13 @@ read -r -d '' ODA_SERVER_BLOCK <<'SERV'
         }
     }
 SERV
+)"
 
 # Backup once per run
 echosudo cp -n "${NGINX_CONF}" "${NGINX_BAK}" || true
+
+# Make sure awk is present
+command -v awk >/dev/null 2>&1 || { echosudo apt-get update -y && echosudo apt-get install -y gawk; }
 
 # Replace the first server block inside the http{} section with our block.
 # If no server block exists, insert just before the closing "}" of http{}.
@@ -177,28 +181,26 @@ TMP_IN="/tmp/nginx.conf.in.$$"
 TMP_OUT="/tmp/nginx.conf.out.$$"
 echosudo cp "${NGINX_CONF}" "${TMP_IN}"
 
+log "Replacing first server block inside http{} in ${NGINX_CONF}…"
 awk -v block="$ODA_SERVER_BLOCK" '
   function print_block(){ print block }
   BEGIN{ in_http=0; depth=0; replacing=0; inserted=0 }
   {
     line=$0
 
-    # enter http block (assumes standard formatting)
+    # enter http block
     if (!in_http && line ~ /^[[:space:]]*http[[:space:]]*\{/ ) {
       in_http=1; depth=1; print line; next
     }
 
     if (in_http) {
-      # Track http{} nesting
       if (line ~ /\{/) depth++
       if (!inserted && replacing==0 && line ~ /^[[:space:]]*server[[:space:]]*\{/ ) {
-        # Start of the first server block inside http{}
         replacing=1; sdepth=1
         print_block()
         next
       }
       if (replacing==1) {
-        # Skip until end of that server block
         if (line ~ /\{/) sdepth++
         if (line ~ /\}/) {
           sdepth--
@@ -206,23 +208,17 @@ awk -v block="$ODA_SERVER_BLOCK" '
         }
         next
       }
-      # If no server block was found, insert before closing http }
       if (!inserted && depth==1 && line ~ /^[[:space:]]*\}[[:space:]]*$/) {
         print_block()
         inserted=1
       }
-
-      # Leaving http block?
       if (line ~ /\}/) {
         depth--
         if (depth==0) in_http=0
       }
-
       print line
       next
     }
-
-    # Outside http{}, just print
     print line
   }
 ' "${TMP_IN}" > "${TMP_OUT}"
@@ -238,6 +234,7 @@ echosudo bash -lc 'mkdir -p /var/www/build && echo "<h1>Service Temporarily Unav
 echosudo nginx -t
 echosudo systemctl restart nginx
 echosudo systemctl enable nginx || true
+
 
 
 # 12) Open TCP/443 via iptables and persist
