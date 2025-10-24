@@ -29,10 +29,6 @@ WEB_ROOT="/var/www"
 BUILD_DIR="${WEB_ROOT}/build"
 SSL_KEY="/etc/ssl/private/selfsigned.key"
 SSL_CRT="/etc/ssl/certs/selfsigned.crt"
-NGINX_SITE_NAME="depot"
-NGINX_SITES_AVAILABLE="/etc/nginx/sites-available"
-NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
-NGINX_CONF_D="/etc/nginx/conf.d"
 IPTABLES_SAVE_PATH="/etc/systemd/scripts/ip4save"
 CN_FQDN="oda.site-a.vcf.lab"
 
@@ -111,10 +107,13 @@ else
   warn "Build directory ${BUILD_DIR} not empty, skipping download."
 fi
 
-# 9) Permissions on /var/www
-log "Setting permissions on ${WEB_ROOT}…"
-echosudo chown -R nginx "${WEB_ROOT}"
-echosudo chgrp -R nginx "${WEB_ROOT}"
+# 9) Permissions on /var/www (try to pick nginx user; fallback)
+NGX_USER="$( (grep -E '^[[:space:]]*user[[:space:]]' /etc/nginx/nginx.conf 2>/dev/null | awk '{print $2}' | tr -d ';') || true )"
+NGX_USER="${NGX_USER:-nginx}"
+id -u "$NGX_USER" >/dev/null 2>&1 || NGX_USER="www-data"
+
+log "Setting permissions on ${WEB_ROOT} (owner ${NGX_USER})…"
+echosudo chown -R "${NGX_USER}:${NGX_USER}" "${WEB_ROOT}" || true
 echosudo chmod -R 750 "${WEB_ROOT}"
 echosudo chmod g+s "${WEB_ROOT}"
 
@@ -131,7 +130,7 @@ else
   warn "TLS files already exist; skipping creation."
 fi
 
-# 11)  Nginx: replace the default server block inside /etc/nginx/nginx.conf 
+# 11) Nginx: replace the default server block inside /etc/nginx/nginx.conf
 log "Updating /etc/nginx/nginx.conf default server block…"
 
 NGINX_CONF="/etc/nginx/nginx.conf"
@@ -172,52 +171,34 @@ SERV
 # Backup once per run
 echosudo cp -n "${NGINX_CONF}" "${NGINX_BAK}" || true
 
-# Make sure awk is present
+# Ensure awk exists
 command -v awk >/dev/null 2>&1 || { echosudo apt-get update -y && echosudo apt-get install -y gawk; }
 
-# Replace the first server block inside the http{} section with our block.
-# If no server block exists, insert just before the closing "}" of http{}.
+# Replace the first server block inside http{} with our block
 TMP_IN="/tmp/nginx.conf.in.$$"
 TMP_OUT="/tmp/nginx.conf.out.$$"
 echosudo cp "${NGINX_CONF}" "${TMP_IN}"
+echosudo chmod 0644 "${TMP_IN}"
 
 log "Replacing first server block inside http{} in ${NGINX_CONF}…"
-awk -v block="$ODA_SERVER_BLOCK" '
+sudo awk -v block="$ODA_SERVER_BLOCK" '
   function print_block(){ print block }
   BEGIN{ in_http=0; depth=0; replacing=0; inserted=0 }
   {
     line=$0
-
     # enter http block
-    if (!in_http && line ~ /^[[:space:]]*http[[:space:]]*\{/ ) {
-      in_http=1; depth=1; print line; next
-    }
-
+    if (!in_http && line ~ /^[[:space:]]*http[[:space:]]*\{/ ) { in_http=1; depth=1; print line; next }
     if (in_http) {
       if (line ~ /\{/) depth++
-      if (!inserted && replacing==0 && line ~ /^[[:space:]]*server[[:space:]]*\{/ ) {
-        replacing=1; sdepth=1
-        print_block()
-        next
-      }
+      if (!inserted && replacing==0 && line ~ /^[[:space:]]*server[[:space:]]*\{/ ) { replacing=1; sdepth=1; print_block(); next }
       if (replacing==1) {
         if (line ~ /\{/) sdepth++
-        if (line ~ /\}/) {
-          sdepth--
-          if (sdepth==0) { replacing=2; inserted=1; next }
-        }
+        if (line ~ /\}/) { sdepth--; if (sdepth==0) { replacing=2; inserted=1; next } }
         next
       }
-      if (!inserted && depth==1 && line ~ /^[[:space:]]*\}[[:space:]]*$/) {
-        print_block()
-        inserted=1
-      }
-      if (line ~ /\}/) {
-        depth--
-        if (depth==0) in_http=0
-      }
-      print line
-      next
+      if (!inserted && depth==1 && line ~ /^[[:space:]]*\}[[:space:]]*$/) { print_block(); inserted=1 }
+      if (line ~ /\}/) { depth--; if (depth==0) in_http=0 }
+      print line; next
     }
     print line
   }
@@ -234,8 +215,6 @@ echosudo bash -lc 'mkdir -p /var/www/build && echo "<h1>Service Temporarily Unav
 echosudo nginx -t
 echosudo systemctl restart nginx
 echosudo systemctl enable nginx || true
-
-
 
 # 12) Open TCP/443 via iptables and persist
 log "Opening TCP/443 via iptables…"
