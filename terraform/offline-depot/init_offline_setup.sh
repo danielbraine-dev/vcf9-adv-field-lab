@@ -75,12 +75,19 @@ step3_deploy_oda(){
   pause
 }
 
+step4_conf_sddc_trust(){
+ #-----------------------------
+ # Add cert to trust
+ #-----------------------------
+ pause
+}
+
 do_step() {
   case "$1" in
     1) step1_install_tools;;
     2) step2_dns_fix;;
     3) step3_deploy_oda;;
-    4) step4_bootstrap_oda;;
+    4) step4_conf_sddc_trust;;
     5) step5_download_token;;
     6) step6_download_depot;;
     7) step7_create_nsx_objects;;
@@ -93,7 +100,7 @@ do_step() {
 run() {
   local spec="${1:-all}"
   if [[ "$spec" == "all" ]]; then
-    for n in {1..11}; do do_step "$n"; done
+    for n in {1..9}; do do_step "$n"; done
     echo "All steps complete. ✅"
     return
   fi
