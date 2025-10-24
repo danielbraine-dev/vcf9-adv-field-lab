@@ -160,6 +160,7 @@ step4_conf_sddc_trust() {
 EOF
 
   echo "[4] SDDC Manager trust configuration completed."
+  pause
 }
 
 
