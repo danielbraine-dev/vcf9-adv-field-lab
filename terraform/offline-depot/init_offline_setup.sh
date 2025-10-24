@@ -75,46 +75,41 @@ step3_deploy_oda(){
   pause
 }
 
-step4_conf_sddc_trust(){
- #-----------------------------
- # Add cert to trust
- #-----------------------------
-  log "Configuring Trust for ODA certificate on SDDC Manager…"
+step4_bootstrap_oda() {
+  echo "[4] Trust ODA certificate on SDDC Manager…"
 
-  # Defaults; override by exporting SDDC_HOST / SDDC_USER / SDDC_PASS / CACERTS_PATH if needed
-  SDDC_HOST="${SDDC_HOST:-10.1.1.5}"
-  SDDC_USER="${SDDC_USER:-vcf}"
-  SDDC_PASS="${SDDC_PASS:-VMware123!VMware123!}"            # if empty, assumes key-based sudo-nopass
-  CACERTS_PATH="${CACERTS_PATH:-}"      # optional: pin a specific cacerts file
+  # Static SDDC Manager credentials for this environment
+  SDDC_HOST="10.1.1.5"
+  SDDC_USER="vcf"
+  SDDC_PASS="VMware123!VMware123!"
+  CACERTS_PATH="/usr/lib/jvm/openjdk-java17-headless.x86_g4/lib/security/cacerts"
 
-  # Ensure the script exists locally
   LOCAL_SCRIPT="${ROOT_DIR}/scripts/sddc_trust_oda_cert.sh"
-  [[ -x "$LOCAL_SCRIPT" ]] || { chmod +x "$LOCAL_SCRIPT" || true; }
   [[ -f "$LOCAL_SCRIPT" ]] || { error "Missing $LOCAL_SCRIPT"; exit 1; }
+  [[ -x "$LOCAL_SCRIPT" ]] || chmod +x "$LOCAL_SCRIPT" || true
 
   SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
 
-  # Copy the trust script up to SDDC Manager
-  if [[ -n "$SDDC_PASS" ]]; then
-    command -v sshpass >/dev/null 2>&1 || { sudo apt-get update -y && sudo apt-get install -y sshpass; }
-    sshpass -p "$SDDC_PASS" scp $SSH_OPTS "$LOCAL_SCRIPT" "${SDDC_USER}@${SDDC_HOST}:/tmp/"
-  else
-    scp $SSH_OPTS "$LOCAL_SCRIPT" "${SDDC_USER}@${SDDC_HOST}:/tmp/"
+  # Ensure sshpass is available
+  if ! command -v sshpass >/dev/null 2>&1; then
+    log "Installing sshpass for SSH automation…"
+    sudo apt-get update -y
+    sudo apt-get install -y sshpass
   fi
 
-  # Execute it (with sudo). If password provided, feed it to sudo.
+  # Copy the script up to SDDC Manager
+  log "Copying trust configuration script to ${SDDC_HOST}…"
+  sshpass -p "$SDDC_PASS" scp $SSH_OPTS "$LOCAL_SCRIPT" "${SDDC_USER}@${SDDC_HOST}:/tmp/"
+
+  # Execute it with sudo on the remote host
   REMOTE="export CACERTS_PATH='${CACERTS_PATH}'; bash /tmp/$(basename "$LOCAL_SCRIPT")"
-  if [[ -n "$SDDC_PASS" ]]; then
-    sshpass -p "$SDDC_PASS" ssh $SSH_OPTS "${SDDC_USER}@${SDDC_HOST}" "echo '$SDDC_PASS' | sudo -S -p '' $REMOTE"
-  else
-    ssh $SSH_OPTS "${SDDC_USER}@${SDDC_HOST}" "sudo $REMOTE"
-  fi
+  log "Running trust configuration remotely on SDDC Manager…"
+  sshpass -p "$SDDC_PASS" ssh $SSH_OPTS "${SDDC_USER}@${SDDC_HOST}" "echo '$SDDC_PASS' | sudo -S -p '' $REMOTE"
 
-  echo "[4] SDDC Manager trust configured."
+  echo "[4] SDDC Manager trust configuration completed."
+  pause
 }
 
- pause
-}
 
 do_step() {
   case "$1" in
