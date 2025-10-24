@@ -205,8 +205,7 @@ sudo awk -v block="$ODA_SERVER_BLOCK" '
 ' "${TMP_IN}" > "${TMP_OUT}"
 
 echosudo cp "${TMP_OUT}" "${NGINX_CONF}"
-echosudo rm -f "${TMP_IN}" || true
-rm -f "${TMP_OUT}" || true
+echosudo rm -f "${TMP_IN}" "${TMP_OUT}" || true
 
 # Ensure basic content exists
 echosudo bash -lc 'mkdir -p /var/www && [ -f /var/www/index.html ] || echo "<h1>VCF Offline Depot</h1>" > /var/www/index.html'
