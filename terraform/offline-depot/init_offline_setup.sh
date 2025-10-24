@@ -75,7 +75,7 @@ step3_deploy_oda(){
   pause
 }
 
-step4_conf_sddc_trust() {
+step4_sddc_oda_cert_trust() {
   echo "[4] Trust ODA certificate on SDDC Manager…"
 
   SDDC_HOST="10.1.1.5"
