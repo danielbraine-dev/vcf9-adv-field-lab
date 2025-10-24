@@ -85,7 +85,7 @@ step4_conf_sddc_trust() {
   SU_PASS="VMware123!VMware123!"       # Password su expects (set to root's if required)
   CACERTS_PATH="/usr/lib/jvm/openjdk-java17-headless.x86_g4/lib/security/cacerts"
 
-  LOCAL_SCRIPT="${ROOT_DIR}/scripts/sddc_trust_oda_cert.sh"
+  LOCAL_SCRIPT="${ROOT_DIR}/sddc_trust_oda_cert.sh"
   [[ -f "$LOCAL_SCRIPT" ]] || { error "Missing $LOCAL_SCRIPT"; exit 1; }
   [[ -x "$LOCAL_SCRIPT" ]] || chmod +x "$LOCAL_SCRIPT" || true
 
