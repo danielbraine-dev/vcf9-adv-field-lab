@@ -75,13 +75,13 @@ step3_deploy_oda(){
   pause
 }
 
-step4_bootstrap_oda() {
+step4_conf_sddc_trust() {
   echo "[4] Trust ODA certificate on SDDC Manager…"
 
-  # Static SDDC Manager credentials for this environment
   SDDC_HOST="10.1.1.5"
   SDDC_USER="vcf"
-  SDDC_PASS="VMware123!VMware123!"
+  SDDC_PASS="VMware123!VMware123!"    # SSH password for vcf
+  SU_PASS="VMware123!VMware123!"       # Password su expects (set to *root* password if required)
   CACERTS_PATH="/usr/lib/jvm/openjdk-java17-headless.x86_g4/lib/security/cacerts"
 
   LOCAL_SCRIPT="${ROOT_DIR}/scripts/sddc_trust_oda_cert.sh"
@@ -90,25 +90,67 @@ step4_bootstrap_oda() {
 
   SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
 
-  # Ensure sshpass is available
+  # Tools we need locally
   if ! command -v sshpass >/dev/null 2>&1; then
-    log "Installing sshpass for SSH automation…"
-    sudo apt-get update -y
-    sudo apt-get install -y sshpass
+    log "Installing sshpass…"
+    sudo apt-get update -y && sudo apt-get install -y sshpass
+  fi
+  if ! command -v expect >/dev/null 2>&1; then
+    log "Installing expect…"
+    sudo apt-get update -y && sudo apt-get install -y expect
   fi
 
-  # Copy the script up to SDDC Manager
-  log "Copying trust configuration script to ${SDDC_HOST}…"
+  # Copy the script to SDDC Manager
+  log "Copying trust script to ${SDDC_HOST}…"
   sshpass -p "$SDDC_PASS" scp $SSH_OPTS "$LOCAL_SCRIPT" "${SDDC_USER}@${SDDC_HOST}:/tmp/"
 
-  # Execute it with sudo on the remote host
-  REMOTE="export CACERTS_PATH='${CACERTS_PATH}'; bash /tmp/$(basename "$LOCAL_SCRIPT")"
-  log "Running trust configuration remotely on SDDC Manager…"
-  sshpass -p "$SDDC_PASS" ssh $SSH_OPTS "${SDDC_USER}@${SDDC_HOST}" "echo '$SDDC_PASS' | sudo -S -p '' $REMOTE"
+  # Use expect to SSH, then su - to root, export CACERTS_PATH, and run the script
+  log "Running trust script on SDDC Manager as root via su - …"
+  expect <<'EOF'
+    set timeout 1200
+    # Variables from shell env
+    set host [exec bash -lc "printf %s ${SDDC_HOST}"]
+    set user [exec bash -lc "printf %s ${SDDC_USER}"]
+    set sshpass [exec bash -lc "printf %s ${SDDC_PASS}"]
+    set supass [exec bash -lc "printf %s ${SU_PASS}"]
+    set cacerts [exec bash -lc "printf %s ${CACERTS_PATH}"]
+
+    # Start SSH with a TTY (-tt) so su interacts properly
+    spawn sshpass -p $sshpass ssh -tt -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 $user@$host
+
+    expect {
+      -re "(?i)password:" { send -- "$sshpass\r"; exp_continue }
+      -re "[$#] $" { }
+    }
+
+    # Become root
+    send -- "su -\r"
+    expect {
+      -re "(?i)password:" { send -- "$supass\r" }
+      timeout { exit 2 }
+    }
+
+    # Confirm root shell (prompt ends with # usually)
+    expect -re "# $"
+
+    # Export env and run script
+    send -- "export CACERTS_PATH=\"$cacerts\"; bash /tmp/sddc_trust_oda_cert.sh\r"
+    expect {
+      -re "# $" { }
+      timeout { exit 3 }
+    }
+
+    # Exit root shell and SSH
+    send -- "exit\r"
+    expect -re "\\$ $"
+    send -- "exit\r"
+    expect eof
+EOF
 
   echo "[4] SDDC Manager trust configuration completed."
   pause
 }
+
 
 
 do_step() {
