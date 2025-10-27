@@ -75,16 +75,16 @@ step3_deploy_oda(){
   pause
 }
 
-step4_bootstrap_oda() {
+step4_conf_sddc_trust() {
   echo "[4] Trust ODA certificate on SDDC Manager…"
 
   SDDC_HOST="10.1.1.5"
   SDDC_USER="vcf"
   SDDC_PASS="VMware123!VMware123!"    # SSH password for vcf
-  SU_PASS="VMware123!VMware123!"       # password su - expects (change to root’s if needed)
+  SU_PASS="VMware123!VMware123!"       # password that su - expects (vcf’s or root’s per your setup)
   CACERTS_PATH="/usr/lib/jvm/openjdk-java17-headless.x86_g4/lib/security/cacerts"
 
-  LOCAL_SCRIPT="${ROOT_DIR}/scripts/sddc_trust_oda_cert.sh"
+  LOCAL_SCRIPT="${ROOT_DIR}/sddc_trust_oda_cert.sh"
   [[ -f "$LOCAL_SCRIPT" ]] || { error "Missing $LOCAL_SCRIPT"; exit 1; }
   [[ -x "$LOCAL_SCRIPT" ]] || chmod +x "$LOCAL_SCRIPT" || true
 
@@ -107,9 +107,9 @@ step4_bootstrap_oda() {
   # Export vars so Expect can read them via env()
   export SDDC_HOST SDDC_USER SDDC_PASS SU_PASS CACERTS_PATH
 
-  # Run expect with debug enabled (-d) so you can see interaction if it hangs
+  # Use expect but avoid prompt matching entirely; only watch for password prompts + our markers
   log "Running trust script on SDDC Manager as root via su - …"
-  expect -d <<'EOF'
+  expect <<'EOF'
     log_user 1
     set timeout 1200
 
@@ -120,22 +120,18 @@ step4_bootstrap_oda() {
     set supass $env(SU_PASS)
     set cacerts $env(CACERTS_PATH)
 
-    # Common prompt regexes
-    set user_prompt  {[\r\n].*[\$>\]]\s*$}
-    set root_prompt  {[\r\n].*#\s*$}
-
-    # Start SSH with a TTY so su interacts properly
+    # Start SSH (force TTY so su interacts properly)
     spawn sshpass -p $sshpass ssh -tt -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o LogLevel=ERROR $user@$host
 
-    # Land on a shell prompt
+    # Handle a possible extra password prompt (sshpass usually covers it, but just in case)
     expect {
       -re "(?i)password:" { send -- "$sshpass\r"; exp_continue }
-      -re $user_prompt    { }
-      timeout             { send_error "ERROR: SSH connection timed out\n"; exit 10 }
-      eof                 { send_error "ERROR: SSH connection failed\n"; exit 11 }
+      -re {.*} { after 200 }   ;# small settle
+      timeout { send_error "ERROR: SSH connection timed out\n"; exit 10 }
+      eof { send_error "ERROR: SSH connection failed\n"; exit 11 }
     }
 
-    # Quick precheck for the PEM file (must already be there from ODA script)
+    # Precheck PEM existence (we only care about our explicit marker)
     send -- "test -f /tmp/selfsigned-cert.pem && echo __PEM_OK__ || echo __PEM_MISSING__\r"
     expect {
       -re "__PEM_OK__"      { }
@@ -150,26 +146,16 @@ step4_bootstrap_oda() {
       timeout             { send_error "ERROR: No password prompt from su -\n"; exit 14 }
     }
 
-    # Wait for root prompt
-    expect {
-      -re $root_prompt { }
-      timeout          { send_error "ERROR: Did not get a root prompt after su -\n"; exit 15 }
-    }
-
-    # Export env and run the trust script as root
+    # Run the trust script as root; print our own completion marker
     send -- "export CACERTS_PATH=\"$cacerts\"; bash -lc 'set -euo pipefail; bash /tmp/sddc_trust_oda_cert.sh && echo __TRUST_DONE__'\r"
     expect {
       -re "__TRUST_DONE__" { }
-      -re $root_prompt     { exp_continue }   ;# stream root shell output
       timeout              { send_error "ERROR: Trust script timed out\n"; exit 16 }
     }
 
-    # Exit root shell and SSH
+    # Clean exits
     send -- "exit\r"
-    expect {
-      -re $user_prompt { }
-      timeout          { }
-    }
+    after 200
     send -- "exit\r"
     expect eof
 EOF
@@ -177,6 +163,7 @@ EOF
   echo "[4] SDDC Manager trust configuration completed."
   pause
 }
+
 
 do_step() {
   case "$1" in
