@@ -1,26 +1,16 @@
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/offline-depot$ ./init_offline_setup.sh 4
+[4] Trust ODA certificate on SDDC Manager…
+
 Copying trust script to 10.1.1.5…
 
 Running trust script on SDDC Manager as root via su - …
-expect version 5.45.4
-argv[0] = expect  argv[1] = -d  
-set argc 0
-set argv0 "expect"
-set argv ""
-executing commands from command file
 spawn sshpass -p VMware123!VMware123! ssh -tt -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o LogLevel=ERROR vcf@10.1.1.5
-parent: waiting for sync byte
-parent: telling child to go ahead
-parent: now unsynchronized from child
-spawn: returns {579984}
-Gate keeper glob pattern for '(?i)password:' is 'password:'. Activating booster.
-Gate keeper glob pattern for '[\r\n].*[\$>\]]\s*$' is '*]*'. Activating booster.
-
-expect: does "" (spawn_id exp4) match regular expression "(?i)password:"? Gate "password:"? gate=no
-"[\r\n].*[\$>\]]\s*$"? Gate "*]*"? gate=no
-Last login: Fri Oct 24 17:46:59 2025 from 10.1.10.130
-
-expect: does "Last login: Fri Oct 24 17:46:59 2025 from 10.1.10.130\r\r\n" (spawn_id exp4) match regular expression "(?i)password:"? Gate "password:"? gate=no
-"[\r\n].*[\$>\]]\s*$"? Gate "*]*"? gate=no
-vcf@sddcmanager-a [ ~ ]$ 
-expect: does "Last login: Fri Oct 24 17:46:59 2025 from 10.1.10.130\r\r\n\u001b[1;32mvcf@sddcmanager-a [ \u001b[0m~\u001b[1;32m ]$ \u001b[0m" (spawn_id exp4) match regular expression "(?i)password:"? Gate "password:"? gate=no
-"[\r\n].*[\$>\]]\s*$"? Gate "*]*"? gate=yes re=no
+test -f /tmp/selfsigned-cert.pem && echo __PEM_OK__ || echo __PEM_MISSING__
+su -
+Last login: Mon Oct 27 18:37:31 2025 from 10.1.10.130
+test -f /tmp/selfsigned-cert.pem && echo __PEM_OK__ || echo __PEM_MISSING__
+su -
+vcf@sddcmanager-a [ ~ ]$ test -f /tmp/selfsigned-cert.pem && echo __PEM_OK__ || echo __PEM_MISSING__
+__PEM_OK__
+vcf@sddcmanager-a [ ~ ]$ su -
+Password: VMware123!VMware123!
