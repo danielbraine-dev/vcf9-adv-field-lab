@@ -81,7 +81,7 @@ step4_conf_sddc_trust() {
   SDDC_HOST="10.1.1.5"
   SDDC_USER="vcf"
   SDDC_PASS="VMware123!VMware123!"    # SSH password for vcf
-  SU_PASS="VMware123!VMware123!"       # password that su - expects (vcf’s or root’s per your setup)
+  SU_PASS="VMware123!VMware123!"       # password that `su -` expects (use root’s if needed)
   CACERTS_PATH="/usr/lib/jvm/openjdk-java17-headless.x86_g4/lib/security/cacerts"
 
   LOCAL_SCRIPT="${ROOT_DIR}/sddc_trust_oda_cert.sh"
@@ -104,11 +104,18 @@ step4_conf_sddc_trust() {
   log "Copying trust script to ${SDDC_HOST}…"
   sshpass -p "$SDDC_PASS" scp $SSH_OPTS "$LOCAL_SCRIPT" "${SDDC_USER}@${SDDC_HOST}:/tmp/" || { error "SCP failed"; exit 1; }
 
+  # Quick precheck for the PEM file (must already be there from ODA step)
+  log "Checking /tmp/selfsigned-cert.pem on SDDC Manager…"
+  if ! sshpass -p "$SDDC_PASS" ssh $SSH_OPTS "${SDDC_USER}@${SDDC_HOST}" "test -f /tmp/selfsigned-cert.pem"; then
+    error "/tmp/selfsigned-cert.pem not found on ${SDDC_HOST}. Make sure ODA step copied it."
+    exit 1
+  fi
+
   # Export vars so Expect can read them via env()
   export SDDC_HOST SDDC_USER SDDC_PASS SU_PASS CACERTS_PATH
 
-  # Use expect but avoid prompt matching entirely; only watch for password prompts + our markers
-  log "Running trust script on SDDC Manager as root via su - …"
+  # Use expect to run su - -c '…' non-interactively; only watch for prompts + our marker
+  log "Running trust script on SDDC Manager as root via su - -c …"
   expect <<'EOF'
     log_user 1
     set timeout 1200
@@ -120,42 +127,33 @@ step4_conf_sddc_trust() {
     set supass $env(SU_PASS)
     set cacerts $env(CACERTS_PATH)
 
-    # Start SSH (force TTY so su interacts properly)
+    # Start SSH with a TTY so su interacts properly
     spawn sshpass -p $sshpass ssh -tt -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o LogLevel=ERROR $user@$host
 
-    # Handle a possible extra password prompt (sshpass usually covers it, but just in case)
+    # Handle potential extra SSH password prompt (some stacks still ask once)
     expect {
       -re "(?i)password:" { send -- "$sshpass\r"; exp_continue }
-      -re {.*} { after 200 }   ;# small settle
-      timeout { send_error "ERROR: SSH connection timed out\n"; exit 10 }
-      eof { send_error "ERROR: SSH connection failed\n"; exit 11 }
+      -re ".*"            { after 200 }
+      timeout             { send_error "ERROR: SSH connection timed out\n"; exit 10 }
+      eof                 { send_error "ERROR: SSH connection failed\n"; exit 11 }
     }
 
-    # Precheck PEM existence (we only care about our explicit marker)
-    send -- "test -f /tmp/selfsigned-cert.pem && echo __PEM_OK__ || echo __PEM_MISSING__\r"
-    expect {
-      -re "__PEM_OK__"      { }
-      -re "__PEM_MISSING__" { send_error "ERROR: /tmp/selfsigned-cert.pem not found on SDDC Manager\n"; exit 12 }
-      timeout               { send_error "ERROR: PEM precheck timed out\n"; exit 13 }
-    }
+    # Run script entirely under su - -c (no interactive root shell)
+    set cmd "export CACERTS_PATH=\"$cacerts\"; bash -lc 'set -euo pipefail; bash /tmp/sddc_trust_oda_cert.sh && echo __TRUST_DONE__'"
+    send -- "su - -c \"$cmd\"\r"
 
-    # Become root
-    send -- "su -\r"
+    # Supply the su password, then wait for our completion marker
     expect {
       -re "(?i)password:" { send -- "$supass\r" }
-      timeout             { send_error "ERROR: No password prompt from su -\n"; exit 14 }
+      timeout             { send_error "ERROR: No password prompt from su -\n"; exit 12 }
     }
 
-    # Run the trust script as root; print our own completion marker
-    send -- "export CACERTS_PATH=\"$cacerts\"; bash -lc 'set -euo pipefail; bash /tmp/sddc_trust_oda_cert.sh && echo __TRUST_DONE__'\r"
     expect {
       -re "__TRUST_DONE__" { }
-      timeout              { send_error "ERROR: Trust script timed out\n"; exit 16 }
+      timeout              { send_error "ERROR: Trust script timed out or failed\n"; exit 13 }
     }
 
-    # Clean exits
-    send -- "exit\r"
-    after 200
+    # Clean exit
     send -- "exit\r"
     expect eof
 EOF
@@ -163,6 +161,7 @@ EOF
   echo "[4] SDDC Manager trust configuration completed."
   pause
 }
+
 
 
 do_step() {
