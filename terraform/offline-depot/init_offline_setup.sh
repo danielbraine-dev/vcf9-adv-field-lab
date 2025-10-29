@@ -81,7 +81,7 @@ step4_conf_sddc_trust() {
   SDDC_HOST="10.1.1.5"
   SDDC_USER="vcf"
   SDDC_PASS="VMware123!VMware123!"    # SSH password for vcf
-  SU_PASS="VMware123!VMware123!"       # password that `su -` expects (use root’s if needed)
+  SU_PASS="VMware123!VMware123!"       # password that `su -` expects (vcf’s or root’s per your setup)
   CACERTS_PATH="/usr/lib/jvm/openjdk-java17-headless.x86_g4/lib/security/cacerts"
 
   LOCAL_SCRIPT="${ROOT_DIR}/sddc_trust_oda_cert.sh"
@@ -114,7 +114,7 @@ step4_conf_sddc_trust() {
   # Export vars so Expect can read them via env()
   export SDDC_HOST SDDC_USER SDDC_PASS SU_PASS CACERTS_PATH
 
-  # Use expect to run su - -c '…' non-interactively; only watch for prompts + our marker
+  # Use expect to disable history expansion, then run su - -c '…' non-interactively
   log "Running trust script on SDDC Manager as root via su - -c …"
   expect <<'EOF'
     log_user 1
@@ -130,24 +130,31 @@ step4_conf_sddc_trust() {
     # Start SSH with a TTY so su interacts properly
     spawn sshpass -p $sshpass ssh -tt -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o LogLevel=ERROR $user@$host
 
-    # Handle potential extra SSH password prompt (some stacks still ask once)
+    # Some stacks still ask once even with sshpass
     expect {
       -re "(?i)password:" { send -- "$sshpass\r"; exp_continue }
-      -re ".*"            { after 200 }
+      -re {.*}            { after 200 }
       timeout             { send_error "ERROR: SSH connection timed out\n"; exit 10 }
       eof                 { send_error "ERROR: SSH connection failed\n"; exit 11 }
     }
 
-    # Run script entirely under su - -c (no interactive root shell)
+    # IMPORTANT: Disable bash history expansion so '!' in passwords won't blow up if they hit the shell
+    send -- "set +H 2>/dev/null || set +o histexpand 2>/dev/null || true\r"
+    after 100
+
+    # Build command to run as root (prints our own completion marker)
     set cmd "export CACERTS_PATH=\"$cacerts\"; bash -lc 'set -euo pipefail; bash /tmp/sddc_trust_oda_cert.sh && echo __TRUST_DONE__'"
+
+    # Run everything via su - -c (no interactive root shell)
     send -- "su - -c \"$cmd\"\r"
 
-    # Supply the su password, then wait for our completion marker
+    # Supply the su password (expect exact 'Password:' prompt)
     expect {
-      -re "(?i)password:" { send -- "$supass\r" }
-      timeout             { send_error "ERROR: No password prompt from su -\n"; exit 12 }
+      -re "(?i)^.*password:.*$" { send -- "$supass\r" }
+      timeout                   { send_error "ERROR: No password prompt from su -\n"; exit 12 }
     }
 
+    # Wait for completion marker from the script
     expect {
       -re "__TRUST_DONE__" { }
       timeout              { send_error "ERROR: Trust script timed out or failed\n"; exit 13 }
@@ -161,6 +168,7 @@ EOF
   echo "[4] SDDC Manager trust configuration completed."
   pause
 }
+
 
 
 
