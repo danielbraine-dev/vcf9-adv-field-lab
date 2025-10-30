@@ -178,11 +178,11 @@ do_step() {
     2) step2_dns_fix;;
     3) step3_deploy_oda;;
     4) step4_conf_sddc_trust;;
-    5) step5_download_token;;
-    6) step6_download_depot;;
-    7) step7_create_nsx_objects;;
-    8) step8_deploy_avi;;
-    9) step9_create_cert;;
+    5) step5_conf_depot;;
+    6) step6_update_fleet_manager;;
+    7) step7_update_ops;;
+    8) step8_update_sddc_manager;;
+    9) step9_update_whats_left;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
