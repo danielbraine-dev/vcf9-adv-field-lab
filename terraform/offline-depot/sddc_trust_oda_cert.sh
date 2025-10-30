@@ -3,7 +3,8 @@ set -euo pipefail
 
 CERT_SRC="/tmp/selfsigned-cert.pem"
 CERT_DEST="/etc/ssl/certs/selfsigned-cert.pem"
-ALIAS="${ALIAS:-oda-vcf-labs}"
+ALIAS="${ALIAS:-oda-vcf-labs}" # Using the alias from your instructions
+PROPERTIES_FILE="/opt/vmware/vcf/lcm/lcm-app/conf/application-prod.properties"
 
 log(){ printf "\n\033[1;36m%s\033[0m\n" "$*"; }
 warn(){ printf "\n\033[1;33m%s\033[0m\n" "$*"; }
@@ -26,43 +27,56 @@ else
   warn "/usr/bin/rehash_ca_certificates.sh not found; continuing."
 fi
 
-# Locate Java cacerts keystore (or override with CACERTS_PATH)
-CACERTS_PATH="${CACERTS_PATH:-}"
-if [[ -z "$CACERTS_PATH" ]]; then
-  CANDIDATES=(
-    /usr/lib/jvm/*/lib/security/cacerts
-    /usr/lib/jvm/java-17-openjdk*/lib/security/cacerts
-    /usr/lib/jvm/openjdk-*/lib/security/cacerts
-    /usr/lib/jvm/openjdk-java17-headless.x86_g4/lib/security/cacerts
-  )
-  for c in "${CANDIDATES[@]}"; do
-    for f in $c; do
-      [[ -f "$f" ]] && CACERTS_PATH="$f" && break 2
-    done
-  done
+# ---
+# UPDATED: Rely on CACERTS_PATH being passed from init_offline_setup.sh
+# ---
+if [[ -z "${CACERTS_PATH:-}" || ! -f "$CACERTS_PATH" ]]; then
+  err "CACERTS_PATH env var is not set or file not found: '$CACERTS_PATH'"; 
+  exit 1
 fi
-[[ -n "$CACERTS_PATH" && -f "$CACERTS_PATH" ]] || { err "Could not locate Java cacerts; set CACERTS_PATH and re-run."; exit 1; }
 log "Using cacerts keystore: $CACERTS_PATH"
 
-log "Importing certificate into Java cacerts with alias '$ALIAS'…"
+
+# ---
+# UPDATED: Make keytool command idempotent (safe to re-run)
+# 1. Delete the alias first (ignore error if it doesn't exist)
+# 2. Import the new certificate
+# ---
+log "Removing old certificate with alias '$ALIAS' (if it exists)…"
+keytool -delete -alias "$ALIAS" \
+  -keystore "$CACERTS_PATH" \
+  -storepass secretpassword -noprompt \
+  || warn "Alias '$ALIAS' not found, or keystore empty. This is safe to ignore."
+
+log "Importing new certificate into Java cacerts with alias '$ALIAS'…"
 keytool -importcert -trustcacerts \
   -alias "$ALIAS" \
   -file "$CERT_DEST" \
   -keystore "$CACERTS_PATH" \
-  -storepass changeit \
+  -storepass secretpassword \
   -noprompt
 
-# Update LCM property (handle both spellings)
-PROP1="/opt/vmware/vcf/lcm/lcm-app/conf/application-prod.properties"
-PROP2="/opt/vmware/vcf/lcm/lcm-app/conf/application-prod.properites"
-for F in "$PROP1" "$PROP2"; do
-  [[ -f "$F" ]] || continue
-  log "Setting lcm.depot.adapter.certificateCheckEnabled=false in $F"
-  if grep -q '^lcm\.depot\.adapter\.certificateCheckEnabled=' "$F"; then
-    sed -i 's/^lcm\.depot\.adapter\.certificateCheckEnabled=.*/lcm.depot.adapter.certificateCheckEnabled=false/' "$F"
+# ---
+# UPDATED: Use the single, correctly-spelled properties file
+# ---
+if [[ -f "$PROPERTIES_FILE" ]]; then
+  log "Setting lcm.depot.adapter.certificateCheckEnabled=false in $PROPERTIES_FILE"
+  if grep -q '^lcm\.depot\.adapter\.certificateCheckEnabled=' "$PROPERTIES_FILE"; then
+    # Update existing line
+    sed -i 's/^lcm\.depot\.adapter\.certificateCheckEnabled=.*/lcm.depot.adapter.certificateCheckEnabled=false/' "$PROPERTIES_FILE"
   else
-    echo 'lcm.depot.adapter.certificateCheckEnabled=false' >> "$F"
+    # Add new line if it doesn't exist
+    echo '' >> "$PROPERTIES_FILE" # ensure newline
+    echo 'lcm.depot.adapter.certificateCheckEnabled=false' >> "$PROPERTIES_FILE"
   fi
-done
+else
+  warn "Properties file not found: $PROPERTIES_FILE"
+fi
+
+# ---
+# ADDED: Restart the lcm service as per your instructions
+# ---
+log "Restarting lcm service…"
+systemctl restart lcm
 
 log "SDDC Manager trust configuration completed."
