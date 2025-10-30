@@ -82,7 +82,7 @@ step4_conf_sddc_trust() {
   SDDC_USER="vcf"
   SDDC_PASS="VMware123!VMware123!"    # SSH password for vcf
   SU_PASS="VMware123!VMware123!"       # password that `su -` expects (vcf’s or root’s per your setup)
-  CACERTS_PATH="/usr/lib/jvm/openjdk-java17-headless.x86_g4/lib/security/cacerts"
+  CACERTS_PATH="/usr/lib/jvm/openjdk-java17-headless.x86_64/lib/security/cacerts"
 
   LOCAL_SCRIPT="${ROOT_DIR}/sddc_trust_oda_cert.sh"
   [[ -f "$LOCAL_SCRIPT" ]] || { error "Missing $LOCAL_SCRIPT"; exit 1; }
