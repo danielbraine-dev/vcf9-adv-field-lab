@@ -149,7 +149,7 @@ ODA_SERVER_BLOCK="$(cat <<'SERV'
         ssl_ciphers HIGH:!aNULL:!MD5;
         ssl_prefer_server_ciphers on;
 
-        root /var/www;
+        root /var/www/build;
         index index.html;
 
         ssl_session_timeout 5m;
