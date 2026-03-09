@@ -19,3 +19,6 @@ vCenter Configuration:
 vcenter-url: vc-wld01-a.site-a.vcf.lab
 vcenter-user: administrator@wld.sso
 vcenter-password: VMware123!VMware123!
+vcenter-datacenter: dc-a
+supervisor-cluster: cluster-wld01-01a
+
