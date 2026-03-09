@@ -34,18 +34,17 @@ def get_vcfa_provider_token(url, username, password):
     """Authenticate to VCF 9 Provider API and return a bearer token."""
     auth_url = f"{url}/cloudapi/1.0.0/sessions/provider"
     headers = {"Accept": "application/json;version=9.0.0"}
-    auth = (f"{username}@system", password) # VCF 9 Provider format
+    auth = (f"{username}@system", password) 
     
     response = requests.post(auth_url, headers=headers, auth=auth, verify=False)
     response.raise_for_status()
-    # In VCF 9, the token is returned in this specific header
     return response.headers.get("x-vmware-vcloud-access-token")
 
 def get_vcfa_tenant_token(url, username, password, org_name):
     """Authenticate to VCF 9 Tenant API and return a bearer token."""
     auth_url = f"{url}/cloudapi/1.0.0/sessions"
     headers = {"Accept": "application/json;version=9.0.0"}
-    auth = (f"{username}@{org_name}", password) # VCF 9 Tenant format
+    auth = (f"{username}@{org_name}", password) 
     
     response = requests.post(auth_url, headers=headers, auth=auth, verify=False)
     response.raise_for_status()
@@ -58,24 +57,33 @@ def get_vcenter_session(url, username, password):
     response.raise_for_status()
     return response.json()
 
-def get_resource_id(api_url, headers, target_name, name_key="name"):
+def get_resource_id(api_url, headers, target_name, name_key="name", fallback_headers=None):
     """
-    GETs a list of resources and searches for a specific name.
-    Returns the UUID if found, or None if it doesn't exist.
+    GETs a list of resources. If a 403 is hit, it automatically retries with fallback_headers.
+    Returns a tuple of (UUID, Successful_Headers) so the DELETE call uses the right token.
     """
-    response = requests.get(api_url, headers=headers, verify=False)
+    active_headers = headers
+    response = requests.get(api_url, headers=active_headers, verify=False)
+    
+    # Intelligent Fallback for VCF 9 Tenant Restrictions
+    if response.status_code == 403 and fallback_headers:
+        print(f"    [!] 403 Forbidden encountered. Retrying with Provider token...")
+        active_headers = fallback_headers
+        response = requests.get(api_url, headers=active_headers, verify=False)
+        
     if response.status_code == 404:
-        return None
+        return None, active_headers
+        
     response.raise_for_status()
     
     data = response.json()
-    # Support both IaaS API ("content") and CloudAPI ("values") array structures
     items = data.get("values", data.get("content", data)) if isinstance(data, dict) else data
     
     for item in items:
         if isinstance(item, dict) and item.get(name_key) == target_name:
-            return item.get("id")
-    return None
+            return item.get("id"), active_headers
+            
+    return None, active_headers
 
 def wait_for_deletion(check_url, headers, resource_name):
     """Poll an endpoint until it returns a 404 (Not Found)."""
@@ -102,7 +110,6 @@ def wait_for_deletion(check_url, headers, resource_name):
 def main():
     print("=== Starting Idempotent VCF 9 & vCenter Teardown ===\n")
     
-    # 0. Authenticate
     print("[*] Authenticating to APIs...")
     tenant_token = get_vcfa_tenant_token(TENANT_URL, TENANT_USER, TENANT_PASS, TENANT_ORG)
     provider_token = get_vcfa_provider_token(PROVIDER_URL, PROVIDER_USER, PROVIDER_PASS)
@@ -112,23 +119,26 @@ def main():
     provider_headers = {"Authorization": f"Bearer {provider_token}", "Content-Type": "application/json"}
     vc_headers = {"vmware-api-session-id": vc_session, "Content-Type": "application/json"}
     
-    # Required for the new VCF 9 CloudAPI Org endpoints
     cloudapi_provider_headers = provider_headers.copy()
     cloudapi_provider_headers["Accept"] = "application/json;version=40.0"
-    
     print("[+] Authentication successful.\n")
 
     # 1. Remove Tenant Namespace
     print("--- Step 1: Removing Tenant Namespace ---")
     ns_name = "demo-namespace-3qdtf"
     ns_list_url = f"{TENANT_URL}/iaas/api/namespaces"
-    ns_id = get_resource_id(ns_list_url, tenant_headers, ns_name)
+    
+    # We pass provider_headers as a fallback here specifically for the 403 error you hit
+    ns_id, active_ns_headers = get_resource_id(ns_list_url, tenant_headers, ns_name, fallback_headers=provider_headers)
     
     if ns_id:
         print(f"[*] Found Namespace '{ns_name}' with ID: {ns_id}. Deleting...")
         ns_url = f"{ns_list_url}/{ns_id}"
-        requests.delete(ns_url, headers=tenant_headers, verify=False)
-        wait_for_deletion(ns_url, tenant_headers, "Tenant Namespace")
+        del_resp = requests.delete(ns_url, headers=active_ns_headers, verify=False)
+        if del_resp.status_code >= 400:
+            print(f"[-] Delete request failed: {del_resp.status_code} - {del_resp.text}")
+            sys.exit(1)
+        wait_for_deletion(ns_url, active_ns_headers, "Tenant Namespace")
     else:
         print(f"[+] Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
 
@@ -136,7 +146,7 @@ def main():
     print("--- Step 2: Removing Content Library ---")
     cl_name = "provider-content-library"
     cl_list_url = f"{PROVIDER_URL}/iaas/api/content-libraries" 
-    cl_id = get_resource_id(cl_list_url, provider_headers, cl_name)
+    cl_id, _ = get_resource_id(cl_list_url, provider_headers, cl_name)
     
     if cl_id:
         print(f"[*] Found Content Library '{cl_name}' with ID: {cl_id}. Deleting...")
@@ -150,7 +160,7 @@ def main():
     print("--- Step 3: Deleting Regional Networking Config ---")
     net_name = "all-appsus-west-region"
     net_list_url = f"{PROVIDER_URL}/iaas/api/network-profiles"
-    net_id = get_resource_id(net_list_url, provider_headers, net_name)
+    net_id, _ = get_resource_id(net_list_url, provider_headers, net_name)
     
     if net_id:
         print(f"[*] Found Regional Networking '{net_name}' with ID: {net_id}. Deleting...")
@@ -164,7 +174,7 @@ def main():
     print("--- Step 4: Deleting Regional Quota ---")
     quota_name = "us-west-region"
     quota_list_url = f"{PROVIDER_URL}/iaas/api/fabric-compute-reservations"
-    quota_id = get_resource_id(quota_list_url, provider_headers, quota_name)
+    quota_id, _ = get_resource_id(quota_list_url, provider_headers, quota_name)
     
     if quota_id:
         print(f"[*] Found Regional Quota '{quota_name}' with ID: {quota_id}. Deleting...")
@@ -174,22 +184,21 @@ def main():
     else:
         print(f"[+] Regional Quota '{quota_name}' not found. Already deleted. Skipping.\n")
 
-    # 5. Disable and Delete Tenant Org (VCF 9 CloudAPI)
+    # 5. Disable and Delete Tenant Org
     print("--- Step 5: Disabling and Deleting Tenant Org ---")
     org_list_url = f"{PROVIDER_URL}/cloudapi/1.0.0/orgs"
-    org_id = get_resource_id(org_list_url, cloudapi_provider_headers, TENANT_ORG)
+    org_id, _ = get_resource_id(org_list_url, cloudapi_provider_headers, TENANT_ORG)
     
     if org_id:
         print(f"[*] Found Tenant Org '{TENANT_ORG}' with ID {org_id}.")
         org_url = f"{org_list_url}/{org_id}"
         
-        # In VCF 9 (VCD-based), orgs typically must be disabled before deletion
         org_data = requests.get(org_url, headers=cloudapi_provider_headers, verify=False).json()
         if org_data.get("isEnabled", True):
             print(f"[*] Disabling Tenant Org '{TENANT_ORG}'...")
             org_data["isEnabled"] = False
             requests.put(org_url, headers=cloudapi_provider_headers, json=org_data, verify=False)
-            time.sleep(5) # Brief pause to allow disable state to settle
+            time.sleep(5) 
             
         print(f"[*] Deleting Tenant Org '{TENANT_ORG}'...")
         requests.delete(org_url, headers=cloudapi_provider_headers, verify=False)
