@@ -1,14 +1,17 @@
-=== Starting Idempotent VCFA & vCenter Teardown ===
+=== Starting Idempotent VCF 9 & vCenter Teardown ===
 
 [*] Authenticating to APIs...
+[+] Authentication successful.
+
+--- Step 1: Removing Tenant Namespace ---
 Traceback (most recent call last):
-  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 196, in <module>
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 215, in <module>
     main()
-  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 97, in main
-    tenant_token = get_vcfa_token(TENANT_URL, TENANT_USER, TENANT_PASS)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 41, in get_vcfa_token
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 125, in main
+    ns_id = get_resource_id(ns_list_url, tenant_headers, ns_name)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 69, in get_resource_id
     response.raise_for_status()
   File "/usr/lib/python3/dist-packages/requests/models.py", line 1021, in raise_for_status
     raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 404 Client Error: Not Found for url: https://auto-a.site-a.vcf.lab/csp/gateway/am/api/login?access_token
+requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://auto-a.site-a.vcf.lab/iaas/api/namespaces
