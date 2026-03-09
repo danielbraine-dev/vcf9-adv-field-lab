@@ -1,0 +1,21 @@
+VCFA Configuration:
+provider-org-url: https://auto-a.site-a.vcf.lab/login/login?service=provider
+provider-admin-user: admin
+provider-admin-pass: VMware123!VMware123!
+tenant-org-name: all-apps
+tenant-admin-user: all-apps-admin
+tenant-admin-pass: VMware123!VMware123!
+tenant-org-url: https://auto-a.site-a.vcf.lab/login/?service=tenant:all-apps
+tenant-org-project: default-project
+tenant-org-project-ns: demo-namespace-3qdtf
+tenant-region-quota: us-west-region
+tenant-regional-networking: all-appsus-west-region
+provider-gateway: us-west-region-Default Provider Gateway
+edge-cluster: edgecl-wld-a
+supervisor-name: supervisor
+content-library: provider-content-library
+
+vCenter Configuration:
+vcenter-url: vc-wld01-a.site-a.vcf.lab
+vcenter-user: administrator@wld.sso
+vcenter-password: VMware123!VMware123!
