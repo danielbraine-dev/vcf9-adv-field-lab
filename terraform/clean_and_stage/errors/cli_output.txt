@@ -1,1 +1,17 @@
- failed to delete VPC in NSX: Principal 'svc-vcfa_47838324-05e1-4a44-b767' with role '[enterprise_admin]' attempts to delete or modify an object of type nsx$LbVirtualServer it doesn't own. (createUser=wcp-cluster-user-858c980f-1842-46ce-a046-4993adcb79d7-919fac98-e2e9-4e38-8895-afca8a790716, allowOverwrite=null) 
+--- Step 2a: Clearing Tenant Deployments (Workload Teardown) ---
+[*] Searching for active Deployments in the tenant...
+[+] No active deployments found. Network should be clear of workloads.
+
+--- Step 2b: Removing Tenant Namespace ---
+[*] Found Namespace 'demo-namespace-3qdtf' with ID: urn:vcloud:namespace:a0984439-411c-4344-8796-0ff2e96b7c88. Deleting...
+    [!] Tenant lacks deletion rights. Swapping to Provider token...
+[*] Polling: Waiting for Tenant Namespace to be completely removed (this may take several minutes for NSX VPCs)...
+Traceback (most recent call last):
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 324, in <module>
+    main()
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 245, in main
+    wait_for_tmc_namespace_deletion(ns_delete_url, active_ns_headers, "Tenant Namespace")
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 126, in wait_for_tmc_namespace_deletion
+    phase = data.get("status", {}).get("phase", "")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
