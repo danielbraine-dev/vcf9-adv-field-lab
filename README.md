@@ -13,6 +13,10 @@ mkdir avi && \
 mv avi_certs.tf avi_deploy.tf avi_nsxt_cloud.tf nsx_objects_create.tf avi && \
 ./setup.sh 1:4
 
-Relax the Pod Security on the default namespace:
-vcf context use vks-cluster-qxml:kubernetes-cluster-qxml
-kubectl label --overwrite namespace default pod-security.kubernetes.io/enforce=privileged
+
+
+Additional Help:
+Do you need to Relax the Pod Security on the a namespace:
+i.e.: 
+Switch to the appropriate context: vcf context use vks-cluster-qxml:kubernetes-cluster-qxml
+Change the label: kubectl label --overwrite namespace default pod-security.kubernetes.io/enforce=privileged
