@@ -155,15 +155,32 @@ def main():
         "Content-Type": "application/json"
     }
     
+    # Define the Provider equivalent for TMC endpoints
+    tm_provider_headers = {
+        "Authorization": f"Bearer {provider_token}", 
+        "Accept": "application/json;version=40.0",
+        "Content-Type": "application/json"
+    }
+    
     ns_id, active_ns_headers = get_resource_id(ns_summary_url, tm_tenant_headers, ns_name)
     
     if ns_id:
         print(f"[*] Found Namespace '{ns_name}' with ID: {ns_id}. Deleting...")
         ns_delete_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}"
+        
+        # Attempt deletion with the active token (Tenant)
         del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
+        
+        # If the Tenant lacks destruction rights, instantly swap to Provider token
+        if del_resp.status_code == 403:
+            print("    [!] Tenant lacks deletion rights. Swapping to Provider token...")
+            active_ns_headers = tm_provider_headers
+            del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
+            
         if del_resp.status_code >= 400:
             print(f"[-] Delete request failed: {del_resp.status_code} - {del_resp.text}")
             sys.exit(1)
+            
         wait_for_deletion_by_list(ns_summary_url, active_ns_headers, ns_name, "Tenant Namespace")
     else:
         print(f"[+] Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
