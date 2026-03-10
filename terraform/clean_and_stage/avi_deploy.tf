@@ -63,8 +63,11 @@ resource "vsphere_virtual_machine" "avi_controller" {
   guest_id = "other3xLinux64Guest"
   wait_for_guest_net_timeout = 0
 
-  # Explicit dependency to ensure the SE Library exists before Controller setup
-  depends_on = [vsphere_content_library.avi_se_cl]
+  # --- CRITICAL FIX: Explicit dependencies for both Pool and Library ---
+  depends_on = [
+    vsphere_resource_pool.avi,
+    vsphere_content_library.avi_se_cl
+  ]
 
   network_interface {
     network_id   = data.vsphere_network.avi_net.id
@@ -99,7 +102,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
     "guestinfo.controller.admin_password" = var.avi_admin_password
   }
 
-  # Prevent Terraform from flapping when Avi updates its own guestinfo post-boot
   lifecycle {
     ignore_changes = [extra_config]
   }
