@@ -90,6 +90,10 @@ variable "vcfa_token"    {
   sensitive = true
   default = "" 
 }
+variable "vcfa_org_name" {
+  type = string
+  default= ""
+}
 
 ############################
 # NSX object paths and Tags
