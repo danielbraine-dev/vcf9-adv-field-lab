@@ -149,22 +149,14 @@ variable "dhcp_profile_path" {
 variable "vsphere_datacenter" {
   description = "Datacenter name that contains the backing datastore"
   type        = string
-  default     = "wld-01a-DC"
+  default     = "dc-a"
 }
 
 variable "content_library_datastore" {
   description = "Datastore name to back the local content library"
   type        = string
-  default     = "cluster-wld01-01a-vsan01"
+  default     = "vsan-wld01-01a"
 }
 
-############################
-# VCFA cleanup controls & names
-############################
-variable "enable_vcfa_cleanup" {
-  description = "Gate to actually manage (delete) imported VCFA resources"
-  type        = bool
-  default     = true
-}
 
 
