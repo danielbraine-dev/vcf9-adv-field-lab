@@ -149,26 +149,48 @@ def main():
         requests.delete(f"{net_list_url}/{net_id}", headers=cloudapi_provider_headers, verify=False)
         wait_for_deletion_by_list(net_list_url, cloudapi_provider_headers, net_name, "Networking")
 
-    # 4. Regional Quota
+    # 4. Delete Regional Quota (VCF 9 CloudAPI + IaaS Fallback)
     print("--- Step 4: Deleting Regional Quota ---")
-    q_name = "us-west-region"
-    q_list_url = f"{PROVIDER_URL}/iaas/api/fabric-compute-reservations"
-    q_id, _ = get_resource_id(q_list_url, provider_iaas_headers, q_name)
-    if q_id:
-        requests.delete(f"{q_list_url}/{q_id}", headers=provider_iaas_headers, verify=False)
-        wait_for_deletion_by_list(q_list_url, provider_iaas_headers, q_name, "Quota")
+    quota_name = "us-west-region"
+    # Using the CloudAPI limits endpoint which is more stable in VCF 9
+    quota_list_url = f"{PROVIDER_URL}/cloudapi/1.0.0/limits"
+    
+    try:
+        quota_id, _ = get_resource_id(quota_list_url, cloudapi_provider_headers, quota_name)
+        
+        if quota_id:
+            print(f"[*] Found Regional Quota '{quota_name}' via CloudAPI. Deleting...")
+            requests.delete(f"{quota_list_url}/{quota_id}", headers=cloudapi_provider_headers, verify=False)
+            wait_for_deletion_by_list(quota_list_url, cloudapi_provider_headers, quota_name, "Quota")
+        else:
+            print(f"[+] Quota '{quota_name}' not found via CloudAPI. It may be managed via Org VDC. Skipping to Org deletion.")
+    except Exception as e:
+        print(f"[!] Warning: Quota API threw an error ({e}). Proceeding to forced Org deletion to clear it.")
 
-    # 5. Org
-    print("--- Step 5: Deleting Org ---")
+    # 5. Disable and Delete Tenant Org (The "Nuclear" Option)
+    print("\n--- Step 5: Disabling and Deleting Tenant Org ---")
     org_list_url = f"{PROVIDER_URL}/cloudapi/1.0.0/orgs"
     org_id, _ = get_resource_id(org_list_url, cloudapi_provider_headers, TENANT_ORG)
+    
     if org_id:
-        # Simple disable and force delete
+        print(f"[*] Found Tenant Org '{TENANT_ORG}'. Disabling and Purging...")
         org_url = f"{org_list_url}/{org_id}"
+        
+        # Disable the Org first
         requests.put(org_url, headers=cloudapi_provider_headers, json={"isEnabled": False}, verify=False)
-        time.sleep(10)
-        requests.delete(f"{org_url}?force=true", headers=cloudapi_provider_headers, verify=False)
+        time.sleep(5)
+        
+        # In VCF 9, we use recursive=true and force=true to ensure the Org takes the 500-erroring quotas with it
+        print(f"[*] Executing recursive force delete on Org '{TENANT_ORG}'...")
+        del_org_resp = requests.delete(f"{org_url}?force=true&recursive=true", headers=cloudapi_provider_headers, verify=False)
+        
+        if del_org_resp.status_code >= 400:
+            print(f"[-] Org delete failed: {del_org_resp.status_code} - {del_org_resp.text}")
+            sys.exit(1)
+            
         wait_for_deletion_by_list(org_list_url, cloudapi_provider_headers, TENANT_ORG, "Tenant Org")
+    else:
+        print(f"[+] Tenant Org '{TENANT_ORG}' already gone. Skipping.\n")
 
     # 6. vCenter Supervisor
     print("--- Step 6: vCenter Supervisor ---")
