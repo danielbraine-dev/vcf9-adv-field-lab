@@ -1,10 +1,9 @@
-=== Starting Idempotent VCF 9 & vCenter Teardown ===
+--- Step 1: Removing Content Library ---
+[*] Found Content Library 'provider-content-library' with ID: urn:vcloud:contentLibrary:dee60bff-837c-4b28-9b33-8651f9e83c44. Deleting...
+[*] Polling: Waiting for Content Library to be completely removed...
+    [0s elapsed] Still exists. Waiting 30s...
+[+] Success: Content Library successfully deleted.
 
-[*] Authenticating to APIs...
-[+] Authentication successful.
-
---- Step 1: Removing Tenant Namespace ---
-[+] Namespace 'demo-namespace-3qdtf' not found. Already deleted. Skipping.
-
---- Step 2: Removing Content Library ---
-[+] Content Library 'provider-content-library' not found. Already deleted. Skipping.
+--- Step 2: Removing Tenant Namespace ---
+[*] Found Namespace 'demo-namespace-3qdtf' with ID: urn:vcloud:namespace:a0984439-411c-4344-8796-0ff2e96b7c88. Deleting...
+[-] Delete request failed: 403 - {"minorErrorCode":"ACCESS_TO_RESOURCE_IS_FORBIDDEN","message":"[ 5e7700aa-d550-4a1b-8748-4ae6698d1940 ] Either you need some or all of the following rights [NAMESPACE_LIFECYCLE_MANAGE] to perform operations [NAMESPACE_MANAGE] for a0984439-411c-4344-8796-0ff2e96b7c88 or the target entity is invalid.","stackTrace":null}
