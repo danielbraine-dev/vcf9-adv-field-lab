@@ -138,7 +138,7 @@ def main():
     # Create a specific header for /tm/ APIs that removes the version=40.0 requirement
     tm_tenant_headers = {
         "Authorization": f"Bearer {tenant_token}", 
-        "Accept": "application/json",
+        "Accept": "application/json;version=40.0",
         "Content-Type": "application/json"
     }
     
