@@ -198,13 +198,13 @@ variable "avi_vm_name" {
 }
 
 variable "avi_dns_servers" {
-  type = string
-  default = "10.1.1.1"
+  type = list
+  default = ["10.1.1.1"]
 }
 
 variable "avi_ntp_servers" {
-  type = string
-  default = "10.1.1.1"
+  type = list
+  default = ["10.1.1.1"]
 }
 
 variable "avi_domain_search" {
