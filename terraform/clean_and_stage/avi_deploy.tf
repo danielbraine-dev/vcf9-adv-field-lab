@@ -2,23 +2,25 @@
 # Avi Controller OVA deploy (vSphere)
 ############################
 
-variable "vsphere_cluster"   { type = string }
-variable "vsphere_datastore" { type = string }
+# These define the variables. Values come from terraform.tfvars or avi.auto.tfvars.json.
+variable "vsphere_cluster"    { type = string }
+variable "vsphere_datastore"  { type = string }
+variable "vsphere_datacenter" { type = string } # Ensure this is declared
 
-variable "avi_ova_path"      { type = string }
-variable "avi_vm_name"       { type = string }
-variable "avi_mgmt_pg"       { 
-  type = string 
-  default = "mgmt-vds01-wld01-01a"
+variable "avi_ova_path"       { type = string }
+variable "avi_vm_name"        { type = string }
+variable "avi_mgmt_pg"        { 
+  type    = string 
+  default = "mgmt-vds01-wld01-01a" 
 }
-variable "avi_mgmt_ip"       { type = string }
-variable "avi_mgmt_netmask"  { type = string }
-variable "avi_mgmt_gateway"  { type = string }
-variable "avi_dns_servers"   { type = list(string) }
-variable "avi_ntp_servers"   { type = list(string) }
-variable "avi_domain_search" { type = string }
+variable "avi_mgmt_ip"        { type = string }
+variable "avi_mgmt_netmask"   { type = string }
+variable "avi_mgmt_gateway"   { type = string }
+variable "avi_dns_servers"    { type = list(string) }
+variable "avi_ntp_servers"    { type = list(string) }
+variable "avi_domain_search"  { type = string }
 variable "avi_admin_password" { 
-  type = string
+  type      = string
   sensitive = true 
 }
 
@@ -37,7 +39,8 @@ data "vsphere_datastore" "avi_ds" {
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
 
-data "vsphere_network" "avi_net" {
+# FIX: Use vsphere_distributed_portgroup for more reliable VDS lookups
+data "vsphere_distributed_portgroup" "avi_net" {
   name          = var.avi_mgmt_pg
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
@@ -66,14 +69,13 @@ resource "vsphere_virtual_machine" "avi_controller" {
   guest_id = "other3xLinux64Guest"
   wait_for_guest_net_timeout = 15
 
-  # --- CRITICAL FIX: Explicit dependencies for both Pool and Library ---
   depends_on = [
     vsphere_resource_pool.avi,
     vsphere_content_library.avi_se_cl
   ]
 
   network_interface {
-    network_id   = data.vsphere_network.avi_net.id
+    network_id   = data.vsphere_distributed_portgroup.avi_net.id
     adapter_type = "vmxnet3"
   }
 
@@ -88,10 +90,10 @@ resource "vsphere_virtual_machine" "avi_controller" {
     local_ovf_path            = var.avi_ova_path
     disk_provisioning         = "thin"
     allow_unverified_ssl_cert = true
-    ip_protocol                = "IPv4"
+    ip_protocol               = "IPv4"
 
     ovf_network_map = {
-      "Management" = data.vsphere_network.avi_net.id
+      "Management" = data.vsphere_distributed_portgroup.avi_net.id
     }
   }
 
