@@ -30,13 +30,11 @@ step1_install_tools() {
 
 step2_teardown_environment() {
   echo "[2] Teardown existing VCF & vCenter environment…"
-  
   if [[ -f "${ROOT_DIR}/teardown_vcfa.py" ]]; then
     log "Executing Python teardown script..."
-    # This cleans up Content Libraries, Namespaces, Orgs, Regions, and Supervisors
     python3 "${ROOT_DIR}/teardown_vcfa.py" || { error "Teardown script failed!"; exit 1; }
   else
-    error "teardown_vcfa.py not found in ${ROOT_DIR}! Please ensure the file is present."
+    error "teardown_vcfa.py not found in ${ROOT_DIR}!"
     exit 1
   fi
   pause
@@ -44,10 +42,8 @@ step2_teardown_environment() {
 
 step3_tf_init() {
   echo "[3] terraform init/validate…"
-  
-  # Ensure a tfvars exists (safe defaults; edit as needed)
   if [[ ! -f "${TFVARS_FILE}" ]]; then
-    log "Creating ${TFVARS_FILE} with lab defaults…"
+    log "Creating ${TFVARS_FILE} with ALL original lab defaults…"
     cat > "${TFVARS_FILE}" <<'EOF'
   # ---- NSX ----
   nsx_host                 = "nsx-wld01-a.site-a.vcf.lab"
@@ -100,7 +96,6 @@ step3_tf_init() {
   service_cidr                 = "10.96.0.0/23"
 EOF
 fi
-  
   log "Running terraform init…"
   terraform -chdir="${ROOT_DIR}" init -upgrade
   terraform -chdir="${ROOT_DIR}" validate
@@ -108,7 +103,7 @@ fi
 }
 
 step4_create_nsx_objects(){
-  log "[4] Applying NSX/vSphere creation stack (Tier-1 + Segment + Content Library)…"
+  log "[4] Applying NSX/vSphere creation stack…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target='nsxt_policy_tier1_gateway.se_mgmt' \
     -target='nsxt_policy_segment.se_mgmt' \
@@ -118,52 +113,57 @@ step4_create_nsx_objects(){
 
 step5_deploy_avi(){
   log "[5] Install AVI + NSX integration…"
-  
-  AVI_OVA_FILENAME="${AVI_OVA_FILENAME:-$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1 | xargs -n1 basename)}"
-  AVI_OVA_PATH="${ROOT_DIR}/${AVI_OVA_FILENAME}"
-  
-  if [[ ! -f "${AVI_OVA_PATH}" ]]; then
-    error "Could not find an .ova in ${ROOT_DIR}. Place the AVI OVA next to setup.sh or set AVI_OVA_FILENAME."
-    exit 1
+
+  # Remote vs Local Logic
+  REMOTE_OVA_URL="http://your-server-ip/path/to/controller.ova"
+  LOCAL_OVA_PATH="${ROOT_DIR}/controller.ova"
+  FINAL_OVA_PATH=""
+
+  log "Checking for remote OVA at ${REMOTE_OVA_URL}..."
+  if curl -IsL --max-time 5 "$REMOTE_OVA_URL" | grep -q "200 OK"; then
+    log "[+] Remote OVA found. Downloading..."
+    curl -L "$REMOTE_OVA_URL" -o "$LOCAL_OVA_PATH"
+    FINAL_OVA_PATH="$LOCAL_OVA_PATH"
+  else
+    warn "[-] Remote OVA not found. Searching local directory..."
+    LOCAL_SEARCH=$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1)
+    if [[ -n "$LOCAL_SEARCH" ]]; then
+      log "[+] Found local OVA: $(basename "$LOCAL_SEARCH")"
+      FINAL_OVA_PATH="$LOCAL_SEARCH"
+    else
+      error "[-] Critical: No OVA found remotely or locally."
+      exit 1
+    fi
   fi
-  
+
+  log "Resolving Management Portgroup from NSX state..."
   AVI_MGMT_PG="$(
     terraform -chdir="${ROOT_DIR}" state show -no-color nsxt_policy_segment.se_mgmt \
-      | awk -F' = ' '/^\s*display_name\s*=/{print $2}' \
-      | sed -e 's/^"//' -e 's/"$//' \
-      | tail -n1
+      | awk -F' = ' '/^\s*display_name\s*=/{print $2}' | sed -e 's/^"//' -e 's/"$//' | tail -n1
   )"
-  
-  if [[ -z "${AVI_MGMT_PG}" ]]; then
-    error "Could not resolve nsxt_policy_segment.se_mgmt.display_name from state."
-    exit 1
-  fi
   
   cat > "${ROOT_DIR}/avi.auto.tfvars.json" <<EOF
   {
-    "avi_ova_path": "${AVI_OVA_PATH}",
+    "avi_ova_path": "${FINAL_OVA_PATH}",
     "avi_mgmt_pg": "${AVI_MGMT_PG}"
   }
 EOF
   
-  log "Prepared AVI vars: ova=${AVI_OVA_PATH}, mgmt_pg=${AVI_MGMT_PG}"
-  
   log "Adding DNS record for Avi controller…"
   bash "${ROOT_DIR}/scripts/add_dns_record.sh"
   
-  log "Deploying Avi Controller OVA via Terraform…"
+  log "Deploying Avi Controller via Terraform…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.avi_controller'
   pause
 }
 
 step6_create_cert(){
-  log "[6] Creating Certificates…"
+  log "[6] Creating Certificates and Uploading to NSX…"
   AVI_FQDN="avi-controller01-a.site-a.vcf.lab"
   log "Waiting for Avi API at https://${AVI_FQDN}…"
   until curl -sk --max-time 5 "https://${AVI_FQDN}/api/initial-data" >/dev/null; do
     sleep 10
   done
-  log "Avi API is up."
 
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=tls_private_key.avi \
@@ -173,6 +173,7 @@ step6_create_cert(){
     -target=local_file.avi_cert_pem \
     -target=local_file.avi_key_pem
 
+  # Helper to read credentials for script use
   read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
 
   NSX_HOST="$(read_tfvar nsx_host)"
@@ -182,7 +183,7 @@ step6_create_cert(){
   CERT_NAME="$(read_tfvar avi_cert_name || echo avi-portal-cert)"
 
   if [[ -z "${NSX_HOST}" || -z "${NSX_USER}" || -z "${NSX_PASS}" ]]; then
-    warn "NSX variables missing from ${TFVARS_FILE}; skipping NSX trust upload."
+    warn "NSX variables missing; skipping NSX trust upload."
   else
     log "Uploading Avi portal cert to NSX trust store…"
     bash "${ROOT_DIR}/scripts/upload_nsx_cert.sh" "$NSX_HOST" "$NSX_USER" "$NSX_PASS" "$CERT_PATH" "$CERT_NAME"
@@ -191,18 +192,16 @@ step6_create_cert(){
 }
 
 step7_nsx_cloud(){
-  log "[7] PASS A — NSXCloud + vCenter (no IPAM/DNS yet)"
+  log "[7] NSXCloud Setup (Two-Pass)…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="attach_ipam_now=false" \
     -target=avi_cloud.nsx_t_cloud \
     -target=avi_vcenterserver.vc_01
   
-  log "PASS B1 — Discover networks and create IPAM/DNS profile"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=data.avi_network.vip \
     -target=avi_ipamdnsproviderprofile.internal
 
-  log "PASS B2 — Attach IPAM/DNS to Cloud and create SE Group"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="attach_ipam_now=true" \
     -target=avi_cloud.nsx_t_cloud \
@@ -211,20 +210,20 @@ step7_nsx_cloud(){
 }  
 
 step8_onboard_nsx_alb(){
-  log "[8] Onboarding Avi to NSX (ALB onboarding)…"
+  log "[8] Onboarding Avi to NSX…"
   bash "${ROOT_DIR}/scripts/nsx_onboard_alb.sh"
   pause
 }
 
 step9_install_sup(){
   log "[9] Installing Supervisor in vSphere…"
-  bash "${ROOT_DIR}/scripts/install_supervisor.sh" || warn "Supervisor install script finished with warnings."
+  bash "${ROOT_DIR}/scripts/install_supervisor.sh"
   pause
 }
 
 step10_provision_vcfa_objects(){
-  log "[10] Provisioning VCFA Objects (Tenant Org, Region, Quotas, etc.)…"
-  # Add specific VCFA creation targets here
+  log "[10] Provisioning VCFA Objects…"
+  # Add your final terraform apply commands here
   pause
 }
 
@@ -251,7 +250,6 @@ run() {
     echo "All steps complete. ✅"
     return
   fi
-
   IFS=',' read -ra parts <<< "$spec"
   for p in "${parts[@]}"; do
     if [[ "$p" =~ ^([0-9]+)[-:]([0-9]+)$ ]]; then
@@ -259,7 +257,7 @@ run() {
     elif [[ "$p" =~ ^[0-9]+$ ]]; then
       do_step "$p"
     else
-      echo "Bad step spec: '$p'"; echo "Usage: $0 [all|N|N-M|N:M|N1,N2,...]"; exit 2
+      echo "Bad step spec: '$p'"; exit 2
     fi
   done
 }
