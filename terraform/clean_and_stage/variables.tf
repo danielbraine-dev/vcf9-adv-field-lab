@@ -168,5 +168,11 @@ variable "vsphere_datastore" {
   default = "vsan-wld01-01a"
 }
 
+############################
+# AVI objects
+############################
 
-
+variable "avi_mgmt_pg" {
+  type = string
+  default = "mgmt-vds01-wld01-01a"
+}
