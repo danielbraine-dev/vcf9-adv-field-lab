@@ -102,6 +102,40 @@ def wait_for_deletion_by_list(list_url, headers, target_name, resource_name, nam
     print(f"[-] Timeout Error: {resource_name} was not deleted within {TIMEOUT_SECONDS} seconds.")
     sys.exit(1)
 
+def wait_for_tmc_namespace_deletion(check_url, headers, resource_name):
+    """Specifically polls a TMC namespace ID to ensure backend NSX cleanup finishes."""
+    print(f"[*] Polling: Waiting for {resource_name} to be completely removed (this may take several minutes for NSX VPCs)...")
+    start_time = time.time()
+    
+    while (time.time() - start_time) < TIMEOUT_SECONDS:
+        response = requests.get(check_url, headers=headers, verify=False)
+        
+        if response.status_code == 404:
+            print(f"[+] Success: {resource_name} and backing VPCs successfully deleted.\n")
+            return True
+        elif response.status_code >= 400 and response.status_code != 403:
+            print(f"[-] Error during polling: {response.status_code} - {response.text}")
+            sys.exit(1)
+            
+        # Inspect the JSON to see if the deletion permanently failed
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                phase = data.get("status", {}).get("phase", "")
+                if phase.upper() == "ERROR":
+                    print(f"\n[-] FATAL: {resource_name} entered an ERROR state in VCFA!")
+                    print("    This usually means a backend NSX object is stuck or locked.")
+                    sys.exit(1)
+            except ValueError:
+                pass
+            
+        print(f"    [{int(time.time() - start_time)}s elapsed] Namespace still terminating. Waiting {POLL_INTERVAL}s...")
+        time.sleep(POLL_INTERVAL)
+        
+    print(f"[-] Timeout Error: {resource_name} was not deleted within {TIMEOUT_SECONDS} seconds.")
+    sys.exit(1)
+
+
 # --- Execution Steps ---
 
 def main():
@@ -155,7 +189,6 @@ def main():
         "Content-Type": "application/json"
     }
     
-    # Define the Provider equivalent for TMC endpoints
     tm_provider_headers = {
         "Authorization": f"Bearer {provider_token}", 
         "Accept": "application/json;version=40.0",
@@ -168,10 +201,8 @@ def main():
         print(f"[*] Found Namespace '{ns_name}' with ID: {ns_id}. Deleting...")
         ns_delete_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}"
         
-        # Attempt deletion with the active token (Tenant)
         del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
         
-        # If the Tenant lacks destruction rights, instantly swap to Provider token
         if del_resp.status_code == 403:
             print("    [!] Tenant lacks deletion rights. Swapping to Provider token...")
             active_ns_headers = tm_provider_headers
@@ -181,7 +212,8 @@ def main():
             print(f"[-] Delete request failed: {del_resp.status_code} - {del_resp.text}")
             sys.exit(1)
             
-        wait_for_deletion_by_list(ns_summary_url, active_ns_headers, ns_name, "Tenant Namespace")
+        # Use the specialized direct-ID polling function
+        wait_for_tmc_namespace_deletion(ns_delete_url, active_ns_headers, "Tenant Namespace")
     else:
         print(f"[+] Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
 
