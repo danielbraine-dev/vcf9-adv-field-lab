@@ -14,7 +14,7 @@ variable "nsxt_cloudname"           {
 }               
 variable "nsxt_cloud_prefix"        { 
   type = string
-  default="avi-wld01-a" 
+  default="avi-wld01" 
 }
 
 # Data / VIP segment lives under this T1 and segment id
