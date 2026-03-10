@@ -121,7 +121,7 @@ def main():
     vc_headers = {"vmware-api-session-id": vc_session, "Content-Type": "application/json"}
     
     print("[+] Authentication successful.\n")
-
+    
     # 1. Remove Content Library (VCF 9 CloudAPI)
     print("--- Step 1: Removing Content Library ---")
     cl_name = "provider-content-library"
@@ -130,15 +130,14 @@ def main():
     
     if cl_id:
         print(f"[*] Found Content Library '{cl_name}' with ID: {cl_id}. Deleting...")
-        cl_url = f"{cl_list_url}/{cl_id}"
+        # Add the recursive and force flags to bypass the "not empty" safety check
+        cl_delete_url = f"{cl_list_url}/{cl_id}?recursive=true&force=true"
         
-        # Capture the deletion response to ensure VCFA actually accepted the command
-        del_resp = requests.delete(cl_url, headers=cloudapi_provider_headers, verify=False)
+        del_resp = requests.delete(cl_delete_url, headers=cloudapi_provider_headers, verify=False)
         
         if del_resp.status_code >= 400:
             print(f"[-] API Delete Request Failed! Status Code: {del_resp.status_code}")
             print(f"[-] VCFA Error Message: {del_resp.text}")
-            print("[!] No task was created in VCFA because the API rejected the command.")
             sys.exit(1)
             
         wait_for_deletion_by_list(cl_list_url, cloudapi_provider_headers, cl_name, "Content Library")
