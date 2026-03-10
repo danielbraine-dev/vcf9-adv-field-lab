@@ -104,13 +104,13 @@ variable "nsx_tag"       { default = "terraform-jumpstart" }
 variable "t0_path" {
   description = "Policy path to the Tier-0 gateway to attach the T1 to"
   type        = string
-  default     = "/infra/tier-0s/f2d56669-12c2-42b3-aa7a-8f57340665e5"
+  default     = "/infra/tier-0s/6a71e1f3-0906-4f08-a058-5f3b570a2193"
 }
 
 variable "wld1_t1_path" {
   description ="Policy path to the WLD1 Tier-1 gateway"
   type        = string
-  default     = "/infra/tier-1s/349361ff-2844-4ad3-9f03-6ab52b47f5af"
+  default     = "/infra/tier-1s/67fe9bc6-0265-4fa7-97ad-fbc6014da574"
 }
 
 variable "wld1_t1_name"{
@@ -121,19 +121,19 @@ variable "wld1_t1_name"{
 variable "edge_cluster_path" {
   description = "Policy path to the Edge Cluster used by the T1"
   type        = string
-  default     = "/infra/sites/default/enforcement-points/default/edge-clusters/55fd1616-197f-42ea-bcad-31402378a01c"
+  default     = "/infra/sites/default/enforcement-points/default/edge-clusters/853893e2-00e6-45a1-8774-6f8e136ca24b"
 }
 
 variable "overlay_tz_path" {
   description = "Policy path to the Overlay Transport Zone"
   type        = string
-  default     = "/infra/sites/default/enforcement-points/default/transport-zones/1b3a2f36-bfd1-443e-a0f6-4de01abc963e"
+  default     = "/infra/sites/default/enforcement-points/default/transport-zones/25b6ebaf-41ba-4f72-b018-cff34a7a0e03"
 }
 
 variable "transport_zone_name" {
   description = "Name of WLD1 TZ"
   type        = string
-  default     = "overlay-tz-nsx-wld01-a"
+  default     = "overlay-vds01-wld01-01a"
 }
 
 # Optional: if your provider version supports associating a DHCP Profile to the segment.
