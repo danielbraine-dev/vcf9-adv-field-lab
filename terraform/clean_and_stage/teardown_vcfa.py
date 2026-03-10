@@ -218,10 +218,10 @@ def main():
     else:
         print(f"[+] Region '{region_name}' already removed. Skipping.\n")
 
-    # 6. Delete vCenter Supervisor (Final Corrected Endpoint)
-    print("--- Step 6: Deleting vCenter Supervisor ---")
+    # 6. Disable vCenter Supervisor (Via POST Action Pattern)
+    print("--- Step 6: Disabling vCenter Supervisor ---")
     
-    # 1. Lookup: Get the list of clusters to find the MoREF
+    # 1. Lookup: Find the MoREF (e.g., domain-c10) for our named cluster
     sup_list_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters"
     list_resp = requests.get(sup_list_url, headers=vc_headers, verify=False)
     
@@ -229,28 +229,27 @@ def main():
     if list_resp.status_code == 200:
         clusters = list_resp.json()
         for cluster in clusters:
-            # Match the human-readable name to get the MoREF (e.g., domain-c10)
             if cluster.get("cluster_name") == CLUSTER_ID:
                 target_moref = cluster.get("cluster")
                 break
     
     if target_moref:
-        print(f"[*] Found Supervisor on Cluster '{CLUSTER_ID}' (MoREF: {target_moref}). Decommissioning...")
+        print(f"[*] Found Supervisor on Cluster '{CLUSTER_ID}' (MoREF: {target_moref}). Disabling...")
         
-        # 2. Decommission: Use the 'software' path for the DELETE operation
-        # This is the specific VCF 9 / vSphere 8 path for decommissioning
-        del_url = f"{VCENTER_URL}/api/vcenter/namespace-management/software/clusters/{target_moref}"
+        # 2. Action: Use POST with the ?action=disable query parameter
+        disable_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters/{target_moref}?action=disable"
         
-        del_req = requests.delete(del_url, headers=vc_headers, verify=False)
+        # Sending a POST with no body, just the action URL
+        disable_req = requests.post(disable_url, headers=vc_headers, verify=False)
         
-        if del_req.status_code >= 400:
-            print(f"[-] Decommission failed: {del_req.status_code} - {del_req.text}")
+        if disable_req.status_code >= 400:
+            print(f"[-] Disable action failed: {disable_req.status_code} - {disable_req.text}")
             sys.exit(1)
             
-        print(f"[*] Polling: Waiting for vCenter to completely remove the Supervisor...")
+        print(f"[*] Polling: Waiting for vCenter to completely decommission the Supervisor...")
         start_time = time.time()
         while True:
-            # We poll the original summary list to see when the MoREF disappears
+            # Poll the list until the cluster MoREF is no longer returned as a Supervisor-enabled cluster
             check_resp = requests.get(sup_list_url, headers=vc_headers, verify=False)
             still_exists = False
             if check_resp.status_code == 200:
@@ -260,17 +259,17 @@ def main():
                         break
             
             if not still_exists:
-                print(f"[+] Success: Supervisor on '{CLUSTER_ID}' removed.\n")
+                print(f"[+] Success: Supervisor on '{CLUSTER_ID}' disabled and removed.\n")
                 break
             
             if (time.time() - start_time) > TIMEOUT_SECONDS:
-                print("[-] Timeout waiting for Supervisor removal.")
+                print("[-] Timeout waiting for Supervisor decommissioning.")
                 sys.exit(1)
                 
             print(f"    [{int(time.time() - start_time)}s elapsed] Still decommissioning... Waiting 30s...")
             time.sleep(30)
     else:
-        print(f"[+] No active Supervisor found for cluster '{CLUSTER_ID}'. Already removed. Skipping.\n")
+        print(f"[+] No active Supervisor found for cluster '{CLUSTER_ID}'. Already disabled. Skipping.\n")
 
     print("=== Teardown Complete! Environment is clean and ready for Terraform. ===")
 
