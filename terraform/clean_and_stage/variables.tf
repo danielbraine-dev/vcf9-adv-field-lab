@@ -167,7 +167,6 @@ variable "vsphere_datastore" {
   type = string
   default = "vsan-wld01-01a"
 }
-}
 
 
 
