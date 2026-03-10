@@ -121,12 +121,33 @@ def main():
     print("--- Step 2: Removing Tenant Namespace ---")
     ns_name = "demo-namespace-3qdtf"
     ns_list_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaceSummaries"
-    ns_id, active_ns_headers = get_resource_id(ns_list_url, {"Authorization": f"Bearer {tenant_token}", "Accept": "application/json;version=40.0"}, ns_name)
+    
+    tm_tenant_headers = {"Authorization": f"Bearer {tenant_token}", "Accept": "application/json;version=40.0", "Content-Type": "application/json"}
+    tm_provider_headers = {"Authorization": f"Bearer {provider_token}", "Accept": "application/json;version=40.0", "Content-Type": "application/json"}
+    
+    ns_id, active_ns_headers = get_resource_id(ns_list_url, tm_tenant_headers, ns_name)
     if ns_id:
-        requests.delete(f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}", headers=active_ns_headers, verify=False)
+        print(f"[*] Found Namespace '{ns_name}' with ID: {ns_id}. Deleting...")
+        ns_delete_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}"
+        
+        # Capture the response to catch errors
+        del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
+        
+        # If the Tenant lacks destruction rights, swap to Provider token
+        if del_resp.status_code == 403:
+            print("    [!] Tenant lacks deletion rights. Swapping to Provider token...")
+            active_ns_headers = tm_provider_headers
+            del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
+            
+        if del_resp.status_code >= 400:
+            print(f"[-] Delete request failed: {del_resp.status_code} - {del_resp.text}")
+            sys.exit(1)
+            
         wait_for_deletion_by_list(ns_list_url, active_ns_headers, ns_name, "Namespace")
         print("[*] Waiting 180s for network purge...")
         time.sleep(180)
+    else:
+        print(f"[+] Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
 
     # 3. Regional Networking
     print("--- Step 3: Deleting Regional Networking Config ---")
