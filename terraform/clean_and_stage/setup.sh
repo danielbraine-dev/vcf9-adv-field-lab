@@ -105,8 +105,10 @@ fi
 step4_create_nsx_objects(){
   log "[4] Applying NSX/vSphere creation stack…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target='nsxt_policy_tier1_gateway.se_mgmt' \
+    -target='nsxt_policy_dhcp_server.common_dhcp' \
+    -target='nsxt_policy_tier1_gateway.t1_se_services' \
     -target='nsxt_policy_segment.se_mgmt' \
+    -target='nsxt_policy_segment.se_data_vip' \
     -target='vsphere_content_library.avi_se_cl'
   pause
 }
