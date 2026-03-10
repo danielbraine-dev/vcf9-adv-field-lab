@@ -117,17 +117,19 @@ def wait_for_tmc_namespace_deletion(check_url, headers, resource_name):
             print(f"[-] Error during polling: {response.status_code} - {response.text}")
             sys.exit(1)
             
-        # Inspect the JSON to see if the deletion permanently failed
+        # Hardened JSON parsing to prevent string-based crashes
         if response.status_code == 200:
             try:
                 data = response.json()
-                phase = data.get("status", {}).get("phase", "")
-                if phase.upper() == "ERROR":
-                    print(f"\n[-] FATAL: {resource_name} entered an ERROR state in VCFA!")
-                    print("    This usually means a backend NSX object is stuck or locked.")
-                    sys.exit(1)
+                # Only attempt to parse 'status' if data is actually a dictionary
+                if isinstance(data, dict):
+                    phase = data.get("status", {}).get("phase", "")
+                    if phase.upper() == "ERROR":
+                        print(f"\n[-] FATAL: {resource_name} entered an ERROR state in VCFA!")
+                        print("    This usually means a backend NSX object is stuck or locked.")
+                        sys.exit(1)
             except ValueError:
-                pass
+                pass # Ignore if the response body is empty or not JSON
             
         print(f"    [{int(time.time() - start_time)}s elapsed] Namespace still terminating. Waiting {POLL_INTERVAL}s...")
         time.sleep(POLL_INTERVAL)
@@ -178,44 +180,35 @@ def main():
     else:
         print(f"[+] Content Library '{cl_name}' not found. Already deleted. Skipping.\n")
 
-    # 2. Remove Tenant Namespace (Using TMC CloudAPI)
+    # Define standard IaaS headers for the Provider (No strict CloudAPI versioning needed here)
+    provider_iaas_headers = {
+        "Authorization": f"Bearer {provider_token}",
+        "Content-Type": "application/json"
+    }
+
+    # 2. Remove Tenant Namespace (Via top-level VCFA IaaS API)
     print("--- Step 2: Removing Tenant Namespace ---")
     ns_name = "demo-namespace-3qdtf"
-    ns_summary_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaceSummaries"
+    ns_list_url = f"{PROVIDER_URL}/iaas/api/namespaces"
     
-    tm_tenant_headers = {
-        "Authorization": f"Bearer {tenant_token}", 
-        "Accept": "application/json;version=40.0",
-        "Content-Type": "application/json"
-    }
-    
-    tm_provider_headers = {
-        "Authorization": f"Bearer {provider_token}", 
-        "Accept": "application/json;version=40.0",
-        "Content-Type": "application/json"
-    }
-    
-    ns_id, active_ns_headers = get_resource_id(ns_summary_url, tm_tenant_headers, ns_name)
+    # Use Provider token directly to avoid Tenant permission limits and prevent out-of-band ghosts
+    ns_id, active_ns_headers = get_resource_id(ns_list_url, provider_iaas_headers, ns_name)
     
     if ns_id:
-        print(f"[*] Found Namespace '{ns_name}' with ID: {ns_id}. Deleting...")
-        ns_delete_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}"
+        print(f"[*] Found Namespace '{ns_name}' with ID: {ns_id} in VCFA IaaS. Deleting...")
+        ns_delete_url = f"{ns_list_url}/{ns_id}"
         
         del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
         
-        if del_resp.status_code == 403:
-            print("    [!] Tenant lacks deletion rights. Swapping to Provider token...")
-            active_ns_headers = tm_provider_headers
-            del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
-            
         if del_resp.status_code >= 400:
             print(f"[-] Delete request failed: {del_resp.status_code} - {del_resp.text}")
             sys.exit(1)
             
-        # Use the specialized direct-ID polling function
-        wait_for_tmc_namespace_deletion(ns_delete_url, active_ns_headers, "Tenant Namespace")
+        # We can safely use the list poller here because VCFA IaaS will keep the object in the list 
+        # (usually in a 'Terminating' state) until the backend NSX VPC cleanup is 100% complete.
+        wait_for_deletion_by_list(ns_list_url, active_ns_headers, ns_name, "Tenant Namespace")
     else:
-        print(f"[+] Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
+        print(f"[+] Namespace '{ns_name}' not found in VCFA IaaS. Already deleted. Skipping.\n")
 
     # 3. Delete Regional Networking Config (VCF 9 CloudAPI)
     print("--- Step 3: Deleting Regional Networking Config ---")
