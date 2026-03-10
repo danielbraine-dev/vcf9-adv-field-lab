@@ -9,9 +9,9 @@ resource "nsxt_policy_dhcp_server" "common_dhcp" {
   server_addresses = ["100.96.0.1/30"]
 }
 
-resource "nsxt_policy_tier1_gateway" "se_mgmt" {
-  display_name       = "SE-mgmt"
-  description        = "Tier-1 for SE management"
+resource "nsxt_policy_tier1_gateway" "t1_se_services" {
+  display_name       = "SE-services"
+  description        = "Tier-1 for SE data"
   edge_cluster_path  = var.edge_cluster_path
   dhcp_config_path   = nsxt_policy_dhcp_server.common_dhcp.path
   tier0_path         = var.t0_path
@@ -37,14 +37,14 @@ resource "nsxt_policy_tier1_gateway" "se_mgmt" {
 resource "nsxt_policy_segment" "se_mgmt" {
   display_name        = "SE-mgmt"
   transport_zone_path = var.overlay_tz_path
-  connectivity_path   = nsxt_policy_tier1_gateway.se_mgmt.path
+  connectivity_path   = var.wld1_t1_path
 
   subnet {
-    cidr        = "10.10.5.1/24"
-    dhcp_ranges = ["10.10.5.2-10.10.5.20"]
+    cidr        = "10.4.100.129/25"
+    dhcp_ranges = ["10.4.100.130-10.4.100.160"]
 
     dhcp_v4_config {
-      server_address = "10.10.5.254/24"
+      server_address = "10.4.100.254/25"
       dns_servers    = ["10.1.1.1"]
       lease_time     = 86400
     }
@@ -56,18 +56,18 @@ resource "nsxt_policy_segment" "se_mgmt" {
   }
 }
 
-# NSX-T: Segment SE-mgmt with segment-local DHCP
+# NSX-T: Segment SE-Data_VIP with segment-local DHCP
 resource "nsxt_policy_segment" "se_data_vip" {
   display_name        = "SE-Data_VIP"
   transport_zone_path = var.overlay_tz_path
-  connectivity_path   = var.wld1_t1_path
+  connectivity_path   = nsxt_policy_tier1_gateway.t1_se_services.path
 
   subnet {
-    cidr        = "10.5.5.1/24"
-    dhcp_ranges = ["10.5.5.2-10.5.5.20"]
+    cidr        = "10.4.100.1/25"
+    dhcp_ranges = ["10.4.100.5-10.4.100.60"]
 
     dhcp_v4_config {
-      server_address = "10.5.5.254/24"
+      server_address = "10.4.100.126/25"
       dns_servers    = ["10.1.1.1"]
       lease_time     = 86400
     }
