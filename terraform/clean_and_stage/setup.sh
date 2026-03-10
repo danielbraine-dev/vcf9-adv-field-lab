@@ -69,20 +69,7 @@ step3_tf_init() {
   vcfa_endpoint    = "https://auto-a.site-a.vcf.lab"
   vcfa_token       = "<PUT_YOUR_VCFA_TOKEN_HERE>"
   
-  # ---- VCFA cleanup inputs (Step 2) ----
-  enable_vcfa_cleanup = true
-  vcfa_org_name            = "showcase-all-apps"
-  vcfa_region_name         = "us-west-region"
-  org_project_name         = "default-project"
-  ns_name                  = "demo-namespace-vkrcg"
-  org_cl_name              = "showcase-content-library"
-  provider_cl_name         = "provider-content-library"
-  org_reg_net_name         = "showcase-all-appsus-west-region"
-  provider_gw_name         = "provider-gateway-us-west"
-  provider_ip_space        = "ip-space-us-west"
-  vcenter_fqdn_to_refresh  = "vc-wld01-a.site-a.vcf.lab"
-  
-  # ---- AVI OVA deploy (Step 5) ----
+  # ---- AVI OVA deploy ----
   avi_ova_path           = "/path/to/Controller.ova"
   avi_vm_name            = "avi-controller01-a"
   avi_mgmt_pg            = "<MGMT_PORTGROUP_NAME>"   # e.g., 'pg-mgmt' or 'VM Network'
@@ -94,7 +81,7 @@ step3_tf_init() {
   avi_domain_search      = "site-a.vcf.lab"
   avi_admin_password     = "VMware123!VMware123!"
   
-  # ---- Supervisor enable (Step 6)
+  # ---- Supervisor enable
   sup_mgmt_ip_range      = "10.1.1.85-10.1.1.95"
   sup_mgmt_netmask       = "255.255.255.0"
   sup_mgmt_gateway       = "10.1.1.1"
@@ -109,9 +96,9 @@ step3_tf_init() {
   ext_ipblock_cidr             = "10.1.0.0/24"
   ext_ipblock_range            = "10.1.0.7-10.1.0.255"
   tgw_ipblock_name             = "Supervisor TGW IP Block"
-  tgw_ipblock_cidr             = "172.16.100.0/24"
-  tgw_ipblock_range            = "172.16.100.0-172.16.100.255"
-  workload_vpc_cidrs           = ["172.16.200.0/24"]
+  tgw_ipblock_cidr             = "172.16.101.0/24"
+  tgw_ipblock_range            = "172.16.101.1-172.16.101.254"
+  workload_vpc_cidrs           = ["172.16.201.0/24"]
   service_cidr                 = "10.96.0.0/23"
 EOF
 fi
