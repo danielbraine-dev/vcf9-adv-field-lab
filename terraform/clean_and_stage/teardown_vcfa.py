@@ -3,28 +3,24 @@ import urllib3
 import time
 import sys
 
-# Suppress insecure request warnings for the lab environment
+# Suppress insecure request warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- Configuration Variables ---
-# VCFA Provider
 PROVIDER_URL = "https://auto-a.site-a.vcf.lab"
 PROVIDER_USER = "admin"
 PROVIDER_PASS = "VMware123!VMware123!"
 
-# VCFA Tenant
 TENANT_URL = "https://auto-a.site-a.vcf.lab"
 TENANT_ORG = "all-apps"
 TENANT_USER = "all-apps-admin"
 TENANT_PASS = "VMware123!VMware123!"
 
-# vCenter
 VCENTER_URL = "https://vc-wld01-a.site-a.vcf.lab"
 VCENTER_USER = "administrator@wld.sso"
 VCENTER_PASS = "VMware123!VMware123!"
 CLUSTER_ID = "cluster-wld01-01a"
 
-# Timers
 TIMEOUT_SECONDS = 1200
 POLL_INTERVAL = 30
 
@@ -65,8 +61,12 @@ def get_resource_id(api_url, headers, target_name, name_key="name", fallback_hea
         
     response.raise_for_status()
     data = response.json()
-    items = data.get("values", data.get("content", data.get("items", data))) if isinstance(data, dict) else data
     
+    # VCF 9 lists are often in 'values', 'content', or 'items'
+    items = data.get("values", data.get("content", data.get("items", [])))
+    if not isinstance(items, list) and isinstance(data, list):
+        items = data
+
     for item in items:
         if isinstance(item, dict) and item.get(name_key) == target_name:
             return item.get("id"), active_headers
@@ -74,14 +74,14 @@ def get_resource_id(api_url, headers, target_name, name_key="name", fallback_hea
     return None, active_headers
 
 def wait_for_deletion_by_list(list_url, headers, target_name, resource_name, name_key="name"):
-    print(f"[*] Polling: Waiting for {resource_name} to be completely removed...")
+    print(f"[*] Polling: Waiting for {resource_name} to vanish from list...")
     start_time = time.time()
     
     while (time.time() - start_time) < TIMEOUT_SECONDS:
         item_id, _ = get_resource_id(list_url, headers, target_name, name_key)
         
         if not item_id:
-            print(f"[+] Success: {resource_name} successfully deleted.\n")
+            print(f"[+] Success: {resource_name} is no longer found.\n")
             return True
             
         print(f"    [{int(time.time() - start_time)}s elapsed] Still exists. Waiting {POLL_INTERVAL}s...")
@@ -90,214 +90,96 @@ def wait_for_deletion_by_list(list_url, headers, target_name, resource_name, nam
     print(f"[-] Timeout Error: {resource_name} was not deleted within {TIMEOUT_SECONDS} seconds.")
     sys.exit(1)
 
-def wait_for_tmc_namespace_deletion(check_url, headers, resource_name):
-    print(f"[*] Polling: Waiting for {resource_name} to terminate...")
-    start_time = time.time()
-    
-    while (time.time() - start_time) < TIMEOUT_SECONDS:
-        response = requests.get(check_url, headers=headers, verify=False)
-        
-        if response.status_code == 404:
-            print(f"[+] Success: {resource_name} successfully deleted.\n")
-            return True
-        elif response.status_code >= 400 and response.status_code != 403:
-            print(f"[-] Error during polling: {response.status_code} - {response.text}")
-            sys.exit(1)
-            
-        # Ultra-safe JSON parsing to prevent string/type crashers
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                if isinstance(data, dict):
-                    status_dict = data.get("status")
-                    if isinstance(status_dict, dict):
-                        phase = status_dict.get("phase", "")
-                        if phase.upper() == "ERROR":
-                            print(f"\n    [!] Warning: {resource_name} entered an ERROR state.")
-                            print("        (VCFA is likely purging stranded items in the background. Continuing...)")
-                            return True # Break the poll and let the 3 minute wait handle it
-            except Exception:
-                pass # Completely ignore any parsing errors and just keep waiting
-            
-        print(f"    [{int(time.time() - start_time)}s elapsed] Namespace still terminating. Waiting {POLL_INTERVAL}s...")
-        time.sleep(POLL_INTERVAL)
-        
-    print(f"[-] Timeout Error: {resource_name} was not deleted within {TIMEOUT_SECONDS} seconds.")
-    sys.exit(1)
-
-# --- Execution Steps ---
+# --- Main Execution ---
 
 def main():
-    print("=== Starting Idempotent VCF 9 & vCenter Teardown ===\n")
+    print("=== Starting Final Idempotent VCF 9 Teardown ===\n")
     
-    print("[*] Authenticating to APIs...")
     tenant_token = get_vcfa_tenant_token(TENANT_URL, TENANT_USER, TENANT_PASS, TENANT_ORG)
     provider_token = get_vcfa_provider_token(PROVIDER_URL, PROVIDER_USER, PROVIDER_PASS)
     vc_session = get_vcenter_session(VCENTER_URL, VCENTER_USER, VCENTER_PASS)
     
-    cloudapi_provider_headers = {
-        "Authorization": f"Bearer {provider_token}", 
-        "Accept": "application/json;version=40.0",
-        "Content-Type": "application/json"
-    }
-    
-    # Standard IaaS Headers for steps that don't need CloudAPI versioning
-    provider_iaas_headers = {
-        "Authorization": f"Bearer {provider_token}",
-        "Content-Type": "application/json"
-    }
-    
+    cloudapi_provider_headers = {"Authorization": f"Bearer {provider_token}", "Accept": "application/json;version=40.0", "Content-Type": "application/json"}
+    provider_iaas_headers = {"Authorization": f"Bearer {provider_token}", "Content-Type": "application/json"}
     vc_headers = {"vmware-api-session-id": vc_session, "Content-Type": "application/json"}
-    print("[+] Authentication successful.\n")
 
-    # 1. Remove Content Library
+    # 1. Content Library
     print("--- Step 1: Removing Content Library ---")
     cl_name = "provider-content-library"
-    cl_list_url = f"{PROVIDER_URL}/cloudapi/vcf/contentLibraries" 
+    cl_list_url = f"{PROVIDER_URL}/cloudapi/vcf/contentLibraries"
     cl_id, _ = get_resource_id(cl_list_url, cloudapi_provider_headers, cl_name)
-    
     if cl_id:
-        print(f"[*] Found Content Library '{cl_name}'. Deleting...")
-        cl_delete_url = f"{cl_list_url}/{cl_id}?recursive=true&force=true"
-        requests.delete(cl_delete_url, headers=cloudapi_provider_headers, verify=False)
+        requests.delete(f"{cl_list_url}/{cl_id}?recursive=true&force=true", headers=cloudapi_provider_headers, verify=False)
         wait_for_deletion_by_list(cl_list_url, cloudapi_provider_headers, cl_name, "Content Library")
-    else:
-        print(f"[+] Content Library '{cl_name}' not found. Already deleted. Skipping.\n")
 
-    # 2a. Remove Tenant Deployments
-    print("--- Step 2a: Clearing Tenant Deployments (Workload Teardown) ---")
+    # 2a. Deployments
+    print("--- Step 2a: Clearing Deployments ---")
+    dep_headers = {"Authorization": f"Bearer {tenant_token}", "Content-Type": "application/json"}
     dep_list_url = f"{TENANT_URL}/deployment/api/deployments"
-    dep_headers = {
-        "Authorization": f"Bearer {tenant_token}",
-        "Content-Type": "application/json"
-    }
-    
-    dep_resp = requests.get(f"{dep_list_url}?size=50", headers=dep_headers, verify=False)
-    if dep_resp.status_code == 200:
-        deployments = dep_resp.json().get("content", [])
-        if not deployments:
-            print("[+] No active deployments found.")
-        else:
-            for dep in deployments:
-                dep_id = dep.get("id")
-                dep_name = dep.get("name")
-                print(f"[*] Found Deployment '{dep_name}'. Instructing VCFA to destroy it...")
-                requests.delete(f"{dep_list_url}/{dep_id}", headers=dep_headers, verify=False)
-                wait_for_deletion_by_list(dep_list_url, dep_headers, dep_name, f"Deployment '{dep_name}'")
-    else:
-        print(f"[-] Could not query Deployments. Moving on.")
+    dep_resp = requests.get(dep_list_url, headers=dep_headers, verify=False).json()
+    for dep in dep_resp.get("content", []):
+        requests.delete(f"{dep_list_url}/{dep['id']}", headers=dep_headers, verify=False)
+        wait_for_deletion_by_list(dep_list_url, dep_headers, dep['name'], "Deployment")
 
-    # 2b. Remove Tenant Namespace
-    print("\n--- Step 2b: Removing Tenant Namespace ---")
+    # 2b. Namespace
+    print("--- Step 2b: Removing Namespace ---")
     ns_name = "demo-namespace-3qdtf"
-    ns_summary_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaceSummaries"
+    ns_list_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaceSummaries"
+    tm_headers = {"Authorization": f"Bearer {tenant_token}", "Accept": "application/json;version=40.0", "Content-Type": "application/json"}
+    tm_prov_headers = {"Authorization": f"Bearer {provider_token}", "Accept": "application/json;version=40.0", "Content-Type": "application/json"}
     
-    tm_tenant_headers = {
-        "Authorization": f"Bearer {tenant_token}", 
-        "Accept": "application/json;version=40.0",
-        "Content-Type": "application/json"
-    }
-    tm_provider_headers = {
-        "Authorization": f"Bearer {provider_token}", 
-        "Accept": "application/json;version=40.0",
-        "Content-Type": "application/json"
-    }
-    
-    ns_id, active_ns_headers = get_resource_id(ns_summary_url, tm_tenant_headers, ns_name)
-    
+    ns_id, active_headers = get_resource_id(ns_list_url, tm_headers, ns_name)
     if ns_id:
-        print(f"[*] Found Namespace '{ns_name}'. Deleting...")
-        ns_delete_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}"
-        
-        del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
+        del_resp = requests.delete(f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}", headers=active_headers, verify=False)
         if del_resp.status_code == 403:
-            active_ns_headers = tm_provider_headers
-            del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
-            
-        wait_for_tmc_namespace_deletion(ns_delete_url, active_ns_headers, "Tenant Namespace")
+            requests.delete(f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}", headers=tm_prov_headers, verify=False)
+            active_headers = tm_prov_headers
         
-        # The User-Requested Hard Wait to allow VCFA to purge stranded IP blocks
-        print("[*] Namespace deletion initialized. Waiting 3 minutes (180s) for VCFA to purge stranded networking items...")
+        # Use list-based polling to avoid getting stuck on internal status strings
+        wait_for_deletion_by_list(ns_list_url, active_headers, ns_name, "Tenant Namespace")
+        print("[*] Waiting 180s for NSX IP Block purge...")
         time.sleep(180)
-        print("[+] Wait complete.\n")
-    else:
-        print(f"[+] Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
 
-    # 3. Delete Regional Networking Config
-    print("--- Step 3: Deleting Regional Networking Config ---")
+    # 3. Regional Networking
+    print("--- Step 3: Deleting Regional Networking ---")
     net_name = "all-appsus-west-region"
     net_list_url = f"{PROVIDER_URL}/cloudapi/vcf/regionalNetworkingSettings"
     net_id, _ = get_resource_id(net_list_url, cloudapi_provider_headers, net_name)
-    
     if net_id:
-        print(f"[*] Found Regional Networking '{net_name}'. Deleting...")
-        net_url = f"{net_list_url}/{net_id}"
-        requests.delete(net_url, headers=cloudapi_provider_headers, verify=False)
-        wait_for_deletion_by_list(net_list_url, cloudapi_provider_headers, net_name, "Regional Networking")
-    else:
-        print(f"[+] Regional Networking '{net_name}' not found. Already deleted. Skipping.\n")
+        requests.delete(f"{net_list_url}/{net_id}", headers=cloudapi_provider_headers, verify=False)
+        wait_for_deletion_by_list(net_list_url, cloudapi_provider_headers, net_name, "Networking")
 
-    # 4. Delete Regional Quota (Reverted to standard IaaS API)
+    # 4. Regional Quota
     print("--- Step 4: Deleting Regional Quota ---")
-    quota_name = "us-west-region"
-    quota_list_url = f"{PROVIDER_URL}/iaas/api/fabric-compute-reservations"
-    quota_id, _ = get_resource_id(quota_list_url, provider_iaas_headers, quota_name)
-    
-    if quota_id:
-        print(f"[*] Found Regional Quota '{quota_name}'. Deleting...")
-        quota_url = f"{quota_list_url}/{quota_id}"
-        requests.delete(quota_url, headers=provider_iaas_headers, verify=False)
-        wait_for_deletion_by_list(quota_list_url, provider_iaas_headers, quota_name, "Regional Quota")
-    else:
-        print(f"[+] Regional Quota '{quota_name}' not found. Already deleted. Skipping.\n")
+    q_name = "us-west-region"
+    q_list_url = f"{PROVIDER_URL}/iaas/api/fabric-compute-reservations"
+    q_id, _ = get_resource_id(q_list_url, provider_iaas_headers, q_name)
+    if q_id:
+        requests.delete(f"{q_list_url}/{q_id}", headers=provider_iaas_headers, verify=False)
+        wait_for_deletion_by_list(q_list_url, provider_iaas_headers, q_name, "Quota")
 
-    # 5. Disable and Delete Tenant Org
-    print("--- Step 5: Disabling and Deleting Tenant Org ---")
+    # 5. Org
+    print("--- Step 5: Deleting Org ---")
     org_list_url = f"{PROVIDER_URL}/cloudapi/1.0.0/orgs"
     org_id, _ = get_resource_id(org_list_url, cloudapi_provider_headers, TENANT_ORG)
-    
     if org_id:
-        print(f"[*] Found Tenant Org '{TENANT_ORG}'.")
+        # Simple disable and force delete
         org_url = f"{org_list_url}/{org_id}"
-        
-        org_data_resp = requests.get(org_url, headers=cloudapi_provider_headers, verify=False)
-        if org_data_resp.status_code == 200:
-            org_data = org_data_resp.json()
-            if org_data.get("isEnabled", True):
-                print(f"[*] Disabling Tenant Org '{TENANT_ORG}'...")
-                org_data["isEnabled"] = False
-                requests.put(org_url, headers=cloudapi_provider_headers, json=org_data, verify=False)
-                time.sleep(10) 
-            
-        print(f"[*] Deleting Tenant Org '{TENANT_ORG}' (Forcing purge of stranded items)...")
-        # Ensure ?force=true is present to handle any lingering internal references just like the UI
+        requests.put(org_url, headers=cloudapi_provider_headers, json={"isEnabled": False}, verify=False)
+        time.sleep(10)
         requests.delete(f"{org_url}?force=true", headers=cloudapi_provider_headers, verify=False)
         wait_for_deletion_by_list(org_list_url, cloudapi_provider_headers, TENANT_ORG, "Tenant Org")
-    else:
-        print(f"[+] Tenant Org '{TENANT_ORG}' not found. Already deleted. Skipping.\n")
 
-    # 6. Delete vCenter Supervisor
-    print("--- Step 6: Deleting vCenter Supervisor ---")
-    supervisor_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters/{CLUSTER_ID}"
+    # 6. vCenter Supervisor
+    print("--- Step 6: vCenter Supervisor ---")
+    sup_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters/{CLUSTER_ID}"
+    if requests.get(sup_url, headers=vc_headers, verify=False).status_code == 200:
+        requests.delete(sup_url, headers=vc_headers, verify=False)
+        print("[*] Waiting for vCenter Supervisor 404...")
+        while requests.get(sup_url, headers=vc_headers, verify=False).status_code != 404:
+            time.sleep(30)
     
-    sup_check = requests.get(supervisor_url, headers=vc_headers, verify=False)
-    if sup_check.status_code == 200:
-        print(f"[*] Found Supervisor on Cluster '{CLUSTER_ID}'. Deleting...")
-        requests.delete(supervisor_url, headers=vc_headers, verify=False)
-        
-        print(f"[*] Polling: Waiting for vCenter Supervisor to be completely removed...")
-        start_time = time.time()
-        while (time.time() - start_time) < TIMEOUT_SECONDS:
-            check_resp = requests.get(supervisor_url, headers=vc_headers, verify=False)
-            if check_resp.status_code == 404:
-                print(f"[+] Success: vCenter Supervisor successfully deleted.\n")
-                break
-            print(f"    [{int(time.time() - start_time)}s elapsed] Still exists. Waiting {POLL_INTERVAL}s...")
-            time.sleep(POLL_INTERVAL)
-    else:
-        print(f"[+] Supervisor on Cluster '{CLUSTER_ID}' not found/already removed. Skipping.\n")
-
-    print("=== Teardown complete! Environment is clean and ready for Terraform. ===")
+    print("\n=== Teardown Complete ===")
 
 if __name__ == "__main__":
     main()
