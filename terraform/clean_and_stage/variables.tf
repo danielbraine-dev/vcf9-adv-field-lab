@@ -158,7 +158,7 @@ variable "content_library_datastore" {
   default     = "vsan-wld01-01a"
 }
 
-variable "vsphere_compute_cluster" {
+variable "vsphere_cluster" {
   type = string
   default = "cluster-wld01-01a"
 }
