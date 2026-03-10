@@ -39,9 +39,10 @@ data "vsphere_network" "avi_net" {
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
 
-data "vsphere_resource_pool" "avi_rp" {
-  name          = "${data.vsphere_compute_cluster.avi_cluster.name}/Resources"
-  datacenter_id = data.vsphere_datacenter.avi_dc.id
+# vSphere: AVI Controller Resource Pool
+resource "vsphere_resource_pool" "avi" {
+  name                    = "Avi-Controller"
+  parent_resource_pool_id = data.vsphere_compute_cluster.avi_cluster.resource_pool_id
 }
 
 # vSphere: Local Content Library for AVI SE
@@ -55,7 +56,7 @@ resource "vsphere_content_library" "avi_se_cl" {
 resource "vsphere_virtual_machine" "avi_controller" {
   name             = var.avi_vm_name
   datastore_id     = data.vsphere_datastore.avi_ds.id
-  resource_pool_id = data.vsphere_resource_pool.avi_rp.id
+  resource_pool_id = vsphere_resource_pool.avi.id
 
   num_cpus = 6
   memory   = 24576
