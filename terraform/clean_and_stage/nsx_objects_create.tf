@@ -10,7 +10,7 @@ resource "nsxt_policy_dhcp_server" "common_dhcp" {
 }
 
 resource "nsxt_policy_tier1_gateway" "t1_se_services" {
-  display_name       = "SE-services"
+  display_name       = "t1-se-services"
   description        = "Tier-1 for SE data"
   edge_cluster_path  = var.edge_cluster_path
   dhcp_config_path   = nsxt_policy_dhcp_server.common_dhcp.path
