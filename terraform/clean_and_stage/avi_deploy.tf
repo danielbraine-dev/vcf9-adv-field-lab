@@ -69,7 +69,7 @@ resource "vsphere_virtual_machine" "avi_controller" {
     disk_provisioning         = "thin"
     allow_unverified_ssl_cert = true
     ip_protocol               = "IPv4"
-
+    datacenter_id = data.vsphere_datacenter.avi_dc.id
     ovf_network_map = {
       "Management" = data.vsphere_network.avi_net.id
     }
