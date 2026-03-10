@@ -61,7 +61,7 @@ resource "vsphere_virtual_machine" "avi_controller" {
   num_cpus = 6
   memory   = 24576
   guest_id = "other3xLinux64Guest"
-  wait_for_guest_net_timeout = 0
+  wait_for_guest_net_timeout = 15
 
   # --- CRITICAL FIX: Explicit dependencies for both Pool and Library ---
   depends_on = [
