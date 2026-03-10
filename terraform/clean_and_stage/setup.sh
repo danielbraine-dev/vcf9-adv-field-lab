@@ -15,9 +15,6 @@ pause() { [[ "${PAUSE:-0}" == "1" ]] && read -rp "→ Press Enter to continue…
 
 step1_install_tools() {
   echo "[1] Install tools…"
-  #-----------------------------
-  # 1) Setup tools in lab & apply fixes
-  #-----------------------------
   if [[ -f "${ROOT_DIR}/commands.txt" ]]; then
     log "Installing tools from commands.txt…"
     while IFS= read -r command; do
@@ -31,15 +28,16 @@ step1_install_tools() {
   pause
 }
 
-
-step2_dns_fix() {
-  echo "[2] DNS fix…"
-  if [[ -x "${ROOT_DIR}/scripts/dns_fix.sh" ]]; then
-    log "Applying DNS fix…"
-    chmod +x "${ROOT_DIR}/scripts/dns_fix.sh"
-    "${ROOT_DIR}/scripts/dns_fix.sh" || warn "dns_fix.sh reported a warning."
+step2_teardown_environment() {
+  echo "[2] Teardown existing VCF & vCenter environment…"
+  
+  if [[ -f "${ROOT_DIR}/teardown_vcfa.py" ]]; then
+    log "Executing Python teardown script..."
+    # This cleans up Content Libraries, Namespaces, Orgs, Regions, and Supervisors
+    python3 "${ROOT_DIR}/teardown_vcfa.py" || { error "Teardown script failed!"; exit 1; }
   else
-    warn "dns_fix.sh not found; skipping DNS fix."
+    error "teardown_vcfa.py not found in ${ROOT_DIR}! Please ensure the file is present."
+    exit 1
   fi
   pause
 }
@@ -58,9 +56,9 @@ step3_tf_init() {
   nsx_allow_unverified_ssl = true
   
   # ---- vSphere ----
-  vsphere_server   = "vc-wld01-a.site-a.vcf.lab"
-  vsphere_user     = "administrator@wld.sso"
-  vsphere_password = "VMware123!VMware123!"
+  vsphere_server     = "vc-wld01-a.site-a.vcf.lab"
+  vsphere_user       = "administrator@wld.sso"
+  vsphere_password   = "VMware123!VMware123!"
   vsphere_datacenter = "wld-01a-DC"
   vsphere_cluster    = "cluster-wld01-01a"
   vsphere_datastore  = "cluster-wld01-01a-vsan01"
@@ -72,7 +70,7 @@ step3_tf_init() {
   # ---- AVI OVA deploy ----
   avi_ova_path           = "/path/to/Controller.ova"
   avi_vm_name            = "avi-controller01-a"
-  avi_mgmt_pg            = "<MGMT_PORTGROUP_NAME>"   # e.g., 'pg-mgmt' or 'VM Network'
+  avi_mgmt_pg            = "<MGMT_PORTGROUP_NAME>"
   avi_mgmt_ip            = "10.1.1.200"
   avi_mgmt_netmask       = "255.255.255.0"
   avi_mgmt_gateway       = "10.1.1.1"
@@ -88,7 +86,7 @@ step3_tf_init() {
   sup_dns_servers        = ["10.1.1.1"]
   sup_ntp_servers        = ["10.1.1.1"]
   sup_dns_search         = "site-a.vcf.lab"
-  
+
   # Workload settings
   nsx_project_name             = "Default"
   nsx_vpc_connectivity_profile = "Default VPC Connectivity Profile"
@@ -103,383 +101,14 @@ step3_tf_init() {
 EOF
 fi
   
-  # Terraform init (repo root)
   log "Running terraform init…"
   terraform -chdir="${ROOT_DIR}" init -upgrade
   terraform -chdir="${ROOT_DIR}" validate
   pause
 }
 
-step4_remove_vcfa_objects(){
-  log "Priming VCFA lookup data (org/region)…"
-  terraform -chdir="${ROOT_DIR}"  apply -input=false \
-    -target=null_resource.auth_dir \
-    -target=vcfa_api_token.tenant \
-    -target=vcfa_api_token.system \
-    -auto-approve
-
-  # Refresh the two lookups we actually read IDs from
-  terraform -chdir="${ROOT_DIR}" apply -input=false \
-    -target="data.vcfa_org.showcase" \
-    -target="data.vcfa_region.region" \
-    -refresh-only -auto-approve
-
-  # Resolve the token file path written by vcfa_api_token.tenant (robustly)
-  TOKEN_DIR="${ROOT_DIR}/.auth"
-  TENANT_CANDS=( "${TOKEN_DIR}/vcfa_tenant_token.json" "${TOKEN_DIR}/tenant_token.json" )
-  SYSTEM_CANDS=( "${TOKEN_DIR}/vcfa_system_token.json" "${TOKEN_DIR}/system_token.json" )
-
-  TOKEN_FILE=""
-  for f in "${TENANT_CANDS[@]}"; do [[ -s "$f" ]] && TOKEN_FILE="$f" && break; done
-  if [[ -z "$TOKEN_FILE" ]]; then
-    for f in "${SYSTEM_CANDS[@]}"; do [[ -s "$f" ]] && TOKEN_FILE="$f" && break; done
-  fi
-
-  # Last-resort: take vcfa_token from terraform.tfvars if present
-  if [[ -z "${TOKEN_FILE}" || ! -s "${TOKEN_FILE}" ]]; then
-    read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
-    VCFA_TOKEN_FROM_VARS="$(read_tfvar vcfa_token || true)"
-    if [[ -n "${VCFA_TOKEN_FROM_VARS}" && "${VCFA_TOKEN_FROM_VARS}" != "<PUT_YOUR_VCFA_TOKEN_HERE>" ]]; then
-      TOKEN_FILE="${ROOT_DIR}/.tenant.token"
-      printf '%s' "${VCFA_TOKEN_FROM_VARS}" > "${TOKEN_FILE}"
-      log "Using vcfa_token from ${TFVARS_FILE}."
-    fi
-  fi
-
-  [[ -z "${TOKEN_FILE:-}" || ! -s "${TOKEN_FILE}" ]] && { error "Could not resolve a VCFA token file in ${TOKEN_DIR} and no tfvars fallback was provided."; exit 1; }
-
-  # Read token from JSON or raw text
-  _bearer() {
-    local raw; raw="$(cat "${TOKEN_FILE}")"
-    # If it's JSON, extract common fields; else echo raw
-    jq -r '.token // .access_token // .accessToken // empty' 2>/dev/null <<<"$raw" | awk 'NF{print; exit}' \
-      || printf '%s' "$raw"
-  }
-
-  VCFA_API="${VCFA_API:-https://auto-a.site-a.vcf.lab}"
-  ORG_NAME="${ORG_NAME:-showcase-all-apps}"
-  PROJECT_NAME="${PROJECT_NAME:-default-project}"
-  REGION_NAME="${REGION_NAME:-us-west-region}"
-  VPC_NAME="${VPC_NAME:-us-west-region-Default-VPC}"
-  ORG_CL_NAME="${ORG_CL_NAME:-showcase-content-library}"
-  PROVIDER_CL_NAME="${PROVIDER_CL_NAME:-provider-content-library}"
-  NS_NAME="${NS_NAME:-demo-namespace-vkrcg}"
-  CLOUDAPI_VERSION="${CLOUDAPI_VERSION:-40.0}"
-  CLOUDAPI_ACCEPT="Accept: application/json;version=${CLOUDAPI_VERSION}"
-  NS_URN="urn:vcloud:namespace:6d272bc5-a6aa-4531-bfe4-7c0e034f238a"
-
-  log()   { printf -- "\n==> %s\n" "$*"; }
-  warn()  { printf -- "\n!! %s\n" "$*" >&2; }
-  error() { printf -- "\n!! %s\n" "$*" >&2; }
-
-  # Always -k in lab (self-signed); return code only (no -f) so we can inspect status
-  _http_get() { # prints: body \n code
-  curl -ksS \
-    -H "$CLOUDAPI_ACCEPT" \
-    -H "Authorization: Bearer $(_bearer)" \
-    -w '\n%{http_code}' "${VCFA_API}$1" || echo -e "\n000"
-  }
-
-  
-  # Existence using URN endpoint
-  # Returns: 0 present, 1 gone, 2 unauthorized, 3 unknown/transient
-  ns_exists() {
-    local body code
-    { read -r body; read -r code; } < <(_http_get "/cloudapi/vcf/namespaces/${NS_URN}")
-    case "$code" in
-      200) return 0 ;;
-      404|410) return 1 ;;
-      401|403) return 2 ;;
-    esac
-    # Some builds return JSON error with RESOURCE_NOT_FOUND
-    if jq -e '(.errorCode // .code // "") | test("RESOURCE_NOT_FOUND")' >/dev/null 2>&1 <<<"$body"; then
-      return 1
-    fi
-    return 3
-  }
-
-  wait_ns_deleted() {
-    log "Waiting for Supervisor Namespace ${NS_NAME} (URN: ${NS_URN}) to be deleted…"
-    local t0 timeout_sec=5400 unauth_cnt=0 unknown_cnt=0
-    t0=$(date +%s)
-    while true; do
-      ns_exists; rc=$?
-      case "$rc" in
-        0) : ;;  # present -> keep waiting
-        1) log "Supervisor Namespace ${NS_NAME} confirmed deleted."; return 0 ;;
-        2) ((unauth_cnt++))
-           if (( unauth_cnt >= 6 )); then
-             warn "Auth failing repeatedly (401/403). Proceeding as deleted due to inability to verify."
-             return 0
-           fi ;;
-        3) ((unknown_cnt++))
-           if (( unknown_cnt >= 12 )); then
-             warn "Verification inconclusive after multiple attempts. Proceeding as deleted."
-             return 0
-           fi ;;
-      esac
-      if (( $(date +%s) - t0 > timeout_sec )); then
-        warn "Timed out waiting for namespace deletion (soft-timeout). Proceeding."
-        return 0
-      fi
-      sleep 10
-    done
-    }
-  
-  
-  # --- Purge all items from a vCenter Content Library by NAME (govc only) ---
-  purge_cl_items() {
-  local CL_NAME="$1"
-
-  # Lab creds (hardcoded OK)
-  export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
-  export GOVC_USERNAME="administrator@wld.sso"
-  export GOVC_PASSWORD="VMware123!VMware123!"
-  export GOVC_INSECURE=1
-
-  # Snapshot shell flags and relax inside this function (so empty ls/globs don't abort)
-  local _SAVED_SHOPTS; _SAVED_SHOPTS="$(set +o)"
-  set +e
-  set +o pipefail
-
-  # Collect item paths as /LIB/ITEM (not files)
-  _collect_items_once() {
-    local out
-    out="$(govc library.ls "/${CL_NAME}/*" 2>/dev/null || true)"     # /LIB/ITEM
-    if [[ -n "$out" ]]; then
-      printf '%s\n' "$out" | awk -F'/' 'NF==3'
-      return
-    fi
-    # fallback: list files and collapse to their parent item paths
-    out="$(govc library.ls "/${CL_NAME}/*/*" 2>/dev/null || true)"   # /LIB/ITEM/file
-    if [[ -n "$out" ]]; then
-      printf '%s\n' "$out" | sed -E 's#^(/[^/]+/[^/]+)/.*#\1#' | sort -u
-    fi
-  }
-
-  # One pass: delete everything we see
-  mapfile -t ITEMS < <(_collect_items_once)
-  if [[ ${#ITEMS[@]} -eq 0 ]]; then
-    log "Content Library '${CL_NAME}' is empty."
-    eval "$_SAVED_SHOPTS"; return 0
-  fi
-
-  log "Removing ${#ITEMS[@]} item(s) from '${CL_NAME}'…"
-  local ok=0 fail=0 it
-  for it in "${ITEMS[@]}"; do
-    log " - deleting item: ${it}"
-    # Keep per-item timeout modest to avoid long stalls
-    if timeout 180s govc library.rm -- "$it" >/dev/null 2>&1; then
-      ((ok++))
-    else
-      ((fail++))
-      warn "   failed: ${it}"
-    fi
-  done
-  log "Deletion results: removed=${ok}, failed=${fail}"
-
-  # Single verification pass — if anything remains, STOP the teardown
-  mapfile -t REMAIN < <(_collect_items_once)
-  if [[ ${#REMAIN[@]} -gt 0 ]]; then
-    error "Content Library '${CL_NAME}' still has ${#REMAIN[@]} item(s):"
-    printf '   %s\n' "${REMAIN[@]}"
-    eval "$_SAVED_SHOPTS"; return 1
-  fi
-
-  eval "$_SAVED_SHOPTS"; return 0
-  }
-  
-  # Return 0 when CL is empty or missing, 1 if it still has items
-  _cl_has_items() {
-    local CL_NAME="$1" out rc=0
-    out="$(govc library.ls "/${CL_NAME}/*" 2>/dev/null)"; rc=$?
-    [[ $rc -ne 0 ]] && return 0                     # missing -> treat as empty
-    [[ -n "$out" ]] && return 1
-    out="$(govc library.ls "/${CL_NAME}/*/*" 2>/dev/null || true)"
-    [[ -n "$out" ]] && return 1 || return 0
-  }
-  
-  # Wait until CL is empty (handles purge propagation)
-  wait_cl_empty() {
-    local CL_NAME="$1"
-    local timeout="${2:-180}"          # total time to wait
-    local stable_needed="${3:-3}"      # require N consecutive empty polls
-    local poll="${4:-2}"               # seconds between polls
-    local start stable=0
-  
-    # Lab creds (hardcoded ok here)
-    export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
-    export GOVC_USERNAME="administrator@wld.sso"
-    export GOVC_PASSWORD="VMware123!VMware123!"
-    export GOVC_INSECURE=1
-  
-    start=$(date +%s)
-    while :; do
-      if _cl_has_items "$CL_NAME"; then
-        ((stable++))
-        if (( stable >= stable_needed )); then
-          log "Content Library '${CL_NAME}' is confirmed empty."
-          return 0
-        fi
-      else
-        stable=0
-      fi
-      if (( $(date +%s) - start > timeout )); then
-        error "Timed out waiting for CL '${CL_NAME}' to become empty."
-        return 1
-      fi
-      sleep "$poll"
-    done
-  }
-  
-  # Wait until CL is truly gone (not found) for N consecutive polls
-  wait_cl_gone() {
-    local CL_NAME="$1"
-    local timeout="${2:-420}"          # total time to wait after delete
-    local stable_needed="${3:-4}"      # consecutive "not found" confirmations
-    local poll="${4:-5}"               # seconds between polls
-    local start stable=0
-  
-    # Lab creds
-    export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
-    export GOVC_USERNAME="administrator@wld.sso"
-    export GOVC_PASSWORD="VMware123!VMware123!"
-    export GOVC_INSECURE=1
-  
-    start=$(date +%s)
-    while :; do
-      if govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
-        stable=0   # still present — reset the 'gone' counter
-      else
-        ((stable++))
-        if (( stable >= stable_needed )); then
-          log "Content Library '${CL_NAME}' is confirmed gone."
-          return 0
-        fi
-      fi
-      if (( $(date +%s) - start > timeout )); then
-        error "Timed out waiting for CL '${CL_NAME}' to disappear."
-        return 1
-      fi
-      sleep "$poll"
-    done
-  }
-  
-  # Delete a CL deterministically: ensure empty, delete, then wait for disappearance
-  delete_cl_with_govc() {
-    local CL_NAME="$1"
-  
-    # Lab creds
-    export GOVC_URL="https://vc-wld01-a.site-a.vcf.lab"
-    export GOVC_USERNAME="administrator@wld.sso"
-    export GOVC_PASSWORD="VMware123!VMware123!"
-    export GOVC_INSECURE=1
-  
-    # If already gone, nothing to do
-    if ! govc library.info "/${CL_NAME}" >/dev/null 2>&1; then
-      log "Content Library '${CL_NAME}' not found (already gone)."
-      return 0
-    fi
-  
-    # Ensure empty first (handles purge propagation)
-    wait_cl_empty "${CL_NAME}" "${CL_EMPTY_TIMEOUT:-180}" "${CL_EMPTY_STABLE_POLLS:-3}" "${CL_EMPTY_POLL_SEC:-2}"
-  
-    # Turn off publish (defensive) and issue delete
-    govc library.change -publish=false "/${CL_NAME}" >/dev/null 2>&1 || true
-    govc library.rm "/${CL_NAME}" >/dev/null 2>&1 || true
-  
-    # NEW: wait for it to be absent repeatedly (handles reconcile lag)
-    wait_cl_gone "${CL_NAME}" "${CL_GONE_TIMEOUT:-420}" "${CL_GONE_STABLE_POLLS:-4}" "${CL_GONE_POLL_SEC:-60}"
-  }
-
-
-
-  log "Importing VCFA resources for cleanup…"
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_supervisor_namespace.project_ns[0]'            'default-project.demo-namespace-vkrcg' || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.org_cl[0]'                    'showcase-all-apps.showcase-content-library' || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_content_library.provider_cl[0]'               'System.provider-content-library' || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_org_region_quota.showcase_us_west[0]'         'showcase-all-apps.us-west-region' || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_org_regional_networking.showcase_us_west[0]'  'showcase-all-apps.showcase-all-appsus-west-region' || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_provider_gateway.us_west[0]'                  'us-west-region.provider-gateway-us-west' || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_ip_space.us_west[0]'                          'us-west-region.ip-space-us-west' || true
-  terraform -chdir="${ROOT_DIR}" import -var="enable_vcfa_cleanup=false" 'vcfa_region.us_west[0]'                            'us-west-region' || true
-
-  terraform -chdir="${ROOT_DIR}" -input=false state list | egrep '^vcfa_(supervisor_namespace|content_library|org_region_quota|org_regional_networking|provider_gateway|ip_space|region)\.' || true
-
-  # --- STRICT SERIAL TEARDOWN, NO BLANKET DESTROY PASS ---
-  
-  log "Purging items from content libraries before deletion…"
-  purge_cl_items "${ORG_CL_NAME}" 
-  purge_cl_items "${PROVIDER_CL_NAME}"
-
-  log "Deleting content libraries in vCenter via govc…"
-  delete_cl_with_govc "${ORG_CL_NAME}"
-  delete_cl_with_govc "${PROVIDER_CL_NAME}"
- 
-  # 1) Content libraries
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_content_library.org_cl[0]' || true
-
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_content_library.provider_cl[0]' || true
-
-  # 2) Start NS deletion (non-fatal), then ALWAYS wait
-  if ! terraform -chdir="${ROOT_DIR}"  apply -input=false \
-        -auto-approve -parallelism=1 \
-        -var="enable_vcfa_cleanup=true" \
-        -target='vcfa_supervisor_namespace.project_ns[0]'; then
-    warn "NS delete apply returned non-zero (provider timeout is common). Proceeding to wait…"
-  fi
-
-  # wait (this is the part that wasn’t actually running before)
-  if ! wait_ns_deleted; then
-    warn "Continuing even though the wait hit its soft timeout."
-  fi
-  
-    
-  # 3) Now the quota and org regional networking (they require the NS to be gone)
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_org_region_quota.showcase_us_west[0]' || true
-
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_org_regional_networking.showcase_us_west[0]' || true
-
-  # 4) Provider infra
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_provider_gateway.us_west[0]' || true
-
-  terraform -chdir="${ROOT_DIR}" apply -input=false  -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_ip_space.us_west[0]' || true
-
-  # 5) Region last
-  terraform -chdir="${ROOT_DIR}" apply -input=false -auto-approve -parallelism=1 \
-    -var="enable_vcfa_cleanup=true" \
-    -target='vcfa_region.us_west[0]' || true
-
-  pause
-}
-
-
-step5_remove_sup(){
-  #-----------------------------
-  # Remove Supervisor installed in vSphere (native REST)
-  #-----------------------------
-  log "STEP 3: Removing Supervisor from vSphere…"
-  bash "${ROOT_DIR}/scripts/remove_supervisor.sh" || warn "Supervisor removal script finished with warnings."
-  pause
-}
-
-step6_create_nsx_objects(){
-  #-----------------------------
-  # Create NSX Tier-1 + Segment & vSphere Content Library
-  #-----------------------------
-  log "Applying NSX/vSphere creation stack (Tier-1 + Segment + Content Library)…"
+step4_create_nsx_objects(){
+  log "[4] Applying NSX/vSphere creation stack (Tier-1 + Segment + Content Library)…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target='nsxt_policy_tier1_gateway.se_mgmt' \
     -target='nsxt_policy_segment.se_mgmt' \
@@ -487,11 +116,9 @@ step6_create_nsx_objects(){
   pause
 }
 
-step7_deploy_avi(){
-  #-----------------------------
-  # Install AVI + NSX integration
-  #-----------------------------
- 
+step5_deploy_avi(){
+  log "[5] Install AVI + NSX integration…"
+  
   AVI_OVA_FILENAME="${AVI_OVA_FILENAME:-$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1 | xargs -n1 basename)}"
   AVI_OVA_PATH="${ROOT_DIR}/${AVI_OVA_FILENAME}"
   
@@ -500,7 +127,6 @@ step7_deploy_avi(){
     exit 1
   fi
   
-  # Get the realized display name of the SE mgmt segment from state
   AVI_MGMT_PG="$(
     terraform -chdir="${ROOT_DIR}" state show -no-color nsxt_policy_segment.se_mgmt \
       | awk -F' = ' '/^\s*display_name\s*=/{print $2}' \
@@ -513,7 +139,6 @@ step7_deploy_avi(){
     exit 1
   fi
   
-  # Feed Terraform via an auto tfvars (picked up automatically)
   cat > "${ROOT_DIR}/avi.auto.tfvars.json" <<EOF
   {
     "avi_ova_path": "${AVI_OVA_PATH}",
@@ -531,8 +156,8 @@ EOF
   pause
 }
 
-step8_create_cert(){
-  # Wait for the Avi Controller API to come up
+step6_create_cert(){
+  log "[6] Creating Certificates…"
   AVI_FQDN="avi-controller01-a.site-a.vcf.lab"
   log "Waiting for Avi API at https://${AVI_FQDN}…"
   until curl -sk --max-time 5 "https://${AVI_FQDN}/api/initial-data" >/dev/null; do
@@ -540,7 +165,6 @@ step8_create_cert(){
   done
   log "Avi API is up."
 
-  # Apply just the cert/trust pieces and write PEMs to disk
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=tls_private_key.avi \
     -target=tls_self_signed_cert.avi \
@@ -549,7 +173,6 @@ step8_create_cert(){
     -target=local_file.avi_cert_pem \
     -target=local_file.avi_key_pem
 
-  # Extract NSX creds from terraform.tfvars (same helper you already use)
   read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
 
   NSX_HOST="$(read_tfvar nsx_host)"
@@ -564,14 +187,11 @@ step8_create_cert(){
     log "Uploading Avi portal cert to NSX trust store…"
     bash "${ROOT_DIR}/scripts/upload_nsx_cert.sh" "$NSX_HOST" "$NSX_USER" "$NSX_PASS" "$CERT_PATH" "$CERT_NAME"
   fi
-
   pause
 }
 
-
-
-step9_nsx_cloud(){
-  log "PASS A — NSXCloud + vCenter (no IPAM/DNS yet)"
+step7_nsx_cloud(){
+  log "[7] PASS A — NSXCloud + vCenter (no IPAM/DNS yet)"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="attach_ipam_now=false" \
     -target=avi_cloud.nsx_t_cloud \
@@ -590,34 +210,36 @@ step9_nsx_cloud(){
   pause
 }  
 
-step10_onboard_nsx_alb(){
-  log "Onboarding Avi to NSX (ALB onboarding)…"
+step8_onboard_nsx_alb(){
+  log "[8] Onboarding Avi to NSX (ALB onboarding)…"
   bash "${ROOT_DIR}/scripts/nsx_onboard_alb.sh"
   pause
 }
 
-step11_install_sup(){
-  #-----------------------------
-  # Install Supervisor in vSphere (native REST)
-  #-----------------------------
-  log "STEP 6: Installing Supervisor in vSphere…"
+step9_install_sup(){
+  log "[9] Installing Supervisor in vSphere…"
   bash "${ROOT_DIR}/scripts/install_supervisor.sh" || warn "Supervisor install script finished with warnings."
+  pause
+}
+
+step10_provision_vcfa_objects(){
+  log "[10] Provisioning VCFA Objects (Tenant Org, Region, Quotas, etc.)…"
+  # Add specific VCFA creation targets here
   pause
 }
 
 do_step() {
   case "$1" in
     1) step1_install_tools;;
-    2) step2_dns_fix;;
+    2) step2_teardown_environment;;
     3) step3_tf_init;;
-    4) step4_remove_vcfa_objects;;
-    5) step5_remove_sup;;
-    6) step6_create_nsx_objects;;
-    7) step7_deploy_avi;;
-    8) step8_create_cert;;
-    9) step9_nsx_cloud;;
-   10) step10_onboard_nsx_alb;;
-   11) step11_install_sup;;
+    4) step4_create_nsx_objects;;
+    5) step5_deploy_avi;;
+    6) step6_create_cert;;
+    7) step7_nsx_cloud;;
+    8) step8_onboard_nsx_alb;;
+    9) step9_install_sup;;
+   10) step10_provision_vcfa_objects;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
@@ -625,7 +247,7 @@ do_step() {
 run() {
   local spec="${1:-all}"
   if [[ "$spec" == "all" ]]; then
-    for n in {1..11}; do do_step "$n"; done
+    for n in {1..10}; do do_step "$n"; done
     echo "All steps complete. ✅"
     return
   fi
@@ -641,8 +263,7 @@ run() {
     fi
   done
 }
-# Only execute when run directly (not when sourced)
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   run "${1:-all}"
 fi
-
