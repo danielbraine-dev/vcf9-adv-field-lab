@@ -1,5 +1,18 @@
-/Downloads$ git clone https://github.com/danielbraine-dev/vcf9-adv-field-lab.git && cd vcf9-adv-field-lab/terraform/clean_and_stage && python3 teardown_vcfa.py
-fatal: destination path 'vcf9-adv-field-lab' already exists and is not an empty directory.
-holuser@console:~/Downloads$ git pull
-fatal: not a git repository (or any of the parent directories): .git
-holuser@console:~/Downloads$ 
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ python3 teardown_vcfa.py 
+=== Starting Idempotent VCF 9 & vCenter Teardown ===
+
+[*] Authenticating to APIs...
+[+] Authentication successful.
+
+--- Step 1: Removing Tenant Namespace ---
+Traceback (most recent call last):
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 240, in <module>
+    main()
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 145, in main
+    ns_id, active_ns_headers = get_resource_id(ns_summary_url, tm_tenant_headers, ns_name)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 76, in get_resource_id
+    response.raise_for_status()
+  File "/usr/lib/python3/dist-packages/requests/models.py", line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 406 Client Error: Not Acceptable for url: https://auto-a.site-a.vcf.lab/tm/cloudapi/v1/namespaceSummaries
