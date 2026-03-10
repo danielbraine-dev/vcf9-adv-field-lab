@@ -7,7 +7,10 @@ variable "vsphere_datastore" { type = string }
 
 variable "avi_ova_path"      { type = string }
 variable "avi_vm_name"       { type = string }
-variable "avi_mgmt_pg"       { type = string }
+variable "avi_mgmt_pg"       { 
+  type = string 
+  default = "mgmt-vds01-wld01-01a"
+}
 variable "avi_mgmt_ip"       { type = string }
 variable "avi_mgmt_netmask"  { type = string }
 variable "avi_mgmt_gateway"  { type = string }
