@@ -17,7 +17,8 @@ data "vsphere_datastore" "avi_ds" {
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
 
-data "vsphere_distributed_portgroup" "avi_net" {
+# REVERTED: Using the standard vsphere_network data source
+data "vsphere_network" "avi_net" {
   name          = var.avi_mgmt_pg
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
@@ -52,7 +53,7 @@ resource "vsphere_virtual_machine" "avi_controller" {
   ]
 
   network_interface {
-    network_id   = data.vsphere_distributed_portgroup.avi_net.id
+    network_id   = data.vsphere_network.avi_net.id
     adapter_type = "vmxnet3"
   }
 
@@ -70,7 +71,7 @@ resource "vsphere_virtual_machine" "avi_controller" {
     ip_protocol               = "IPv4"
 
     ovf_network_map = {
-      "Management" = data.vsphere_distributed_portgroup.avi_net.id
+      "Management" = data.vsphere_network.avi_net.id
     }
   }
 
