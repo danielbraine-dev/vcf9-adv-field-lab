@@ -41,7 +41,6 @@ sudo apt -y install vim
 source ~/.bashrc
 
 # make scripts executable
-cd ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/scripts
 sudo chmod +x ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/scripts/add_dns_record.sh
 sudo chmod +x ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/scripts/install_supervisor.sh
 sudo chmod +x ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/scripts/nsx_onboard_alb.sh
