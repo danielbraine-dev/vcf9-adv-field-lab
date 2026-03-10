@@ -180,34 +180,46 @@ def main():
     else:
         print(f"[+] Content Library '{cl_name}' not found. Already deleted. Skipping.\n")
 
-    # 2. Remove Tenant Supervisor Namespace (Via top-level VCFA IaaS API)
-    print("--- Step 2: Removing Tenant Supervisor Namespace ---")
-    ns_name = "demo-namespace-3qdtf"
+    # 2. Remove Tenant Namespace by Destroying its Parent Deployment
+    print("\n--- Step 2: Clearing Tenant Deployments (Namespace Teardown) ---")
+    dep_list_url = f"{TENANT_URL}/deployment/api/deployments"
     
-    # The correct IaaS endpoint for vSphere/Supervisor namespaces deployed by Terraform
-    ns_list_url = f"{PROVIDER_URL}/iaas/api/supervisor-namespaces"
-    
-    provider_iaas_headers = {
-        "Authorization": f"Bearer {provider_token}",
+    # Use the Tenant token since deployments are strictly scoped to the tenant project
+    dep_headers = {
+        "Authorization": f"Bearer {tenant_token}",
         "Content-Type": "application/json"
     }
     
-    ns_id, active_ns_headers = get_resource_id(ns_list_url, provider_iaas_headers, ns_name)
+    # Query all deployments in the tenant
+    print("[*] Searching for active Deployments in the tenant...")
+    dep_resp = requests.get(f"{dep_list_url}?size=50", headers=dep_headers, verify=False)
     
-    if ns_id:
-        print(f"[*] Found Supervisor Namespace '{ns_name}' with ID: {ns_id} in VCFA IaaS. Deleting...")
-        ns_delete_url = f"{ns_list_url}/{ns_id}"
+    if dep_resp.status_code == 200:
+        deployments = dep_resp.json().get("content", [])
         
-        del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
-        
-        if del_resp.status_code >= 400:
-            print(f"[-] Delete request failed: {del_resp.status_code} - {del_resp.text}")
-            sys.exit(1)
-            
-        # Poll the supervisor-namespaces list until the backend NSX/vCenter cleanup finishes
-        wait_for_deletion_by_list(ns_list_url, active_ns_headers, ns_name, "Supervisor Namespace")
+        if not deployments:
+            print("[+] No active deployments found. Assuming namespace is already clear.")
+        else:
+            for dep in deployments:
+                dep_id = dep.get("id")
+                dep_name = dep.get("name")
+                print(f"[*] Found Deployment '{dep_name}' (ID: {dep_id}).")
+                print(f"[*] Instructing VCFA to destroy the deployment (this will cleanly cascade to vCenter and NSX)...")
+                
+                # Delete the deployment
+                dep_delete_url = f"{dep_list_url}/{dep_id}"
+                del_req = requests.delete(dep_delete_url, headers=dep_headers, verify=False)
+                
+                if del_req.status_code >= 400:
+                    print(f"[-] Failed to issue delete command for '{dep_name}': {del_req.status_code} - {del_req.text}")
+                    sys.exit(1)
+                
+                # Poll the deployment list until VCFA finishes the vCenter/NSX teardown
+                wait_for_deletion_by_list(dep_list_url, dep_headers, dep_name, f"Deployment '{dep_name}'")
     else:
-        print(f"[+] Supervisor Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
+        print(f"[-] Could not query Deployments. Status Code: {dep_resp.status_code}")
+        print(f"[-] Error: {dep_resp.text}")
+        sys.exit(1)
         
     # 3. Delete Regional Networking Config (VCF 9 CloudAPI)
     print("--- Step 3: Deleting Regional Networking Config ---")
