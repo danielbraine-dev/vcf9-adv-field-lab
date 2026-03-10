@@ -42,7 +42,7 @@ variable "avi_controller" {
 }
 variable "avi_version"    { 
   type = string
-  default = "31.1.2" 
+  default = "31.2.2" 
 }
 variable "ipam_provider_url" { 
   type = string
@@ -175,4 +175,44 @@ variable "vsphere_datastore" {
 variable "avi_mgmt_pg" {
   type = string
   default = "mgmt-vds01-wld01-01a"
+}
+
+variable "avi_mgmt_ip" {
+  type = string
+  default = "10.1.1.200"
+}
+
+variable "avi_mgmt_gateway" {
+  type = string
+  default = "10.1.1.1"
+}
+
+variable "avi_mgmt_netmask" {
+  type = string
+  default = "255.255.255.0"
+}
+
+variable "avi_vm_name" {
+  type = string
+  default = "avi-controller01"
+}
+
+variable "avi_dns_servers" {
+  type = string
+  default = "10.1.1.1"
+}
+
+variable "avi_ntp_servers" {
+  type = string
+  default = "10.1.1.1"
+}
+
+variable "avi_domain_search" {
+  type = string
+  default ="site-a.vcf.lab"
+}
+
+variable "avi_admin_password" {
+  type = string
+  default="VMware123!VMware123!"
 }
