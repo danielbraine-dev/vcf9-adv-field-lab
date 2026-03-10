@@ -116,7 +116,7 @@ step4_create_nsx_objects(){
 step5_deploy_avi(){
   log "[5] Install AVI + NSX integration…"
 
-  # Remote vs Local Logic
+  # 1. Remote vs Local OVA Logic
   REMOTE_OVA_URL="http://your-server-ip/path/to/controller.ova"
   LOCAL_OVA_PATH="${ROOT_DIR}/controller.ova"
   FINAL_OVA_PATH=""
@@ -138,32 +138,35 @@ step5_deploy_avi(){
     fi
   fi
 
-  log "Resolving Management Portgroup from NSX state..."
-  AVI_MGMT_PG="$(
-    terraform -chdir="${ROOT_DIR}" state show -no-color nsxt_policy_segment.se_mgmt \
-      | awk -F' = ' '/^\s*display_name\s*=/{print $2}' | sed -e 's/^"//' -e 's/"$//' | tail -n1
-  )"
-  
+  # 2. Variable Injection
+  # We ONLY inject the OVA path. We removed the AVI_MGMT_PG state lookup 
+  # so that your terraform.tfvars ("mgmt-vds01-wld01-01a") is respected.
   cat > "${ROOT_DIR}/avi.auto.tfvars.json" <<EOF
-  {
-    "avi_ova_path": "${FINAL_OVA_PATH}",
-    "avi_mgmt_pg": "${AVI_MGMT_PG}"
-  }
+{
+  "avi_ova_path": "${FINAL_OVA_PATH}"
+}
 EOF
   
+  # 3. DNS Record Logic
   log "Adding DNS record for Avi controller…"
+  # This script pulls AVI_IP from terraform.tfvars automatically
   bash "${ROOT_DIR}/scripts/add_dns_record.sh"
   
+  # 4. Terraform Deployment
   log "Deploying Avi Controller via Terraform…"
+  # We target the VM; Terraform's graph will handle the Resource Pool and Library dependencies
   terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.avi_controller'
 
-  # Wait for the API to actually respond before moving to Step 6
-  log "Waiting for Avi Controller API at https://${avi_mgmt_ip}..."
-  until curl -sk --max-time 5 "https://${avi_mgmt_ip}/api/initial-data" >/dev/null; do
+  # 5. API Availability Wait-Loop
+  # Extract IP for the curl loop (matching your tfvars variable name)
+  AVI_IP="$(awk -F= '/avi_mgmt_ip/{gsub(/"| /,"",$2);print $2}' "${TFVARS_FILE}")"
+  
+  log "Waiting for Avi Controller API at https://${AVI_IP}..."
+  until curl -sk --max-time 5 "https://${AVI_IP}/api/initial-data" >/dev/null; do
     printf "."
     sleep 20
   done
-  log "\n[+] Avi Controller is responding. Ready for Step 6."
+  log -e "\n[+] Avi Controller is responding. Ready for Step 6."
   pause
 }
 
