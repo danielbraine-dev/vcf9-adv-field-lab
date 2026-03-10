@@ -38,7 +38,7 @@ resource "nsxt_policy_segment" "se_mgmt" {
   display_name        = "SE-mgmt"
   transport_zone_path = var.overlay_tz_path
   connectivity_path   = var.wld1_t1_path
-
+  dhcp_config_path    = nsxt_policy_dhcp_server.common_dhcp.path
   subnet {
     cidr        = "10.4.100.129/25"
     dhcp_ranges = ["10.4.100.130-10.4.100.160"]
