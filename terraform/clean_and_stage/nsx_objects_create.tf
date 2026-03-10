@@ -7,6 +7,7 @@ resource "nsxt_policy_dhcp_server" "common_dhcp" {
   display_name     = "common_dhcp"
   description      = "DHCP server servicing AVI SE Segments"
   server_addresses = ["100.96.0.1/30"]
+  edge_cluster_path = var.edge_cluster_path
 }
 
 resource "nsxt_policy_tier1_gateway" "t1_se_services" {
