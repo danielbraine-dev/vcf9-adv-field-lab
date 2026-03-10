@@ -157,11 +157,11 @@ EOF
   log "Deploying Avi Controller via Terraform…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.avi_controller'
 
-  # Important: Wait for the API to actually respond before moving to Step 6
+  # Wait for the API to actually respond before moving to Step 6
   log "Waiting for Avi Controller API at https://${avi_mgmt_ip}..."
   until curl -sk --max-time 5 "https://${avi_mgmt_ip}/api/initial-data" >/dev/null; do
     printf "."
-    sleep 15
+    sleep 20
   done
   log "\n[+] Avi Controller is responding. Ready for Step 6."
   pause
