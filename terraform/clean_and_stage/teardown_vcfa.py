@@ -131,7 +131,16 @@ def main():
     if cl_id:
         print(f"[*] Found Content Library '{cl_name}' with ID: {cl_id}. Deleting...")
         cl_url = f"{cl_list_url}/{cl_id}"
-        requests.delete(cl_url, headers=cloudapi_provider_headers, verify=False)
+        
+        # Capture the deletion response to ensure VCFA actually accepted the command
+        del_resp = requests.delete(cl_url, headers=cloudapi_provider_headers, verify=False)
+        
+        if del_resp.status_code >= 400:
+            print(f"[-] API Delete Request Failed! Status Code: {del_resp.status_code}")
+            print(f"[-] VCFA Error Message: {del_resp.text}")
+            print("[!] No task was created in VCFA because the API rejected the command.")
+            sys.exit(1)
+            
         wait_for_deletion_by_list(cl_list_url, cloudapi_provider_headers, cl_name, "Content Library")
     else:
         print(f"[+] Content Library '{cl_name}' not found. Already deleted. Skipping.\n")
