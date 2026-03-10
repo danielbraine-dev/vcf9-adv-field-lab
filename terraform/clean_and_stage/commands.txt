@@ -15,7 +15,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashi
 sudo apt update -y && sudo apt-get install -y terraform
 
 # VCF CLI
-curl -LO https://packages.broadcom.com/artifactory/vcf-distro/vcf-cli/linux/amd64/v9.0.0/vcf-cli.tar.gz
+curl -LO https://packages.broadcom.com/artifactory/vcf-distro/vcf-cli/linux/amd64/v9.0.1/vcf-cli.tar.gz
 tar -xvf vcf-cli.tar.gz
 sudo install vcf-cli-linux_amd64 /usr/local/bin/vcf
 
