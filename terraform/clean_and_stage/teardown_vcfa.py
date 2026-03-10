@@ -218,38 +218,50 @@ def main():
     else:
         print(f"[+] Region '{region_name}' already removed. Skipping.\n")
 
-    # 6. Delete vCenter Supervisor (Dynamic MoREF Lookup)
+    # 6. Delete vCenter Supervisor (Translating Cluster Name to MoREF ID)
     print("--- Step 6: Deleting vCenter Supervisor ---")
-    sup_list_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters"
-    sup_check = requests.get(sup_list_url, headers=vc_headers, verify=False)
     
-    if sup_check.status_code == 200:
-        clusters = sup_check.json()
-        if not clusters:
-            print("[+] No active Supervisors found in vCenter. Already removed. Skipping.\n")
-        else:
-            for cluster_obj in clusters:
-                moref_id = cluster_obj.get("cluster") if isinstance(cluster_obj, dict) else cluster_obj
-                print(f"[*] Found active Supervisor on vCenter cluster ID '{moref_id}'. Decommissioning...")
+    # First, list all clusters to find the MoREF ID for our named cluster
+    sup_list_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters"
+    list_resp = requests.get(sup_list_url, headers=vc_headers, verify=False)
+    
+    target_moref = None
+    if list_resp.status_code == 200:
+        clusters = list_resp.json()
+        for cluster in clusters:
+            # We check the 'cluster_name' (Human Readable) to find the 'cluster' (MoREF)
+            if cluster.get("cluster_name") == CLUSTER_ID:
+                target_moref = cluster.get("cluster")
+                break
+    
+    if target_moref:
+        print(f"[*] Found Supervisor on Cluster '{CLUSTER_ID}' with MoREF ID '{target_moref}'. Decommissioning...")
+        del_url = f"{sup_list_url}/{target_moref}"
+        
+        # Trigger the decommission
+        del_req = requests.delete(del_url, headers=vc_headers, verify=False)
+        
+        if del_req.status_code >= 400:
+            print(f"[-] Failed to decommission Supervisor: {del_req.status_code} - {del_req.text}")
+            sys.exit(1)
+            
+        print(f"[*] Polling: Waiting for vCenter to completely remove the Supervisor...")
+        start_time = time.time()
+        while True:
+            # Poll the specific MoREF until it returns 404
+            check_status = requests.get(del_url, headers=vc_headers, verify=False).status_code
+            if check_status == 404:
+                print(f"[+] Success: Supervisor on '{CLUSTER_ID}' removed.\n")
+                break
+            
+            if (time.time() - start_time) > TIMEOUT_SECONDS:
+                print("[-] Timeout waiting for Supervisor removal.")
+                sys.exit(1)
                 
-                del_url = f"{sup_list_url}/{moref_id}"
-                del_req = requests.delete(del_url, headers=vc_headers, verify=False)
-                
-                if del_req.status_code >= 400:
-                    print(f"[-] Failed to decommission Supervisor: {del_req.status_code} - {del_req.text}")
-                    sys.exit(1)
-                
-                print(f"[*] Polling: Waiting for vCenter to completely remove the Supervisor...")
-                start_time = time.time()
-                while requests.get(del_url, headers=vc_headers, verify=False).status_code != 404:
-                    if (time.time() - start_time) > TIMEOUT_SECONDS:
-                        print("[-] Timeout waiting for Supervisor removal.")
-                        sys.exit(1)
-                    print(f"    [{int(time.time() - start_time)}s elapsed] Still decommissioning... Waiting 30s...")
-                    time.sleep(30)
-                print(f"[+] Success: Supervisor on '{moref_id}' removed.\n")
+            print(f"    [{int(time.time() - start_time)}s elapsed] Still decommissioning... Waiting 30s...")
+            time.sleep(30)
     else:
-        print(f"[-] Failed to query vCenter Supervisors: {sup_check.status_code} - {sup_check.text}")
+        print(f"[+] No active Supervisor found for cluster '{CLUSTER_ID}'. Already removed. Skipping.\n")
 
     print("=== Teardown Complete! Environment is clean and ready for Terraform. ===")
 
