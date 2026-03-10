@@ -180,50 +180,35 @@ def main():
     else:
         print(f"[+] Content Library '{cl_name}' not found. Already deleted. Skipping.\n")
 
-    # 2. Remove Tenant Namespace (Via VCF 9 CCI API)
-    print("--- Step 2: Removing Tenant Namespace ---")
+    # 2. Remove Tenant Supervisor Namespace (Via top-level VCFA IaaS API)
+    print("--- Step 2: Removing Tenant Supervisor Namespace ---")
     ns_name = "demo-namespace-3qdtf"
     
-    # In VCF 9, CCI (Cloud Consumption Interface) replaces IaaS for namespace management
-    cci_ns_list_url = f"{TENANT_URL}/cci/api/v1/namespaces"
+    # The correct IaaS endpoint for vSphere/Supervisor namespaces deployed by Terraform
+    ns_list_url = f"{PROVIDER_URL}/iaas/api/supervisor-namespaces"
     
-    # Standard tenant headers (CCI generally accepts standard application/json)
-    cci_tenant_headers = {
-        "Authorization": f"Bearer {tenant_token}",
-        "Accept": "application/json;version=40.0",
-        "Content-Type": "application/json"
-    }
-    cci_provider_headers = {
+    provider_iaas_headers = {
         "Authorization": f"Bearer {provider_token}",
-        "Accept": "application/json;version=40.0",
         "Content-Type": "application/json"
     }
     
-    # Search for the namespace using the CCI API
-    ns_id, active_ns_headers = get_resource_id(cci_ns_list_url, cci_tenant_headers, ns_name, fallback_headers=cci_provider_headers)
+    ns_id, active_ns_headers = get_resource_id(ns_list_url, provider_iaas_headers, ns_name)
     
     if ns_id:
-        print(f"[*] Found Namespace '{ns_name}' with ID: {ns_id} in CCI. Deleting...")
-        ns_delete_url = f"{cci_ns_list_url}/{ns_id}"
+        print(f"[*] Found Supervisor Namespace '{ns_name}' with ID: {ns_id} in VCFA IaaS. Deleting...")
+        ns_delete_url = f"{ns_list_url}/{ns_id}"
         
         del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
         
-        # Intelligent fallback if Tenant lacks CCI deletion rights
-        if del_resp.status_code == 403:
-            print("    [!] Tenant lacks CCI deletion rights. Swapping to Provider token...")
-            active_ns_headers = cci_provider_headers
-            del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
-            
         if del_resp.status_code >= 400:
             print(f"[-] Delete request failed: {del_resp.status_code} - {del_resp.text}")
             sys.exit(1)
             
-        # Because we are using the top-level CCI API, we can safely use the list poller.
-        # VCFA will keep the namespace in the list in a "Terminating" state until NSX VPCs are gone.
-        wait_for_deletion_by_list(cci_ns_list_url, active_ns_headers, ns_name, "Tenant Namespace")
+        # Poll the supervisor-namespaces list until the backend NSX/vCenter cleanup finishes
+        wait_for_deletion_by_list(ns_list_url, active_ns_headers, ns_name, "Supervisor Namespace")
     else:
-        print(f"[+] Namespace '{ns_name}' not found in CCI. Already deleted. Skipping.\n")
-
+        print(f"[+] Supervisor Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
+        
     # 3. Delete Regional Networking Config (VCF 9 CloudAPI)
     print("--- Step 3: Deleting Regional Networking Config ---")
     net_name = "all-appsus-west-region"
