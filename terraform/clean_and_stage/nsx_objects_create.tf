@@ -14,7 +14,6 @@ resource "nsxt_policy_tier1_gateway" "t1_se_services" {
   display_name       = "t1-se-services"
   description        = "Tier-1 for SE data"
   edge_cluster_path  = var.edge_cluster_path
-  dhcp_config_path   = nsxt_policy_dhcp_server.common_dhcp.path
   tier0_path         = var.t0_path
   ha_mode            = "ACTIVE_STANDBY"
   pool_allocation    = "ROUTING"
@@ -62,7 +61,7 @@ resource "nsxt_policy_segment" "se_data_vip" {
   display_name        = "SE-Data_VIP"
   transport_zone_path = var.overlay_tz_path
   connectivity_path   = nsxt_policy_tier1_gateway.t1_se_services.path
-
+  dhcp_config_path    = nsxt_policy_dhcp_server.common_dhcp.path
   subnet {
     cidr        = "10.4.100.1/25"
     dhcp_ranges = ["10.4.100.5-10.4.100.60"]
