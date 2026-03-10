@@ -4,7 +4,7 @@ Open a Terminal on the Linux console and copy/paste the following commands. Ente
 
 sudo sed -i '0,/multiverse/s/multiverse/multiverse\ main\ restricted\ universe/' /etc/apt/sources.list.d/ubuntu.sources && \
 sudo apt update -y && \
-sudo apt install git python3 python3-requests -y && \
+sudo apt install git -y && \
 cd ~/Downloads && \
 git clone https://github.com/danielbraine-dev/vcf9-adv-field-lab.git && \
 cd vcf9-adv-field-lab/terraform/clean_and_stage && \
