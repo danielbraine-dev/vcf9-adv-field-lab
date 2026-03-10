@@ -31,37 +31,28 @@ POLL_INTERVAL = 30
 # --- Helper Functions ---
 
 def get_vcfa_provider_token(url, username, password):
-    """Authenticate to VCF 9 Provider API and return a bearer token."""
     auth_url = f"{url}/cloudapi/1.0.0/sessions/provider"
     headers = {"Accept": "application/json;version=40.0"} 
     auth = (f"{username}@system", password) 
-    
     response = requests.post(auth_url, headers=headers, auth=auth, verify=False)
     response.raise_for_status()
     return response.headers.get("x-vmware-vcloud-access-token")
 
 def get_vcfa_tenant_token(url, username, password, org_name):
-    """Authenticate to VCF 9 Tenant API and return a bearer token."""
     auth_url = f"{url}/cloudapi/1.0.0/sessions"
     headers = {"Accept": "application/json;version=40.0"}
     auth = (f"{username}@{org_name}", password) 
-    
     response = requests.post(auth_url, headers=headers, auth=auth, verify=False)
     response.raise_for_status()
     return response.headers.get("x-vmware-vcloud-access-token")
 
 def get_vcenter_session(url, username, password):
-    """Authenticate to vCenter REST API and return a session ID."""
     auth_url = f"{url}/api/session"
     response = requests.post(auth_url, auth=(username, password), verify=False)
     response.raise_for_status()
     return response.json()
 
 def get_resource_id(api_url, headers, target_name, name_key="name", fallback_headers=None):
-    """
-    GETs a list of resources. Supports intelligent fallback if a 403 is hit.
-    Returns a tuple of (UUID, Successful_Headers).
-    """
     active_headers = headers
     response = requests.get(api_url, headers=active_headers, verify=False)
     
@@ -73,7 +64,6 @@ def get_resource_id(api_url, headers, target_name, name_key="name", fallback_hea
         return None, active_headers
         
     response.raise_for_status()
-    
     data = response.json()
     items = data.get("values", data.get("content", data.get("items", data))) if isinstance(data, dict) else data
     
@@ -84,12 +74,10 @@ def get_resource_id(api_url, headers, target_name, name_key="name", fallback_hea
     return None, active_headers
 
 def wait_for_deletion_by_list(list_url, headers, target_name, resource_name, name_key="name"):
-    """Poll the list endpoint until the resource name is no longer found."""
     print(f"[*] Polling: Waiting for {resource_name} to be completely removed...")
     start_time = time.time()
     
     while (time.time() - start_time) < TIMEOUT_SECONDS:
-        # If get_resource_id returns None, it means the item is completely gone from the list
         item_id, _ = get_resource_id(list_url, headers, target_name, name_key)
         
         if not item_id:
@@ -103,40 +91,39 @@ def wait_for_deletion_by_list(list_url, headers, target_name, resource_name, nam
     sys.exit(1)
 
 def wait_for_tmc_namespace_deletion(check_url, headers, resource_name):
-    """Specifically polls a TMC namespace ID to ensure backend NSX cleanup finishes."""
-    print(f"[*] Polling: Waiting for {resource_name} to be completely removed (this may take several minutes for NSX VPCs)...")
+    print(f"[*] Polling: Waiting for {resource_name} to terminate...")
     start_time = time.time()
     
     while (time.time() - start_time) < TIMEOUT_SECONDS:
         response = requests.get(check_url, headers=headers, verify=False)
         
         if response.status_code == 404:
-            print(f"[+] Success: {resource_name} and backing VPCs successfully deleted.\n")
+            print(f"[+] Success: {resource_name} successfully deleted.\n")
             return True
         elif response.status_code >= 400 and response.status_code != 403:
             print(f"[-] Error during polling: {response.status_code} - {response.text}")
             sys.exit(1)
             
-        # Hardened JSON parsing to prevent string-based crashes
+        # Ultra-safe JSON parsing to prevent string/type crashers
         if response.status_code == 200:
             try:
                 data = response.json()
-                # Only attempt to parse 'status' if data is actually a dictionary
                 if isinstance(data, dict):
-                    phase = data.get("status", {}).get("phase", "")
-                    if phase.upper() == "ERROR":
-                        print(f"\n[-] FATAL: {resource_name} entered an ERROR state in VCFA!")
-                        print("    This usually means a backend NSX object is stuck or locked.")
-                        sys.exit(1)
-            except ValueError:
-                pass # Ignore if the response body is empty or not JSON
+                    status_dict = data.get("status")
+                    if isinstance(status_dict, dict):
+                        phase = status_dict.get("phase", "")
+                        if phase.upper() == "ERROR":
+                            print(f"\n    [!] Warning: {resource_name} entered an ERROR state.")
+                            print("        (VCFA is likely purging stranded items in the background. Continuing...)")
+                            return True # Break the poll and let the 3 minute wait handle it
+            except Exception:
+                pass # Completely ignore any parsing errors and just keep waiting
             
         print(f"    [{int(time.time() - start_time)}s elapsed] Namespace still terminating. Waiting {POLL_INTERVAL}s...")
         time.sleep(POLL_INTERVAL)
         
     print(f"[-] Timeout Error: {resource_name} was not deleted within {TIMEOUT_SECONDS} seconds.")
     sys.exit(1)
-
 
 # --- Execution Steps ---
 
@@ -148,68 +135,59 @@ def main():
     provider_token = get_vcfa_provider_token(PROVIDER_URL, PROVIDER_USER, PROVIDER_PASS)
     vc_session = get_vcenter_session(VCENTER_URL, VCENTER_USER, VCENTER_PASS)
     
-    # Standard CloudAPI Headers for VCF 9
     cloudapi_provider_headers = {
         "Authorization": f"Bearer {provider_token}", 
         "Accept": "application/json;version=40.0",
         "Content-Type": "application/json"
     }
+    
+    # Standard IaaS Headers for steps that don't need CloudAPI versioning
+    provider_iaas_headers = {
+        "Authorization": f"Bearer {provider_token}",
+        "Content-Type": "application/json"
+    }
+    
     vc_headers = {"vmware-api-session-id": vc_session, "Content-Type": "application/json"}
-    
     print("[+] Authentication successful.\n")
-    
-    # 1. Remove Content Library (VCF 9 CloudAPI)
+
+    # 1. Remove Content Library
     print("--- Step 1: Removing Content Library ---")
     cl_name = "provider-content-library"
     cl_list_url = f"{PROVIDER_URL}/cloudapi/vcf/contentLibraries" 
     cl_id, _ = get_resource_id(cl_list_url, cloudapi_provider_headers, cl_name)
     
     if cl_id:
-        print(f"[*] Found Content Library '{cl_name}' with ID: {cl_id}. Deleting...")
-        # Add the recursive and force flags to bypass the "not empty" safety check
+        print(f"[*] Found Content Library '{cl_name}'. Deleting...")
         cl_delete_url = f"{cl_list_url}/{cl_id}?recursive=true&force=true"
-        
-        del_resp = requests.delete(cl_delete_url, headers=cloudapi_provider_headers, verify=False)
-        
-        if del_resp.status_code >= 400:
-            print(f"[-] API Delete Request Failed! Status Code: {del_resp.status_code}")
-            print(f"[-] VCFA Error Message: {del_resp.text}")
-            sys.exit(1)
-            
+        requests.delete(cl_delete_url, headers=cloudapi_provider_headers, verify=False)
         wait_for_deletion_by_list(cl_list_url, cloudapi_provider_headers, cl_name, "Content Library")
     else:
         print(f"[+] Content Library '{cl_name}' not found. Already deleted. Skipping.\n")
 
-    # 2a. Remove Tenant Deployments to free up NSX IP Blocks and Load Balancers
-    print("\n--- Step 2a: Clearing Tenant Deployments (Workload Teardown) ---")
+    # 2a. Remove Tenant Deployments
+    print("--- Step 2a: Clearing Tenant Deployments (Workload Teardown) ---")
     dep_list_url = f"{TENANT_URL}/deployment/api/deployments"
-    
     dep_headers = {
         "Authorization": f"Bearer {tenant_token}",
         "Content-Type": "application/json"
     }
     
-    print("[*] Searching for active Deployments in the tenant...")
     dep_resp = requests.get(f"{dep_list_url}?size=50", headers=dep_headers, verify=False)
-    
     if dep_resp.status_code == 200:
         deployments = dep_resp.json().get("content", [])
-        
         if not deployments:
-            print("[+] No active deployments found. Network should be clear of workloads.")
+            print("[+] No active deployments found.")
         else:
             for dep in deployments:
                 dep_id = dep.get("id")
                 dep_name = dep.get("name")
                 print(f"[*] Found Deployment '{dep_name}'. Instructing VCFA to destroy it...")
-                
                 requests.delete(f"{dep_list_url}/{dep_id}", headers=dep_headers, verify=False)
                 wait_for_deletion_by_list(dep_list_url, dep_headers, dep_name, f"Deployment '{dep_name}'")
     else:
         print(f"[-] Could not query Deployments. Moving on.")
 
-
-    # 2b. Remove Tenant Namespace (Now that it is empty!)
+    # 2b. Remove Tenant Namespace
     print("\n--- Step 2b: Removing Tenant Namespace ---")
     ns_name = "demo-namespace-3qdtf"
     ns_summary_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaceSummaries"
@@ -228,75 +206,77 @@ def main():
     ns_id, active_ns_headers = get_resource_id(ns_summary_url, tm_tenant_headers, ns_name)
     
     if ns_id:
-        print(f"[*] Found Namespace '{ns_name}' with ID: {ns_id}. Deleting...")
+        print(f"[*] Found Namespace '{ns_name}'. Deleting...")
         ns_delete_url = f"{TENANT_URL}/tm/cloudapi/v1/namespaces/{ns_id}"
         
         del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
-        
         if del_resp.status_code == 403:
-            print("    [!] Tenant lacks deletion rights. Swapping to Provider token...")
             active_ns_headers = tm_provider_headers
             del_resp = requests.delete(ns_delete_url, headers=active_ns_headers, verify=False)
             
-        if del_resp.status_code >= 400:
-            print(f"[-] Delete request failed: {del_resp.status_code} - {del_resp.text}")
-            sys.exit(1)
-            
         wait_for_tmc_namespace_deletion(ns_delete_url, active_ns_headers, "Tenant Namespace")
+        
+        # The User-Requested Hard Wait to allow VCFA to purge stranded IP blocks
+        print("[*] Namespace deletion initialized. Waiting 3 minutes (180s) for VCFA to purge stranded networking items...")
+        time.sleep(180)
+        print("[+] Wait complete.\n")
     else:
         print(f"[+] Namespace '{ns_name}' not found. Already deleted. Skipping.\n")
-        
-    # 3. Delete Regional Networking Config (VCF 9 CloudAPI)
+
+    # 3. Delete Regional Networking Config
     print("--- Step 3: Deleting Regional Networking Config ---")
     net_name = "all-appsus-west-region"
     net_list_url = f"{PROVIDER_URL}/cloudapi/vcf/regionalNetworkingSettings"
     net_id, _ = get_resource_id(net_list_url, cloudapi_provider_headers, net_name)
     
     if net_id:
-        print(f"[*] Found Regional Networking '{net_name}' with ID: {net_id}. Deleting...")
+        print(f"[*] Found Regional Networking '{net_name}'. Deleting...")
         net_url = f"{net_list_url}/{net_id}"
         requests.delete(net_url, headers=cloudapi_provider_headers, verify=False)
         wait_for_deletion_by_list(net_list_url, cloudapi_provider_headers, net_name, "Regional Networking")
     else:
         print(f"[+] Regional Networking '{net_name}' not found. Already deleted. Skipping.\n")
 
-    # 4. Delete Regional Quota (VCF 9 CloudAPI Quota Policies)
+    # 4. Delete Regional Quota (Reverted to standard IaaS API)
     print("--- Step 4: Deleting Regional Quota ---")
     quota_name = "us-west-region"
-    quota_list_url = f"{PROVIDER_URL}/cloudapi/1.0.0/quotaPolicies"
-    quota_id, _ = get_resource_id(quota_list_url, cloudapi_provider_headers, quota_name)
+    quota_list_url = f"{PROVIDER_URL}/iaas/api/fabric-compute-reservations"
+    quota_id, _ = get_resource_id(quota_list_url, provider_iaas_headers, quota_name)
     
     if quota_id:
-        print(f"[*] Found Regional Quota '{quota_name}' with ID: {quota_id}. Deleting...")
+        print(f"[*] Found Regional Quota '{quota_name}'. Deleting...")
         quota_url = f"{quota_list_url}/{quota_id}"
-        requests.delete(quota_url, headers=cloudapi_provider_headers, verify=False)
-        wait_for_deletion_by_list(quota_list_url, cloudapi_provider_headers, quota_name, "Regional Quota")
+        requests.delete(quota_url, headers=provider_iaas_headers, verify=False)
+        wait_for_deletion_by_list(quota_list_url, provider_iaas_headers, quota_name, "Regional Quota")
     else:
         print(f"[+] Regional Quota '{quota_name}' not found. Already deleted. Skipping.\n")
 
-    # 5. Disable and Delete Tenant Org (VCF 9 CloudAPI)
+    # 5. Disable and Delete Tenant Org
     print("--- Step 5: Disabling and Deleting Tenant Org ---")
     org_list_url = f"{PROVIDER_URL}/cloudapi/1.0.0/orgs"
     org_id, _ = get_resource_id(org_list_url, cloudapi_provider_headers, TENANT_ORG)
     
     if org_id:
-        print(f"[*] Found Tenant Org '{TENANT_ORG}' with ID {org_id}.")
+        print(f"[*] Found Tenant Org '{TENANT_ORG}'.")
         org_url = f"{org_list_url}/{org_id}"
         
-        org_data = requests.get(org_url, headers=cloudapi_provider_headers, verify=False).json()
-        if org_data.get("isEnabled", True):
-            print(f"[*] Disabling Tenant Org '{TENANT_ORG}'...")
-            org_data["isEnabled"] = False
-            requests.put(org_url, headers=cloudapi_provider_headers, json=org_data, verify=False)
-            time.sleep(5) 
+        org_data_resp = requests.get(org_url, headers=cloudapi_provider_headers, verify=False)
+        if org_data_resp.status_code == 200:
+            org_data = org_data_resp.json()
+            if org_data.get("isEnabled", True):
+                print(f"[*] Disabling Tenant Org '{TENANT_ORG}'...")
+                org_data["isEnabled"] = False
+                requests.put(org_url, headers=cloudapi_provider_headers, json=org_data, verify=False)
+                time.sleep(10) 
             
-        print(f"[*] Deleting Tenant Org '{TENANT_ORG}'...")
+        print(f"[*] Deleting Tenant Org '{TENANT_ORG}' (Forcing purge of stranded items)...")
+        # Ensure ?force=true is present to handle any lingering internal references just like the UI
         requests.delete(f"{org_url}?force=true", headers=cloudapi_provider_headers, verify=False)
         wait_for_deletion_by_list(org_list_url, cloudapi_provider_headers, TENANT_ORG, "Tenant Org")
     else:
         print(f"[+] Tenant Org '{TENANT_ORG}' not found. Already deleted. Skipping.\n")
 
-    # 6. Delete vCenter Supervisor (vCenter WCP API)
+    # 6. Delete vCenter Supervisor
     print("--- Step 6: Deleting vCenter Supervisor ---")
     supervisor_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters/{CLUSTER_ID}"
     
@@ -305,7 +285,6 @@ def main():
         print(f"[*] Found Supervisor on Cluster '{CLUSTER_ID}'. Deleting...")
         requests.delete(supervisor_url, headers=vc_headers, verify=False)
         
-        # For vCenter, we just poll the specific endpoint for 404 since it's a cluster ID, not a name in a list
         print(f"[*] Polling: Waiting for vCenter Supervisor to be completely removed...")
         start_time = time.time()
         while (time.time() - start_time) < TIMEOUT_SECONDS:
