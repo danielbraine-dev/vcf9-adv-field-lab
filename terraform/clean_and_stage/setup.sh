@@ -30,11 +30,11 @@ step1_install_tools() {
 
 step2_teardown_environment() {
   echo "[2] Teardown existing VCF & vCenter environment…"
-  if [[ -f "${ROOT_DIR}/teardown_vcfa.py" ]]; then
+  if [[ -f "${ROOT_DIR}/scripts/teardown_vcfa.py" ]]; then
     log "Executing Python teardown script..."
-    python3 "${ROOT_DIR}/teardown_vcfa.py" || { error "Teardown script failed!"; exit 1; }
+    python3 "${ROOT_DIR}/scripts/teardown_vcfa.py" || { error "Teardown script failed!"; exit 1; }
   else
-    error "teardown_vcfa.py not found in ${ROOT_DIR}!"
+    error "teardown_vcfa.py not found in ${ROOT_DIR}/scripts!"
     exit 1
   fi
   pause
