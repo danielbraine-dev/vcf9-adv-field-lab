@@ -218,10 +218,10 @@ def main():
     else:
         print(f"[+] Region '{region_name}' already removed. Skipping.\n")
 
-    # 6. Delete vCenter Supervisor (Translating Cluster Name to MoREF ID)
+    # 6. Delete vCenter Supervisor (Final Corrected Endpoint)
     print("--- Step 6: Deleting vCenter Supervisor ---")
     
-    # First, list all clusters to find the MoREF ID for our named cluster
+    # 1. Lookup: Get the list of clusters to find the MoREF
     sup_list_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters"
     list_resp = requests.get(sup_list_url, headers=vc_headers, verify=False)
     
@@ -229,28 +229,37 @@ def main():
     if list_resp.status_code == 200:
         clusters = list_resp.json()
         for cluster in clusters:
-            # We check the 'cluster_name' (Human Readable) to find the 'cluster' (MoREF)
+            # Match the human-readable name to get the MoREF (e.g., domain-c10)
             if cluster.get("cluster_name") == CLUSTER_ID:
                 target_moref = cluster.get("cluster")
                 break
     
     if target_moref:
-        print(f"[*] Found Supervisor on Cluster '{CLUSTER_ID}' with MoREF ID '{target_moref}'. Decommissioning...")
-        del_url = f"{sup_list_url}/{target_moref}"
+        print(f"[*] Found Supervisor on Cluster '{CLUSTER_ID}' (MoREF: {target_moref}). Decommissioning...")
         
-        # Trigger the decommission
+        # 2. Decommission: Use the 'software' path for the DELETE operation
+        # This is the specific VCF 9 / vSphere 8 path for decommissioning
+        del_url = f"{VCENTER_URL}/api/vcenter/namespace-management/software/clusters/{target_moref}"
+        
         del_req = requests.delete(del_url, headers=vc_headers, verify=False)
         
         if del_req.status_code >= 400:
-            print(f"[-] Failed to decommission Supervisor: {del_req.status_code} - {del_req.text}")
+            print(f"[-] Decommission failed: {del_req.status_code} - {del_req.text}")
             sys.exit(1)
             
         print(f"[*] Polling: Waiting for vCenter to completely remove the Supervisor...")
         start_time = time.time()
         while True:
-            # Poll the specific MoREF until it returns 404
-            check_status = requests.get(del_url, headers=vc_headers, verify=False).status_code
-            if check_status == 404:
+            # We poll the original summary list to see when the MoREF disappears
+            check_resp = requests.get(sup_list_url, headers=vc_headers, verify=False)
+            still_exists = False
+            if check_resp.status_code == 200:
+                for c in check_resp.json():
+                    if c.get("cluster") == target_moref:
+                        still_exists = True
+                        break
+            
+            if not still_exists:
                 print(f"[+] Success: Supervisor on '{CLUSTER_ID}' removed.\n")
                 break
             
