@@ -169,34 +169,67 @@ def main():
         requests.delete(f"{org_url}?force=true&recursive=true", headers=cloudapi_provider_headers, verify=False)
         wait_for_deletion_by_list(org_list_url, cloudapi_provider_headers, TENANT_ORG, "Tenant Org")
 
-    # 5. Delete Region
+    # 5. Delete Region (Via VCF CloudAPI)
     print("--- Step 5: Deleting Region ---")
     region_name = "us-west-region"
-    region_list_url = f"{PROVIDER_URL}/cloudapi/1.0.0/regions"
+    
+    # Using the correct VCF 9 infrastructure API path
+    region_list_url = f"{PROVIDER_URL}/cloudapi/vcf/regions"
+    
+    # Query the list to find the Region URN
     region_id, _ = get_resource_id(region_list_url, cloudapi_provider_headers, region_name)
+    
     if region_id:
-        print(f"[*] Found Region '{region_name}'. Deleting...")
-        requests.delete(f"{region_list_url}/{region_id}", headers=cloudapi_provider_headers, verify=False)
+        print(f"[*] Found Region '{region_name}' with URN: {region_id}. Deleting...")
+        del_region_url = f"{region_list_url}/{region_id}"
+        
+        del_resp = requests.delete(del_region_url, headers=cloudapi_provider_headers, verify=False)
+        
+        if del_resp.status_code >= 400:
+            print(f"[-] Failed to delete Region: {del_resp.status_code} - {del_resp.text}")
+            sys.exit(1)
+            
         wait_for_deletion_by_list(region_list_url, cloudapi_provider_headers, region_name, "Region")
     else:
-        print(f"[+] Region '{region_name}' already removed. Skipping.")
+        print(f"[+] Region '{region_name}' not found. Already removed. Skipping.\n")
 
-    # 6. Delete vCenter Supervisor
+    # 6. Delete vCenter Supervisor (Dynamic MoREF ID Lookup)
     print("--- Step 6: Deleting vCenter Supervisor ---")
-    supervisor_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters/{CLUSTER_ID}"
-    if requests.get(supervisor_url, headers=vc_headers, verify=False).status_code == 200:
-        print(f"[*] Decommissioning Supervisor on cluster {CLUSTER_ID}...")
-        requests.delete(supervisor_url, headers=vc_headers, verify=False)
-        start_time = time.time()
-        while requests.get(supervisor_url, headers=vc_headers, verify=False).status_code != 404:
-            if (time.time() - start_time) > TIMEOUT_SECONDS:
-                print("[-] Timeout waiting for Supervisor removal.")
-                sys.exit(1)
-            print(f"    [{int(time.time() - start_time)}s] Still decommissioning...")
-            time.sleep(30)
-        print("[+] Success: Supervisor removed.")
+    # Query vCenter for ALL clusters with an active Supervisor
+    sup_list_url = f"{VCENTER_URL}/api/vcenter/namespace-management/clusters"
+    sup_check = requests.get(sup_list_url, headers=vc_headers, verify=False)
+    
+    if sup_check.status_code == 200:
+        clusters = sup_check.json()
+        
+        # In vCenter 8, this returns a list of summary objects. 
+        # If it's empty, no supervisors exist.
+        if not clusters:
+            print("[+] No active Supervisors found in vCenter. Already removed. Skipping.\n")
+        else:
+            for cluster_obj in clusters:
+                # Extract the internal MoREF ID (e.g., "domain-c8")
+                moref_id = cluster_obj.get("cluster") if isinstance(cluster_obj, dict) else cluster_obj
+                
+                print(f"[*] Found active Supervisor on vCenter cluster ID '{moref_id}'. Decommissioning...")
+                del_url = f"{sup_list_url}/{moref_id}"
+                
+                del_req = requests.delete(del_url, headers=vc_headers, verify=False)
+                if del_req.status_code >= 400:
+                    print(f"[-] Failed to decommission Supervisor: {del_req.status_code} - {del_req.text}")
+                    sys.exit(1)
+                
+                print(f"[*] Polling: Waiting for vCenter to completely remove the Supervisor...")
+                start_time = time.time()
+                while requests.get(del_url, headers=vc_headers, verify=False).status_code != 404:
+                    if (time.time() - start_time) > TIMEOUT_SECONDS:
+                        print("[-] Timeout waiting for Supervisor removal.")
+                        sys.exit(1)
+                    print(f"    [{int(time.time() - start_time)}s elapsed] Still decommissioning... Waiting 30s...")
+                    time.sleep(30)
+                print("[+] Success: Supervisor removed.\n")
     else:
-        print("[+] Supervisor already removed. Skipping.")
+        print(f"[-] Failed to query vCenter Supervisors: {sup_check.status_code} - {sup_check.text}")
 
     print("\n=== Teardown Complete! Environment is clean. ===")
 
