@@ -216,3 +216,8 @@ variable "avi_admin_password" {
   type = string
   default="VMware123!VMware123!"
 }
+
+variable "avi_ova_path" {
+  type        = string
+  description = "Path to the Avi Controller OVA"
+}
