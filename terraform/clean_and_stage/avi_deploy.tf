@@ -2,28 +2,6 @@
 # Avi Controller OVA deploy (vSphere)
 ############################
 
-# These define the variables. Values come from terraform.tfvars or avi.auto.tfvars.json.
-variable "vsphere_cluster"    { type = string }
-variable "vsphere_datastore"  { type = string }
-variable "vsphere_datacenter" { type = string } # Ensure this is declared
-
-variable "avi_ova_path"       { type = string }
-variable "avi_vm_name"        { type = string }
-variable "avi_mgmt_pg"        { 
-  type    = string 
-  default = "mgmt-vds01-wld01-01a" 
-}
-variable "avi_mgmt_ip"        { type = string }
-variable "avi_mgmt_netmask"   { type = string }
-variable "avi_mgmt_gateway"   { type = string }
-variable "avi_dns_servers"    { type = list(string) }
-variable "avi_ntp_servers"    { type = list(string) }
-variable "avi_domain_search"  { type = string }
-variable "avi_admin_password" { 
-  type      = string
-  sensitive = true 
-}
-
 # Inventory lookups
 data "vsphere_datacenter" "avi_dc" {
   name = var.vsphere_datacenter
@@ -39,7 +17,6 @@ data "vsphere_datastore" "avi_ds" {
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
 
-# FIX: Use vsphere_distributed_portgroup for more reliable VDS lookups
 data "vsphere_distributed_portgroup" "avi_net" {
   name          = var.avi_mgmt_pg
   datacenter_id = data.vsphere_datacenter.avi_dc.id
