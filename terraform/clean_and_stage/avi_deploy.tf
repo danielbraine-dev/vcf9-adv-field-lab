@@ -2,18 +2,18 @@
 # Avi Controller OVA deploy (vSphere)
 ############################
 
-variable "vsphere_cluster"  { type = string }
-variable "vsphere_datastore"{ type = string }
+variable "vsphere_cluster"   { type = string }
+variable "vsphere_datastore" { type = string }
 
-variable "avi_ova_path"     { type = string }
-variable "avi_vm_name"      { type = string }
-variable "avi_mgmt_pg"      { type = string }
-variable "avi_mgmt_ip"      { type = string }
-variable "avi_mgmt_netmask" { type = string }
-variable "avi_mgmt_gateway" { type = string }
-variable "avi_dns_servers"  { type = list(string) }
-variable "avi_ntp_servers"  { type = list(string) }
-variable "avi_domain_search"{ type = string }
+variable "avi_ova_path"      { type = string }
+variable "avi_vm_name"       { type = string }
+variable "avi_mgmt_pg"       { type = string }
+variable "avi_mgmt_ip"       { type = string }
+variable "avi_mgmt_netmask"  { type = string }
+variable "avi_mgmt_gateway"  { type = string }
+variable "avi_dns_servers"   { type = list(string) }
+variable "avi_ntp_servers"   { type = list(string) }
+variable "avi_domain_search" { type = string }
 variable "avi_admin_password" { 
   type = string
   sensitive = true 
@@ -63,6 +63,9 @@ resource "vsphere_virtual_machine" "avi_controller" {
   guest_id = "other3xLinux64Guest"
   wait_for_guest_net_timeout = 0
 
+  # Explicit dependency to ensure the SE Library exists before Controller setup
+  depends_on = [vsphere_content_library.avi_se_cl]
+
   network_interface {
     network_id   = data.vsphere_network.avi_net.id
     adapter_type = "vmxnet3"
@@ -79,22 +82,25 @@ resource "vsphere_virtual_machine" "avi_controller" {
     local_ovf_path            = var.avi_ova_path
     disk_provisioning         = "thin"
     allow_unverified_ssl_cert = true
-    ip_protocol               = "IPv4"
+    ip_protocol                = "IPv4"
 
-    # Map OVA networks to your portgroup
     ovf_network_map = {
       "Management" = data.vsphere_network.avi_net.id
     }
   }
 
   extra_config = {
-    # Avi OVA cloud-init style properties (varies by OVA build)
-    "guestinfo.controller.ip"       = var.avi_mgmt_ip
-    "guestinfo.controller.gateway"  = var.avi_mgmt_gateway
-    "guestinfo.controller.netmask"  = var.avi_mgmt_netmask
-    "guestinfo.controller.dns"      = join(",", var.avi_dns_servers)
-    "guestinfo.controller.ntp"      = join(",", var.avi_ntp_servers)
-    "guestinfo.controller.domain"   = var.avi_domain_search
+    "guestinfo.controller.ip"             = var.avi_mgmt_ip
+    "guestinfo.controller.gateway"        = var.avi_mgmt_gateway
+    "guestinfo.controller.netmask"        = var.avi_mgmt_netmask
+    "guestinfo.controller.dns"            = join(",", var.avi_dns_servers)
+    "guestinfo.controller.ntp"            = join(",", var.avi_ntp_servers)
+    "guestinfo.controller.domain"         = var.avi_domain_search
     "guestinfo.controller.admin_password" = var.avi_admin_password
+  }
+
+  # Prevent Terraform from flapping when Avi updates its own guestinfo post-boot
+  lifecycle {
+    ignore_changes = [extra_config]
   }
 }
