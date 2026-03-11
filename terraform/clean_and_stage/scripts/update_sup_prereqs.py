@@ -16,20 +16,22 @@ NSX_USER = sys.argv[3]
 NSX_PASS = sys.argv[4]
 TFVARS_PATH = sys.argv[5]
 
-# Hardcoded VCFA Provider Credentials (from your teardown script)
+# Hardcoded VCFA Provider Credentials
 PROVIDER_USER = "admin"
 PROVIDER_PASS = "VMware123!VMware123!"
 
+# Global API Version
+API_VERSION = "40.0"
+
 def get_vcfa_token():
-    print(f"Authenticating to VCFA/VCD ({VCFA_URL})...")
+    print(f"Authenticating to VCFA/VCD ({VCFA_URL}) using API v{API_VERSION}...")
     auth_url = f"{VCFA_URL}/cloudapi/1.0.0/sessions/provider"
-    headers = {"Accept": "application/json;version=37.0"}
+    headers = {"Accept": f"application/json;version={API_VERSION}"}
     auth = (f"{PROVIDER_USER}@system", PROVIDER_PASS)
     
     response = requests.post(auth_url, headers=headers, auth=auth, verify=False)
     response.raise_for_status()
     
-    # VCD sometimes uses lowercase or uppercase for this header
     token = response.headers.get("x-vmware-vcloud-access-token") or response.headers.get("X-VMWARE-VCLOUD-ACCESS-TOKEN")
     if not token:
         raise ValueError("Failed to extract x-vmware-vcloud-access-token from response headers.")
@@ -40,7 +42,6 @@ def update_tfvars(token):
     with open(TFVARS_PATH, "r") as f:
         content = f.read()
     
-    # Regex replace the placeholder (or old token) with the newly minted one
     content = re.sub(r'vcfa_token\s*=\s*".*"', f'vcfa_token       = "{token}"', content)
     
     with open(TFVARS_PATH, "w") as f:
@@ -49,8 +50,8 @@ def update_tfvars(token):
 def update_vcfa_prereqs(token):
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json;version=37.0",
-        "Content-Type": "application/json;version=37.0"
+        "Accept": f"application/json;version={API_VERSION}",
+        "Content-Type": f"application/json;version={API_VERSION}"
     }
 
     # 1. Update IP Space
@@ -63,7 +64,6 @@ def update_vcfa_prereqs(token):
                 print(f"Found IP Space: {space.get('name')}. Updating...")
                 space["name"] = "us-east-region-IP Space"
                 
-                # Brute force string replace handles nested CIDR structures flawlessly
                 space_json = json.dumps(space)
                 space_json = space_json.replace("10.1.0.0/28", "10.1.0.0/26")
                 updated_space = json.loads(space_json)
@@ -74,7 +74,7 @@ def update_vcfa_prereqs(token):
                 else:
                     print(f"[-] Failed to update IP Space: {put_res.text}")
     else:
-        print("[-] Could not fetch VCFA IP Spaces.")
+        print(f"[-] Could not fetch VCFA IP Spaces. HTTP {res.status_code}")
 
     # 2. Update Provider Gateway
     print("\nEnforcing VCFA Provider Gateway state...")
@@ -92,7 +92,7 @@ def update_vcfa_prereqs(token):
                 else:
                     print(f"[-] Failed to update Provider Gateway: {put_res.text}")
     else:
-        print("[-] Could not fetch VCFA Provider Gateways.")
+        print(f"[-] Could not fetch VCFA Provider Gateways. HTTP {res.status_code}")
 
 def update_nsx_profile():
     print("\nWaiting 15 seconds for VCFA to push changes down to NSX-T...")
