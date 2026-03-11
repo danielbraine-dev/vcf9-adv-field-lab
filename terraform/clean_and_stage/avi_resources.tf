@@ -275,7 +275,7 @@ resource "avi_vcenterserver" "wld01_vc" {
   cloud_ref               = avi_cloud.nsx_cloud.id
   
   content_lib {
-    id = "AVI SE Content Library"
+    id = vsphere_content_library.avi_se_cl.id
   }
 }
 
