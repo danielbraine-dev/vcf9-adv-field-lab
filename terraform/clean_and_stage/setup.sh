@@ -291,24 +291,34 @@ step7_avi_base_config(){
 }
 
 step8_nsx_cloud(){
-  log "[8] NSXCloud Setup (Two-Pass Deployment)…"
+  log "[8] NSXCloud Setup (Cycle-Breaker Deployment)…"
   
-  # Pass 1: Build the Cloud shell and register vCenter
+  # Pass 1: Build the Cloud shell, vCenter, IPAM, and DNS. 
+  # (se_group_uuid defaults to "", so the template is left blank to avoid the cycle)
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -var="attach_ipam_now=false" \
     -target=avi_cloud.nsx_cloud \
     -target=avi_vcenterserver.wld01_vc
   
-  # Pass 2: Build the Service Engine Group
+  # Pass 2: Build the Service Engine Group (which requires the Cloud ID)
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -var="attach_ipam_now=false" \
     -target=avi_serviceenginegroup.avi_lab_se_group
 
-  # Pass 3: Stitch them all together (Attach SE Group, IPAM, and DNS to the Cloud)
+  # Pass 3: Extract the new SE Group UUID from the Terraform state file
+  SE_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_serviceenginegroup.avi_lab_se_group | grep '^ *uuid' | awk '{print $3}' | tr -d '"')
+  
+  if [[ -z "$SE_UUID" ]]; then
+      error "[-] Failed to extract SE Group UUID from state file!"
+      exit 1
+  fi
+
+  log "Stitching SE Group UUID ($SE_UUID) back into the NSX Cloud..."
+  
+  # Pass 4: Apply the Cloud one last time, injecting the UUID variable
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -var="attach_ipam_now=true" \
+    -var="se_group_uuid=${SE_UUID}" \
     -target=avi_cloud.nsx_cloud
     
+  log "[+] NSX Cloud and Service Engine Group fully integrated!"
   pause
 }
 
