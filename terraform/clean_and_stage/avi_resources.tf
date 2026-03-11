@@ -182,10 +182,10 @@ resource "avi_systemconfiguration" "this" {
 #########################################################
 # Circular Dependency Toggle
 #########################################################
-variable "attach_ipam_now" {
-  description = "Used to break circular dependencies during NSX Cloud creation"
-  type        = bool
-  default     = false
+variable "se_group_uuid" {
+  description = "Used to break the Cloud/SE Group circular dependency"
+  type        = string
+  default     = ""
 }
 
 #########################################################
@@ -199,9 +199,9 @@ resource "avi_cloud" "nsx_cloud" {
   ip6_autocfg_enabled = false 
 
   # These attach during "Pass 2" of the setup script
-  ipam_provider_ref     = var.attach_ipam_now ? avi_ipamdnsproviderprofile.avi_ipam.id : null
-  dns_provider_ref      = var.attach_ipam_now ? avi_ipamdnsproviderprofile.avi_dns.id : null
-  se_group_template_ref = var.attach_ipam_now ? avi_serviceenginegroup.avi_lab_se_group.id : null
+  ipam_provider_ref     = avi_ipamdnsproviderprofile.avi_ipam.id : null
+  dns_provider_ref      = avi_ipamdnsproviderprofile.avi_dns.id : null
+  se_group_template_ref = se_group_template_ref = var.se_group_uuid != "" ? "/api/serviceenginegroup/${var.se_group_uuid}" : null
 
   dns_resolvers {
     resolver_name = "Enterprise DNS"
