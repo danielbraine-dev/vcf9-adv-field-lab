@@ -1,80 +1,59 @@
-<ProductSection>
-      <Info>Information about the installed software</Info>
-      <Product>Avi Cloud Controller</Product>
-      <Vendor>Avi Networks, Inc.</Vendor>
-      <Version>31.2.2</Version>
-      <FullVersion>31.2.2-9059-20260203.042947</FullVersion>
-      <ProductUrl>www.avinetworks.com</ProductUrl>
-      <VendorUrl>www.avinetworks.com</VendorUrl>
-      <Category>Application</Category>
-      <Property ovf:key="AVIOVFVERSION" ovf:type="string" ovf:userConfigurable="false" ovf:value="3">
-        <Label>Version of the OVF</Label>
-        <Description>Version of the OVF</Description>
-      </Property>
-    </ProductSection>
-    <ProductSection ovf:class="avi" ovf:instance="CONTROLLER">
-      <Info>Information about the installed software</Info>
-      <Category>Application</Category>
-      <Property ovf:key="default-password" ovf:password="true" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Default password</Label>
-	<Description>Default password for admin account. Should have minimum 8 characters and at least one occurrence for each of Uppercase, Lowercase, Digits, Special characters.</Description>
-      </Property>
-      <Property ovf:key="mgmt-ip-v4-enable" ovf:type="string" ovf:userConfigurable="true" ovf:value="True">
-        <Label>Enable IPv4</Label>
-        <Description>Enable IPv4 on the Management Interface. Acceptable values are True/true or False/false. This should be set to False if Enable IPv6 is set to True.</Description>
-      </Property>
-      <Property ovf:key="mgmt-ip" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Management Interface IP Address</Label>
-        <Description>IP address for the Management Interface. Leave blank if using DHCP. Example: 192.168.10.4. Ignored if Enable IPv4 is False.</Description>
-      </Property>
-      <Property ovf:key="mgmt-mask" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Management Interface Subnet Mask</Label>
-        <Description>Subnet mask for the Management Interface. Leave blank if using DHCP. Example : 24 or 255.255.255.0. Ignored if Enable IPv4 is False.</Description>
-      </Property>
-      <Property ovf:key="default-gw" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Default Gateway</Label>
-        <Description>Optional default gateway for the Management Network. Leave blank if using DHCP. Ignored if Enable IPv4 is False.</Description>
-      </Property>
-      <Property ovf:key="mgmt-ip-v6-enable" ovf:type="string" ovf:userConfigurable="true" ovf:value="False">
-        <Label>Enable IPv6</Label>
-        <Description>Enable IPv6 on the Management Interface. Acceptable values are True/true or False/false. Please specify a static V6 IP and Mask if this field is set to True. This should be set to False if Enable IPv4 is set to True.</Description>
-      </Property>
-      <Property ovf:key="mgmt-ip-v6" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Management Interface IPv6 Address</Label>
-        <Description>IPv6 address for the Management Interface. Ignored if Enable IPv6 is False.</Description>
-      </Property>
-      <Property ovf:key="mgmt-mask-v6" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Management Interface Subnet Mask</Label>
-        <Description>IPv6 Subnet mask for the Management Interface. Ignored if Enable IPv6 is False.</Description>
-      </Property>
-      <Property ovf:key="default-gw-v6" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Default v6 Gateway</Label>
-        <Description>Optional default IPv6 gateway for the Management Network. Ignored if Enable IPv6 is False.</Description>
-      </Property>
-      <Property ovf:key="sysadmin-public-key" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Sysadmin login authentication key</Label>
-        <Description>Sysadmin login authentication key</Description>
-      </Property>
-      <Property ovf:key="nsx-t-node-id" ovf:type="string" ovf:userConfigurable="true">
-        <Label>NSX-T Node ID</Label>
-        <Description>NSX-T Node ID to uniquely identify node in a NSX-T cluster (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
-      </Property>
-      <Property ovf:key="nsx-t-ip" ovf:type="string" ovf:userConfigurable="true">
-        <Label>NSX-T IP Address</Label>
-        <Description>IP address of the NSX-T which will manage this controller (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
-      </Property>
-      <Property ovf:key="nsx-t-auth-token" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Authentication token of NSX-T</Label>
-        <Description>Authentication token of the NSX-T which will manage this controller (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
-      </Property>
-      <Property ovf:key="nsx-t-thumbprint" ovf:type="string" ovf:userConfigurable="true">
-        <Label>NSX-T thumbprint</Label>
-        <Description>Thumbprint of the MP node of NSX-T which will manage this controller (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
-      </Property>
-      <Property ovf:key="hostname" ovf:type="string" ovf:userConfigurable="true">
-        <Label>Hostname of Avi Controller</Label>
-        <Description>Hostname of Avi controller (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
-      </Property>
-    </ProductSection>
-  </VirtualSystem>
-</Envelope>
+VCF Automation OpenAPI
+
+ 9.0.0 
+
+[ Base URL: /cloudapi ]
+
+/tm/api-explorer/provider/cloudapi.json
+
+VCF Automation OpenAPI is a new API that is defined using the OpenAPI standards.
+
+This RESTful API borrows some elements of the legacy Tenant Manager API and establishes new patterns for use
+as described below.
+Authentication
+
+Authentication and Authorization schemes are the same as those for the legacy APIs. You can authenticate
+using the JWT token via the Authorization header or specifying a session using
+x-vcloud-authorization (The latter form is deprecated).
+Important Headers
+
+    X-VMWARE-VCLOUD-TENANT-CONTEXT - This header is used to perform any API action within a tenant organization. System administrators and Sub-provider administrators must include this header in the request if they want to perform actions in a tenant context. This header specifies the target organization's id.
+    X-VMWARE-VCLOUD-AUTH-CONTEXT - This header specifies the name of the organization to validate the JWT against and perform the API action requested. This is only needed in multisite scenarios where the JWT from one org is used to authenticate to another org.
+
+Operation Patterns
+This API follows the following general guidelines to establish a consistent CRUD pattern:
+Operation	Description	Response Code	Response Content
+GET /items	Returns a paginated list of items	200	Response will include Navigational links to the items in the list.
+POST /items	Returns newly created item	201	Content-Location header links to the newly created item
+GET /items/urn	Returns an individual item	200	A single item using same data type as that included in list above
+PUT /items/urn	Updates an individual item	200	Updated view of the item is returned
+DELETE /items/urn	Deletes the item	204	No content is returned.
+Asynchronous operations
+Asynchronous operations are determined by the server. In those cases, instead of responding as described above, the server responds with an HTTP Response code 202 and an empty body. The tracking task (which is the same task as all legacy API operations use) is linked via the URI provided in the Location header.
+All API calls can choose to service a request asynchronously or synchronously as determined by the server upon interpreting the request. Operations that choose to exhibit this dual behavior will have both options documented by specifying both response code(s) below. The caller must be prepared to handle responses to such API calls by inspecting the HTTP Response code.
+Error Conditions
+All operations report errors using the following error reporting rules:
+
+    400: Bad Request - In event of bad request due to incorrect data or other user error
+    401: Bad Request - If user is unauthenticated or their session has expired
+    403: Forbidden - If the user is not authorized or the entity does not exist
+
+OpenAPI Design Concepts and Principles
+
+    IDs are full Uniform Resource Names (URNs).
+    Uses Content-Type: application/json instead of application/xml or similar custom xml based mime types, where applicable.
+    REST links are in the Link header.
+        Multiple relationships for any link are represented by multiple values in a space-separated list.
+        Links have a custom VCF Automation-specific "model" attribute that hints at the applicable data type for the links.
+        title + rel + model attributes evaluates to a unique link.
+        Links follow Hypermedia as the Engine of Application State (HATEOAS) principles. Links are present if certain operations are present and permitted for the user"s current role and the state of the referred entities.
+    APIs follow a flat structure relying on cross-referencing other entities instead of the navigational style used by the legacy Tenant Manager APIs.
+    Most endpoints that return a list support filtering and sorting similar to the query service in the legacy Tenant Manager APIs.
+    Unless otherwise specified by a particular operation, accept header must be included to specify the API version for the request similar to calls to existing legacy Tenant Manager APIs. For example application/json;version=9.0.0, or application/json;version=41.0.0-alpha. A client may choose the api version with which it works(up to 5 major versions back). Unless stated otherwise(typically due to critical bug fixes), operations and data structures will behave as specified at the requested API version, even if the latest API version may have evolved to behave differently. See point 'OpenApi custom extensions' for more information on how operations and data structures declare their API version.
+    Each feature has a version in the path element present in its URL.
+    Note API URL's without a version in their paths must be considered experimental.
+    OpenApi custom extensions:
+    Versioning Extensions:
+        x-vcloud-added-in - declares the api version when an operation, a data model, or a property was added. For example a new field was added to some data structure. This field will be involved in the operations only if the client requested that- or a later API version. It will not be included in the (json) representations otherwise.
+        x-vcloud-deprecated-in and x-vcloud-deprecated-alternative - declares the api version in which an operation, a data model, or a property is deprecated and gives an alternative to use in next api versions.
+        x-vcloud-removed-in - declares the api version in which an operation, a data model, or a property is removed. This is analogous to x-vcloud-added-in in behaviour, but for removal of some 
