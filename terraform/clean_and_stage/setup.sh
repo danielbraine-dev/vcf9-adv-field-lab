@@ -168,10 +168,10 @@ step6_init_avi(){
   AVI_VERSION="31.2.2" 
   
   # Safely extract the IP from the arrays like ["10.1.1.1"]
-  DNS_IP=$(grep '^avi_dns_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-  NTP_IP=$(grep '^avi_ntp_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+  DNS_IP=$(grep 'avi_dns_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
+  NTP_IP=$(grep 'avi_ntp_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
 
-  log "Authenticating with Avi API..."
+  log "Authenticating with Avi API at ${AVI_IP}..."
   curl -sk -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
     -d "username=admin&password=${AVI_PASS}" > /dev/null
 
