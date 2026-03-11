@@ -339,16 +339,15 @@ step8_nsx_cloud(){
 }
 
 step9_install_sup(){
-  log "[10] Deploying vSphere Supervisor (VCF VPC Mode)…"
+  log "[9] Deploying vSphere Supervisor (VCF VPC Mode)…"
   
   VCFA_URL="$(read_tfvar vcfa_endpoint)"
-  VCFA_TOKEN="$(read_tfvar vcfa_token)"
   NSX_HOST="$(read_tfvar nsx_host)"
   NSX_USER="$(read_tfvar nsx_username)"
   NSX_PASS="$(read_tfvar nsx_password)"
 
-  log "Triggering VCFA to update Provider Gateways and IP Spaces..."
-  bash "${ROOT_DIR}/scripts/update_sup_prereqs.sh" "$VCFA_URL" "$VCFA_TOKEN" "$NSX_HOST" "$NSX_USER" "$NSX_PASS"
+  log "Executing Python automation for VCFA/NSX prerequisites & token extraction..."
+  python3 "${ROOT_DIR}/scripts/update_sup_prereqs.py" "$VCFA_URL" "$NSX_HOST" "$NSX_USER" "$NSX_PASS" "${TFVARS_FILE}"
   
   # Initialize the new supervisor.tf resources
   terraform -chdir="${ROOT_DIR}" init -upgrade
