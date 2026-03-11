@@ -291,22 +291,26 @@ step7_avi_base_config(){
 }
 
 step8_nsx_cloud(){
-  log "[8] NSXCloud Setup (Two-Pass)…"
+  log "[8] NSXCloud Setup (Two-Pass Deployment)…"
+  
+  # Pass 1: Build the Cloud shell and register vCenter
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="attach_ipam_now=false" \
-    -target=avi_cloud.nsx_t_cloud \
-    -target=avi_vcenterserver.vc_01
+    -target=avi_cloud.nsx_cloud \
+    -target=avi_vcenterserver.wld01_vc
   
+  # Pass 2: Build the Service Engine Group
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target=data.avi_network.vip \
-    -target=avi_ipamdnsproviderprofile.internal
+    -var="attach_ipam_now=false" \
+    -target=avi_serviceenginegroup.avi_lab_se_group
 
+  # Pass 3: Stitch them all together (Attach SE Group, IPAM, and DNS to the Cloud)
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="attach_ipam_now=true" \
-    -target=avi_cloud.nsx_t_cloud \
-    -target=avi_serviceenginegroup.default
+    -target=avi_cloud.nsx_cloud
+    
   pause
-}  
+}
 
 step9_install_sup(){
   log "[10] Installing Supervisor in vSphere…"
