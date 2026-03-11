@@ -4,7 +4,6 @@ import urllib3
 import time
 import sys
 import json
-import re
 
 # Suppress insecure request warnings for the lab environment
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -14,85 +13,94 @@ VCFA_URL = sys.argv[1]
 NSX_HOST = sys.argv[2]
 NSX_USER = sys.argv[3]
 NSX_PASS = sys.argv[4]
-TFVARS_PATH = sys.argv[5]
 
-# Hardcoded VCFA Provider Credentials
+# Hardcoded VCFA Provider Credentials (from your teardown script)
 PROVIDER_USER = "admin"
 PROVIDER_PASS = "VMware123!VMware123!"
 
-# Global API Version
-API_VERSION = "40.0"
-
 def get_vcfa_token():
-    print(f"Authenticating to VCFA/VCD ({VCFA_URL}) using API v{API_VERSION}...")
+    print(f"Authenticating to VCFA ({VCFA_URL}) using known-good provider auth...")
     auth_url = f"{VCFA_URL}/cloudapi/1.0.0/sessions/provider"
-    headers = {"Accept": f"application/json;version={API_VERSION}"}
-    auth = (f"{PROVIDER_USER}@system", PROVIDER_PASS)
+    headers = {"Accept": "application/json;version=40.0"} 
+    auth = (f"{PROVIDER_USER}@system", PROVIDER_PASS) 
     
     response = requests.post(auth_url, headers=headers, auth=auth, verify=False)
     response.raise_for_status()
     
-    token = response.headers.get("x-vmware-vcloud-access-token") or response.headers.get("X-VMWARE-VCLOUD-ACCESS-TOKEN")
+    token = response.headers.get("x-vmware-vcloud-access-token")
     if not token:
-        raise ValueError("Failed to extract x-vmware-vcloud-access-token from response headers.")
+        raise ValueError("Failed to extract x-vmware-vcloud-access-token!")
     return token
 
-def update_tfvars(token):
-    print("Injecting valid VCFA token into terraform.tfvars...")
-    with open(TFVARS_PATH, "r") as f:
-        content = f.read()
-    
-    content = re.sub(r'vcfa_token\s*=\s*".*"', f'vcfa_token       = "{token}"', content)
-    
-    with open(TFVARS_PATH, "w") as f:
-        f.write(content)
-
 def update_vcfa_prereqs(token):
+    # Using the standard Bearer auth, but adding the x-vmware header just in case VCF 9 prefers it
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": f"application/json;version={API_VERSION}",
-        "Content-Type": f"application/json;version={API_VERSION}"
+        "x-vmware-vcloud-access-token": token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
     }
 
-    # 1. Update IP Space
-    print("\nEnforcing VCFA IP Space state...")
-    res = requests.get(f"{VCFA_URL}/cloudapi/1.0.0/networkIpSpaces", headers=headers, verify=False)
+    # 1. Update IP Space (Using the exact endpoint from your screenshot)
+    print("\nEnforcing VCFA IP Space state via /v1/ipSpaces...")
+    res = requests.get(f"{VCFA_URL}/v1/ipSpaces", headers=headers, verify=False)
+    
     if res.status_code == 200:
-        spaces = res.json().get("values", [])
+        data = res.json()
+        # Handle different potential array wrappers gracefully
+        spaces = data.get("values", data.get("content", data if isinstance(data, list) else []))
+        
         for space in spaces:
-            if space.get("name") in ["us-west-region-Default IP Space", "us-east-region-IP Space"]:
-                print(f"Found IP Space: {space.get('name')}. Updating...")
-                space["name"] = "us-east-region-IP Space"
+            name = space.get("name") or space.get("display_name", "")
+            if name in ["us-west-region-Default IP Space", "us-east-region-IP Space"]:
+                print(f"Found IP Space: {name}. Updating...")
                 
-                space_json = json.dumps(space)
-                space_json = space_json.replace("10.1.0.0/28", "10.1.0.0/26")
-                updated_space = json.loads(space_json)
+                # Update name fields
+                if "name" in space: space["name"] = "us-east-region-IP Space"
+                if "display_name" in space: space["display_name"] = "us-east-region-IP Space"
                 
-                put_res = requests.put(f"{VCFA_URL}/cloudapi/1.0.0/networkIpSpaces/{space['id']}", headers=headers, json=updated_space, verify=False)
-                if put_res.status_code in [200, 202, 204]:
-                    print("[+] VCFA IP Space enforced (us-east-region-IP Space, 10.1.0.0/26).")
+                # Update CIDR via generic replacement to handle nested schemas
+                space_str = json.dumps(space)
+                space_str = space_str.replace("10.1.0.0/28", "10.1.0.0/26")
+                updated_space = json.loads(space_str)
+                
+                space_id = space.get("id")
+                put_url = f"{VCFA_URL}/v1/ipSpaces/{space_id}"
+                put_res = requests.put(put_url, headers=headers, json=updated_space, verify=False)
+                
+                if put_res.status_code in [200, 201, 202, 204]:
+                    print("[+] VCFA IP Space enforced!")
                 else:
-                    print(f"[-] Failed to update IP Space: {put_res.text}")
+                    print(f"[-] Failed to update IP Space. HTTP {put_res.status_code}: {put_res.text}")
     else:
-        print(f"[-] Could not fetch VCFA IP Spaces. HTTP {res.status_code}")
+        print(f"[-] Could not fetch VCFA IP Spaces. HTTP {res.status_code}: {res.text}")
 
-    # 2. Update Provider Gateway
-    print("\nEnforcing VCFA Provider Gateway state...")
-    res = requests.get(f"{VCFA_URL}/cloudapi/1.0.0/providerGateways", headers=headers, verify=False)
+    # 2. Update Provider Gateway (Using the exact endpoint from your screenshot)
+    print("\nEnforcing VCFA Provider Gateway state via /v1/providerGateways...")
+    res = requests.get(f"{VCFA_URL}/v1/providerGateways", headers=headers, verify=False)
+    
     if res.status_code == 200:
-        pgs = res.json().get("values", [])
+        data = res.json()
+        pgs = data.get("values", data.get("content", data if isinstance(data, list) else []))
+        
         for pg in pgs:
-            if pg.get("name") in ["us-west-region-Default Provider Gateway", "us-east-region-PG"]:
-                print(f"Found Provider Gateway: {pg.get('name')}. Updating...")
-                pg["name"] = "us-east-region-PG"
+            name = pg.get("name") or pg.get("display_name", "")
+            if name in ["us-west-region-Default Provider Gateway", "us-east-region-PG"]:
+                print(f"Found Provider Gateway: {name}. Updating...")
                 
-                put_res = requests.put(f"{VCFA_URL}/cloudapi/1.0.0/providerGateways/{pg['id']}", headers=headers, json=pg, verify=False)
-                if put_res.status_code in [200, 202, 204]:
-                    print("[+] VCFA Provider Gateway enforced (us-east-region-PG).")
+                if "name" in pg: pg["name"] = "us-east-region-PG"
+                if "display_name" in pg: pg["display_name"] = "us-east-region-PG"
+                
+                pg_id = pg.get("id")
+                put_url = f"{VCFA_URL}/v1/providerGateways/{pg_id}"
+                put_res = requests.put(put_url, headers=headers, json=pg, verify=False)
+                
+                if put_res.status_code in [200, 201, 202, 204]:
+                    print("[+] VCFA Provider Gateway enforced!")
                 else:
-                    print(f"[-] Failed to update Provider Gateway: {put_res.text}")
+                    print(f"[-] Failed to update Provider Gateway. HTTP {put_res.status_code}: {put_res.text}")
     else:
-        print(f"[-] Could not fetch VCFA Provider Gateways. HTTP {res.status_code}")
+        print(f"[-] Could not fetch VCFA Provider Gateways. HTTP {res.status_code}: {res.text}")
 
 def update_nsx_profile():
     print("\nWaiting 15 seconds for VCFA to push changes down to NSX-T...")
@@ -111,9 +119,9 @@ def update_nsx_profile():
     
     if not nsx_space_path:
         print("[-] Failed to find the synced IP Space in NSX-T! VCFA sync may be delayed.")
-        sys.exit(1)
+        return
         
-    print("\nEnforcing NSX-T VPC Profile state...")
+    print("Enforcing NSX-T VPC Profile state...")
     res = requests.get(f"https://{NSX_HOST}/policy/api/v1/orgs/default/projects/default/vpc-connectivity-profiles", auth=nsx_auth, verify=False)
     if res.status_code == 200:
         for profile in res.json().get("results", []):
@@ -130,7 +138,6 @@ def update_nsx_profile():
 if __name__ == "__main__":
     try:
         token = get_vcfa_token()
-        update_tfvars(token)
         update_vcfa_prereqs(token)
         update_nsx_profile()
     except Exception as e:
