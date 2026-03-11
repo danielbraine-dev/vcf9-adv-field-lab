@@ -76,14 +76,16 @@ resource "vsphere_virtual_machine" "avi_controller" {
     }
   }
 
-  extra_config = {
-    "guestinfo.controller.ip"             = var.avi_mgmt_ip
-    "guestinfo.controller.gateway"        = var.avi_mgmt_gateway
-    "guestinfo.controller.netmask"        = var.avi_mgmt_netmask
-    "guestinfo.controller.dns"            = join(",", var.avi_dns_servers)
-    "guestinfo.controller.ntp"            = join(",", var.avi_ntp_servers)
-    "guestinfo.controller.domain"         = var.avi_domain_search
-    "guestinfo.controller.admin_password" = var.avi_admin_password
+  vapp {
+    properties = {
+      "guestinfo.controller.ip"        = var.avi_mgmt_ip,
+      "guestinfo.controller.netmask"   = var.avi_mgmt_netmask,
+      "guestinfo.controller.gateway"   = var.avi_mgmt_gateway,
+      "guestinfo.controller.dns"       = join(",", var.avi_dns_servers),
+      "guestinfo.controller.domain"    = var.avi_domain_search,
+      "guestinfo.controller.ntp"       = join(",", var.avi_ntp_servers),
+      "guestinfo.admin_password"       = var.avi_admin_password
+    }
   }
 
   lifecycle {
