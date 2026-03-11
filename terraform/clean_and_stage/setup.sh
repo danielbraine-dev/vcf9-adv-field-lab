@@ -308,19 +308,13 @@ step8_nsx_cloud(){
   pause
 }  
 
-step9_onboard_nsx_alb(){
-  log "[9] Onboarding Avi to NSX…"
-  bash "${ROOT_DIR}/scripts/nsx_onboard_alb.sh"
-  pause
-}
-
-step10_install_sup(){
+step9_install_sup(){
   log "[10] Installing Supervisor in vSphere…"
   bash "${ROOT_DIR}/scripts/install_supervisor.sh"
   pause
 }
 
-step11_provision_vcfa_objects(){
+step10_provision_vcfa_objects(){
   log "[11] Provisioning VCFA Objects…"
   # Add your final terraform apply commands here
   pause
@@ -336,9 +330,8 @@ do_step() {
     6) step6_init_avi;;
     7) step7_avi_base_config;;
     8) step8_nsx_cloud;;
-    9) step9_onboard_nsx_alb;;
-   10) step10_install_sup;;
-   11) step11_provision_vcfa_objects;;
+    9) step10_install_sup;;
+   10) step11_provision_vcfa_objects;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
@@ -346,7 +339,7 @@ do_step() {
 run() {
   local spec="${1:-all}"
   if [[ "$spec" == "all" ]]; then
-    for n in {1..11}; do do_step "$n"; done
+    for n in {1..10}; do do_step "$n"; done
     echo "All steps complete. ✅"
     return
   fi
