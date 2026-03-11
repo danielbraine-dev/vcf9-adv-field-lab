@@ -83,7 +83,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
       "avi.mgmt-mask.CONTROLLER"           = var.avi_mgmt_netmask
       "avi.default-gw.CONTROLLER"          = var.avi_mgmt_gateway
       "avi.mgmt-ip-v6-enable.CONTROLLER"   = "False"
-      "avi.default-password.CONTROLLER"    = var.avi_admin_password
     }
   }
 
