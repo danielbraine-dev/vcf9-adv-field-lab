@@ -22,21 +22,6 @@ data "vsphere_network" "avi_net" {
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
 
-data "vsphere_ovf_vm_template" "avi_ova" {
-  name             = var.avi_vm_name
-  disk_provisioning = "thin"
-  resource_pool_id = vsphere_resource_pool.avi.id
-  datastore_id     = data.vsphere_datastore.avi_ds.id
-  
-  # GRAB THE FIRST HOST TO BYPASS DRS AND STOP THE HANG
-  host_system_id   = data.vsphere_compute_cluster.avi_cluster.host_system_ids[0] 
-  
-  local_ovf_path   = var.avi_ova_path
-  ovf_network_map  = {
-    "Management" = data.vsphere_network.avi_net.id
-  }
-}
-
 # vSphere: AVI Controller Resource Pool
 resource "vsphere_resource_pool" "avi" {
   name                    = "Avi-Controller"
