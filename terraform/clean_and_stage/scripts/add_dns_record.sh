@@ -4,7 +4,7 @@ set -euo pipefail
 # Variables
 DNS_HOST="10.1.10.129"
 DNS_ROOT_PASS='VMware1234!'   # Update if your lab uses a different password
-AVI_FQDN="avi-controller01-a.site-a.vcf.lab"
+AVI_FQDN="avi-controller01.site-a.vcf.lab"
 AVI_IP="10.1.1.200"
 
 # Ensure sshpass is installed
