@@ -159,41 +159,81 @@ step5_deploy_avi(){
 }
 
 step6_init_avi(){
-  log "[6] Initializing Avi Controller System Configuration (Zero-Touch)..."
+  log "[6] Initializing Avi Controller System Configuration (Diagnostic Mode)..."
 
-  # Dynamically pull variables from tfvars
   AVI_IP=$(read_tfvar avi_mgmt_ip)
   AVI_PASS=$(read_tfvar avi_admin_password)
   DOMAIN=$(read_tfvar avi_domain_search)
   AVI_VERSION="31.2.2" 
   
-  # Safely extract the IP from the arrays like ["10.1.1.1"]
   DNS_IP=$(grep 'avi_dns_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
   NTP_IP=$(grep 'avi_ntp_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
 
-  log "Authenticating with Avi API at ${AVI_IP}..."
-  curl -sk -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
-    -d "username=admin&password=${AVI_PASS}" > /dev/null
+  # 1. TEST AUTHENTICATION
+  log "Attempting login with provided password..."
+  HTTP_LOGIN=$(curl -sk -w "%{http_code}" -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
+    -d "username=admin&password=${AVI_PASS}" -o /dev/null)
+  
+  log "Login API returned HTTP: $HTTP_LOGIN"
+
+  # Fallback to 'admin' if the first login fails
+  if [[ "$HTTP_LOGIN" != "200" ]]; then
+      warn "Login failed! Attempting fallback factory password 'admin'..."
+      HTTP_LOGIN=$(curl -sk -w "%{http_code}" -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
+        -d "username=admin&password=admin" -o /dev/null)
+      log "Fallback Login API returned HTTP: $HTTP_LOGIN"
+      
+      if [[ "$HTTP_LOGIN" == "200" ]]; then
+          log "[+] Fallback login successful! The OVA ignored the govc password."
+          # We update our variable so the payload uses 'admin' as the old_password
+          OLD_PASS="admin" 
+      else
+          error "[-] Both passwords failed. Halting."
+          exit 1
+      fi
+  else
+      OLD_PASS="${AVI_PASS}"
+  fi
 
   CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
-  [[ -z "$CSRF_TOKEN" ]] && { error "Failed to get CSRF token. Is the VM booted?"; exit 1; }
-
-  log "Bypassing initial Admin Setup screen..."
-  USER_UUID=$(curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
+  
+  # 2. FETCH USER (With Debugging)
+  log "Fetching admin user UUID..."
+  RAW_RESP=$(curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
     -H "X-Avi-Version: ${AVI_VERSION}" \
-    "https://${AVI_IP}/api/useraccount" | jq -r '.results[] | select(.username=="admin") | .uuid')
+    "https://${AVI_IP}/api/useraccount")
+  
+  # Check if the response actually contains a "results" array
+  if ! echo "$RAW_RESP" | grep -q '"results"'; then
+      error "[-] API did not return a user list. Raw response:"
+      echo "$RAW_RESP" | jq . || echo "$RAW_RESP"
+      exit 1
+  fi
 
-  curl -sk -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
+  USER_UUID=$(echo "$RAW_RESP" | jq -r '.results[] | select(.username=="admin") | .uuid')
+  log "Found Admin UUID: $USER_UUID"
+
+  # 3. SUBMIT INITIAL SETUP FORM
+  log "Submitting Admin Setup form..."
+  HTTP_SETUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
     -H "X-CSRFToken: ${CSRF_TOKEN}" \
     -H "X-Avi-Version: ${AVI_VERSION}" \
     -H "Content-Type: application/json" \
     -H "Referer: https://${AVI_IP}/" \
-    -d "{\"username\":\"admin\",\"password\":\"${AVI_PASS}\",\"old_password\":\"${AVI_PASS}\",\"name\":\"admin\",\"email\":\"admin@${DOMAIN}\"}" \
-    "https://${AVI_IP}/api/useraccount/${USER_UUID}"
+    -d "{\"username\":\"admin\",\"password\":\"${AVI_PASS}\",\"old_password\":\"${OLD_PASS}\",\"name\":\"admin\",\"email\":\"admin@${DOMAIN}\"}" \
+    "https://${AVI_IP}/api/useraccount/${USER_UUID}")
 
-  log "[+] Admin account finalized!"
+  log "Setup API returned HTTP: $HTTP_SETUP"
+
+  if [[ "$HTTP_SETUP" == "200" || "$HTTP_SETUP" == "201" ]]; then
+      log "[+] Admin account finalized!"
+  else
+      error "[-] Failed to set password."
+      exit 1
+  fi
+
+  # ... [The rest of the script for DNS/NTP remains exactly the same] ...
   log "Retrieving factory system configuration..."
-  
   curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
     -H "X-Avi-Version: ${AVI_VERSION}" \
     "https://${AVI_IP}/api/systemconfiguration" > "${ROOT_DIR}/sysconf_raw.json"
