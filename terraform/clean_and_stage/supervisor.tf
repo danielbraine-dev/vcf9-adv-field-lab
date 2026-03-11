@@ -11,9 +11,18 @@ data "vsphere_storage_policy" "vsan_default" {
   name = "vSAN Default Storage Policy"
 }
 
-# Lookup for the vSphere Zone
 data "vsphere_zone" "wld_a" {
   name = "z-wld-a"
+}
+
+# NSX Data Lookups for the VPC configuration
+data "nsxt_policy_project" "default_project" {
+  display_name = "Default"
+}
+
+data "nsxt_policy_vpc_connectivity_profile" "default_profile" {
+  display_name = "Default VPC Connectivity Profile"
+  project_id   = data.nsxt_policy_project.default_project.id
 }
 
 #########################################################
@@ -25,7 +34,7 @@ resource "vsphere_supervisor" "wld01_sup" {
   storage_policy = data.vsphere_storage_policy.vsan_default.id
   zone_id        = data.vsphere_zone.wld_a.id
 
-  # Matches your first screenshot
+  # Management Network
   management_network {
     network      = data.vsphere_network.avi_net.id # mgmt-vds01-wld01-01a
     network_mode = "STATIC"
@@ -40,11 +49,11 @@ resource "vsphere_supervisor" "wld01_sup" {
     ntp_servers        = ["10.1.1.1"]
   }
 
-  # Matches your second screenshot (VPC Networking)
+  # Namespace/Workload Network
   namespaces_network_provider {
     nsx_vcf_vpc {
       project_id                  = data.nsxt_policy_project.default_project.id
-      vpc_connectivity_profile_id = nsxt_policy_vpc_connectivity_profile.default_vpc_profile.id
+      vpc_connectivity_profile_id = data.nsxt_policy_vpc_connectivity_profile.default_profile.id
       transit_gateway_ip_block    = "172.16.101.0/24"
       vpc_cidrs                   = ["172.16.201.0/24"]
       service_cidr                = "10.96.0.0/23"
