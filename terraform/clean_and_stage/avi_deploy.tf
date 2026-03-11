@@ -69,13 +69,13 @@ resource "vsphere_virtual_machine" "avi_controller" {
 
   vapp {
     properties = {
-      "avi.mgmt-ip-v4-enable.CONTROLLER"   = "True"
-      "avi.mgmt-ip.CONTROLLER"             = var.avi_mgmt_ip
-      "avi.mgmt-mask.CONTROLLER"           = var.avi_mgmt_netmask
-      "avi.default-gw.CONTROLLER"          = var.avi_mgmt_gateway
-      "avi.mgmt-ip-v6-enable.CONTROLLER"   = "False"
-      "avi.default-password.CONTROLLER"    = var.avi_admin_password
-      "avi.sysadmin-public-key.CONTROLLER" = var.avi_admin_password
+      "mgmt-ip-v4-enable.CONTROLLER"   = "True"
+      "mgmt-ip.CONTROLLER"             = var.avi_mgmt_ip
+      "mgmt-mask.CONTROLLER"           = var.avi_mgmt_netmask
+      "default-gw.CONTROLLER"          = var.avi_mgmt_gateway
+      "mgmt-ip-v6-enable.CONTROLLER"   = "False"
+      "default-password.CONTROLLER"    = var.avi_admin_password
+      "sysadmin-public-key.CONTROLLER" = var.avi_admin_password
     }
   }
 
