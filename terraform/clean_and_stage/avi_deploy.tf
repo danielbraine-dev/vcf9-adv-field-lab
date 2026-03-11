@@ -73,7 +73,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
       "mgmt-mask"           = var.avi_mgmt_netmask
       "default-gw"          = var.avi_mgmt_gateway
       "default-password"    = var.avi_admin_password
-      "sysadmin-public-key" = var.avi_admin_password
     }
   }
 
