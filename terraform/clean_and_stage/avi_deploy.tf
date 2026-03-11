@@ -55,9 +55,7 @@ resource "vsphere_virtual_machine" "avi_controller" {
   name             = var.avi_vm_name
   datastore_id     = data.vsphere_datastore.avi_ds.id
   resource_pool_id = vsphere_resource_pool.avi.id
-  datacenter_id = data.vsphere_datacenter.avi_dc.id
-
-  host_system_id   = data.vsphere_compute_cluster.avi_cluster.host_system_ids[0]
+  datacenter_id    = data.vsphere_datacenter.avi_dc.id
 
   num_cpus = 6
   memory   = 24576
@@ -72,13 +70,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
   network_interface {
     network_id   = data.vsphere_network.avi_net.id
     adapter_type = "vmxnet3"
-  }
-
-  disk {
-    label            = "disk0"
-    size             = 128
-    eagerly_scrub    = false
-    thin_provisioned = true
   }
 
   ovf_deploy {
@@ -98,6 +89,8 @@ resource "vsphere_virtual_machine" "avi_controller" {
       "avi.mgmt-mask.CONTROLLER"           = var.avi_mgmt_netmask
       "avi.default-gw.CONTROLLER"          = var.avi_mgmt_gateway
       "avi.mgmt-ip-v6-enable.CONTROLLER"   = "False"
+      "avi.default-password.CONTROLLER"    = var.avi_admin_password
+      "avi.sysadmin-public-key.CONTROLLER" = var.avi_admin_password
     }
   }
 
