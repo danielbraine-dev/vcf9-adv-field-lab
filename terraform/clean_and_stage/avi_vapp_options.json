@@ -1,0 +1,20 @@
+{
+  "DiskProvisioning": "thin",
+  "IPAllocationPolicy": "staticManual",
+  "IPProtocol": "IPv4",
+  "NetworkMapping": [
+    {
+      "Name": "Management",
+      "Network": "mgmt-vds01-wld01-01a"
+    }
+  ],
+  "PropertyMapping": [
+    { "Key": "avi.mgmt-ip-v4-enable.CONTROLLER", "Value": "True" },
+    { "Key": "avi.mgmt-ip.CONTROLLER", "Value": "10.1.1.200" },
+    { "Key": "avi.mgmt-mask.CONTROLLER", "Value": "255.255.255.0" },
+    { "Key": "avi.default-gw.CONTROLLER", "Value": "10.1.1.1" },
+    { "Key": "avi.mgmt-ip-v6-enable.CONTROLLER", "Value": "False" },
+    { "Key": "avi.default-password.CONTROLLER", "Value": "VMware123!VMware123!" },
+    { "Key": "avi.sysadmin-public-key.CONTROLLER", "Value": "VMware123!VMware123!" }
+  ]
+}
