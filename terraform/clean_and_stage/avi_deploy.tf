@@ -40,7 +40,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
   name             = var.avi_vm_name
   datastore_id     = data.vsphere_datastore.avi_ds.id
   resource_pool_id = vsphere_resource_pool.avi.id
-  datacenter_id    = data.vsphere_datacenter.avi_dc.id
 
   num_cpus = 6
   memory   = 24576
@@ -67,9 +66,9 @@ resource "vsphere_virtual_machine" "avi_controller" {
 
   vapp {
     properties = {
-      "avi.mgmt-ip.CONTROLLER"             = var.avi_mgmt_ip
-      "avi.mgmt-mask.CONTROLLER"           = var.avi_mgmt_netmask
-      "avi.default-gw.CONTROLLER"          = var.avi_mgmt_gateway
+      "avi.mgmt-ip.CONTROLLER"             = "10.1.1.200"
+      "avi.mgmt-mask.CONTROLLER"           = "255.255.255.0"
+      "avi.default-gw.CONTROLLER"          = "10.1.1.1"
     }
   }
 
