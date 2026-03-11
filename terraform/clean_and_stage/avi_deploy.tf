@@ -45,7 +45,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
   num_cpus = 6
   memory   = 24576
   guest_id = "other3xLinux64Guest"
-  wait_for_guest_net_timeout = 15
 
   depends_on = [
     vsphere_resource_pool.avi,
@@ -61,7 +60,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
     local_ovf_path            = var.avi_ova_path
     disk_provisioning         = "thin"
     allow_unverified_ssl_cert = true
-    ip_protocol               = "IPv4"
     ovf_network_map = {
       "Management" = data.vsphere_network.avi_net.id
     }
@@ -69,10 +67,9 @@ resource "vsphere_virtual_machine" "avi_controller" {
 
   vapp {
     properties = {
-      "mgmt-ip"             = var.avi_mgmt_ip
-      "mgmt-mask"           = var.avi_mgmt_netmask
-      "default-gw"          = var.avi_mgmt_gateway
-      "default-password"    = var.avi_admin_password
+      "avi.mgmt-ip.CONTROLLER"             = var.avi_mgmt_ip
+      "avi.mgmt-mask.CONTROLLER"           = var.avi_mgmt_netmask
+      "avi.default-gw.CONTROLLER"          = var.avi_mgmt_gateway
     }
   }
 
