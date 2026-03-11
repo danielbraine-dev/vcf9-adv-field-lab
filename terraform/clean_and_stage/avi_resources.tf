@@ -232,7 +232,7 @@ resource "avi_cloud" "nsx_cloud" {
       tz_type        = "OVERLAY"
       transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a"
       tier1_segment_config {
-        segment_config_mode = "ROUTING_MODE_GLOBAL"
+        segment_config_mode = "TIER1_SEGMENT_MANUAL"
         manual {
           tier1_lrs {
             tier1_lr_id = "/infra/tier-1s/t1-se-services"
