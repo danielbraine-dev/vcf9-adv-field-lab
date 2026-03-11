@@ -1,1 +1,8 @@
-Error: Cycle: avi_cloud.nsx_cloud, avi_serviceenginegroup.avi_lab_se_group
+[8] NSXCloud Setup (Cycle-Breaker Deployment)…
+╷
+│ Error: Missing newline after argument
+│ 
+│   on avi_resources.tf line 202, in resource "avi_cloud" "nsx_cloud":
+│  202:   ipam_provider_ref     = avi_ipamdnsproviderprofile.avi_ipam.id : null
+│ 
+│ An argument definition must end with a newline.
