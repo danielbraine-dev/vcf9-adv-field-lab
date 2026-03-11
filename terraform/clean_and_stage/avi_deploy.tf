@@ -89,6 +89,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
   }
 
   lifecycle {
-    ignore_changes = [extra_config]
+    ignore_changes = [vapp[0].properties]
   }
 }
