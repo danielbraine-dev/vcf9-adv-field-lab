@@ -176,9 +176,8 @@ step6_init_avi(){
   CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
   [[ -z "$CSRF_TOKEN" ]] && { error "Failed to get CSRF token. Is the VM booted?"; exit 1; }
 
+  # 1. BYPASS USER SETUP
   log "Bypassing initial Admin Setup screen..."
-  
-  # Submit the "Create Account" payload directly to the self-service endpoint (no UUID needed)
   HTTP_SETUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
     -H "X-CSRFToken: ${CSRF_TOKEN}" \
     -H "X-Avi-Version: ${AVI_VERSION}" \
@@ -194,18 +193,48 @@ step6_init_avi(){
       exit 1
   fi
 
+  # 2. SET BACKUP PASSPHRASE
+  log "Retrieving Backup Configuration..."
+  curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
+    -H "X-Avi-Version: ${AVI_VERSION}" \
+    "https://${AVI_IP}/api/backupconfiguration" > "${ROOT_DIR}/backupconf_raw.json"
+
+  BACKUP_UUID=$(jq -r '.results[0].uuid' "${ROOT_DIR}/backupconf_raw.json")
+
+  log "Setting Backup Passphrase..."
+  jq --arg pass "${AVI_PASS}" \
+     '.results[0] | .passphrase = $pass' \
+     "${ROOT_DIR}/backupconf_raw.json" > "${ROOT_DIR}/backupconf_updated.json"
+
+  HTTP_BACKUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
+    -H "X-CSRFToken: ${CSRF_TOKEN}" \
+    -H "X-Avi-Version: ${AVI_VERSION}" \
+    -H "Referer: https://${AVI_IP}/" \
+    -H "Content-Type: application/json" \
+    -d @"${ROOT_DIR}/backupconf_updated.json" \
+    "https://${AVI_IP}/api/backupconfiguration/${BACKUP_UUID}")
+
+  if [[ "$HTTP_BACKUP" == "200" || "$HTTP_BACKUP" == "201" ]]; then
+    log "[+] Backup Configuration (Passphrase) applied successfully!"
+  else
+    warn "[-] Failed to set Backup Passphrase. HTTP: $HTTP_BACKUP"
+  fi
+
+  # 3. SET SYSTEM CONFIGURATION & COMPLETE WORKFLOW
   log "Retrieving factory system configuration..."
   curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
     -H "X-Avi-Version: ${AVI_VERSION}" \
     "https://${AVI_IP}/api/systemconfiguration" > "${ROOT_DIR}/sysconf_raw.json"
 
-  log "Injecting DNS ($DNS_IP) and NTP ($NTP_IP) settings..."
+  # We add '.welcome_workflow_complete = true' to bypass the UI wizard entirely
+  log "Injecting DNS ($DNS_IP), NTP ($NTP_IP), and bypassing Welcome wizard..."
   jq --arg dns "$DNS_IP" \
      --arg domain "$DOMAIN" \
      --arg ntp "$NTP_IP" \
      '.dns_configuration.server_list = [{"type": "V4", "addr": $dns}] | 
       .dns_configuration.search_domain = $domain | 
-      .ntp_configuration.ntp_servers = [{"server": {"type": "V4", "addr": $ntp}}]' \
+      .ntp_configuration.ntp_servers = [{"server": {"type": "V4", "addr": $ntp}}] |
+      .welcome_workflow_complete = true' \
      "${ROOT_DIR}/sysconf_raw.json" > "${ROOT_DIR}/sysconf_updated.json"
 
   log "Applying updated system configuration..."
@@ -224,7 +253,7 @@ step6_init_avi(){
     exit 1
   fi
 
-  rm -f "${ROOT_DIR}/sysconf_raw.json" "${ROOT_DIR}/sysconf_updated.json" "${ROOT_DIR}/avi_cookies.txt"
+  rm -f "${ROOT_DIR}"/*_raw.json "${ROOT_DIR}"/*_updated.json "${ROOT_DIR}/avi_cookies.txt"
   pause
 }
 
