@@ -377,7 +377,7 @@ do_step() {
     6) step6_init_avi;;
     7) step7_avi_base_config;;
     8) step8_nsx_cloud;;
-    9) step10_install_sup;;
+    9) step9_install_sup;;
    10) step11_provision_vcfa_objects;;
     *) echo "Unknown step $1"; exit 2;;
   esac
