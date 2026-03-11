@@ -140,6 +140,9 @@ resource "avi_systemconfiguration" "this" {
   # Ensure the Welcome Wizard stays locked out
   welcome_workflow_complete = true    
 
+  # Attach the DNS VS as a system DNS provider dynamically
+  dns_virtualservice_refs = var.dns_vs_uuid != "" ? ["/api/virtualservice/${var.dns_vs_uuid}"] : null
+
   # We must re-declare DNS and NTP here so Terraform doesn't overwrite 
   # what we did in Step 6 with blank values.
   dns_configuration {
@@ -184,6 +187,12 @@ resource "avi_systemconfiguration" "this" {
 #########################################################
 variable "se_group_uuid" {
   description = "Used to break the Cloud/SE Group circular dependency"
+  type        = string
+  default     = ""
+}
+
+variable "dns_vs_uuid" {
+  description = "Used to attach the DNS VS to the System Configuration after creation"
   type        = string
   default     = ""
 }
@@ -297,6 +306,49 @@ resource "avi_serviceenginegroup" "avi_lab_se_group" {
     duration = 5
   }
 }
+
+#########################################################
+# Delegated DNS Virtual Service Configuration
+#########################################################
+
+# Data lookup for the VRF Context (Automatically synced from NSX-T by Avi)
+data "avi_vrfcontext" "t1_se_services" {
+  name       = "t1-se-services"
+  cloud_ref  = avi_cloud.nsx_cloud.id
+  depends_on = [avi_cloud.nsx_cloud]
+}
+
+resource "avi_vsvip" "dns_vip" {
+  name            = "delegate-dns-vip"
+  cloud_ref       = avi_cloud.nsx_cloud.id
+  vrf_context_ref = data.avi_vrfcontext.t1_se_services.id
+  
+  vip {
+    vip_id = "1"
+    ip_address {
+      type = "V4"
+      addr = "10.4.100.2"
+    }
+  }
+}
+
+resource "avi_virtualservice" "delegated_dns" {
+  name                    = "delegated-dns"
+  cloud_ref               = avi_cloud.nsx_cloud.id
+  vsvip_ref               = avi_vsvip.dns_vip.id
+  se_group_ref            = avi_serviceenginegroup.avi_lab_se_group.id
+  vrf_context_ref         = data.avi_vrfcontext.t1_se_services.id
+  
+  # Standard DNS Profiles
+  application_profile_ref = "/api/applicationprofile?name=System-DNS"
+  network_profile_ref     = "/api/networkprofile?name=System-UDP-Per-Pkt"
+
+  services {
+    port           = 53
+    port_range_end = 53
+  }
+}
+
 ##########################################################################
 # Deploy OVA - Saving in-case I figure out how to do this instead of govc
 ##########################################################################
