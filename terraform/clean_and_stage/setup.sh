@@ -13,6 +13,9 @@ error() { printf "\n\033[1;31m%s\033[0m\n" "$*"; }
 
 pause() { [[ "${PAUSE:-0}" == "1" ]] && read -rp "→ Press Enter to continue…" || true; }
 
+# Global Helper to read standard strings from tfvars
+read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
+
 step1_install_tools() {
   echo "[1] Install tools…"
   if [[ -f "${ROOT_DIR}/commands.txt" ]]; then
@@ -155,8 +158,77 @@ step5_deploy_avi(){
   pause
 }
 
-step6_create_cert(){
-  log "[6] Creating Certificates and Uploading to NSX…"
+step6_init_avi(){
+  log "[6] Initializing Avi Controller System Configuration (Zero-Touch)..."
+
+  # Dynamically pull variables from tfvars
+  AVI_IP=$(read_tfvar avi_mgmt_ip)
+  AVI_PASS=$(read_tfvar avi_admin_password)
+  DOMAIN=$(read_tfvar avi_domain_search)
+  AVI_VERSION="31.2.2" 
+  
+  # Safely extract the IP from the arrays like ["10.1.1.1"]
+  DNS_IP=$(grep '^avi_dns_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+  NTP_IP=$(grep '^avi_ntp_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+
+  log "Authenticating with Avi API..."
+  curl -sk -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
+    -d "username=admin&password=${AVI_PASS}" > /dev/null
+
+  CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
+  [[ -z "$CSRF_TOKEN" ]] && { error "Failed to get CSRF token. Is the VM booted?"; exit 1; }
+
+  log "Bypassing initial Admin Setup screen..."
+  USER_UUID=$(curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
+    -H "X-Avi-Version: ${AVI_VERSION}" \
+    "https://${AVI_IP}/api/useraccount" | jq -r '.results[] | select(.username=="admin") | .uuid')
+
+  curl -sk -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
+    -H "X-CSRFToken: ${CSRF_TOKEN}" \
+    -H "X-Avi-Version: ${AVI_VERSION}" \
+    -H "Content-Type: application/json" \
+    -H "Referer: https://${AVI_IP}/" \
+    -d "{\"username\":\"admin\",\"password\":\"${AVI_PASS}\",\"old_password\":\"${AVI_PASS}\",\"name\":\"admin\",\"email\":\"admin@${DOMAIN}\"}" \
+    "https://${AVI_IP}/api/useraccount/${USER_UUID}"
+
+  log "[+] Admin account finalized!"
+  log "Retrieving factory system configuration..."
+  
+  curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
+    -H "X-Avi-Version: ${AVI_VERSION}" \
+    "https://${AVI_IP}/api/systemconfiguration" > "${ROOT_DIR}/sysconf_raw.json"
+
+  log "Injecting DNS ($DNS_IP) and NTP ($NTP_IP) settings..."
+  jq --arg dns "$DNS_IP" \
+     --arg domain "$DOMAIN" \
+     --arg ntp "$NTP_IP" \
+     '.dns_configuration.server_list = [{"type": "V4", "addr": $dns}] | 
+      .dns_configuration.search_domain = $domain | 
+      .ntp_configuration.ntp_servers = [{"server": {"type": "V4", "addr": $ntp}}]' \
+     "${ROOT_DIR}/sysconf_raw.json" > "${ROOT_DIR}/sysconf_updated.json"
+
+  log "Applying updated system configuration..."
+  HTTP_STATUS=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
+    -H "X-CSRFToken: ${CSRF_TOKEN}" \
+    -H "X-Avi-Version: ${AVI_VERSION}" \
+    -H "Referer: https://${AVI_IP}/" \
+    -H "Content-Type: application/json" \
+    -d @"${ROOT_DIR}/sysconf_updated.json" \
+    "https://${AVI_IP}/api/systemconfiguration")
+
+  if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then
+    log "[+] Avi Controller System Configuration applied successfully!"
+  else
+    error "[-] Failed to apply configuration. HTTP Status: $HTTP_STATUS"
+    exit 1
+  fi
+
+  rm -f "${ROOT_DIR}/sysconf_raw.json" "${ROOT_DIR}/sysconf_updated.json" "${ROOT_DIR}/avi_cookies.txt"
+  pause
+}
+
+step7_create_cert(){
+  log "[7] Creating Certificates and Uploading to NSX…"
   AVI_FQDN="avi-controller01-a.site-a.vcf.lab"
   log "Waiting for Avi API at https://${AVI_FQDN}…"
   until curl -sk --max-time 5 "https://${AVI_FQDN}/api/initial-data" >/dev/null; do
@@ -170,9 +242,6 @@ step6_create_cert(){
     -target=avi_systemconfiguration.this \
     -target=local_file.avi_cert_pem \
     -target=local_file.avi_key_pem
-
-  # Helper to read credentials for script use
-  read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
 
   NSX_HOST="$(read_tfvar nsx_host)"
   NSX_USER="$(read_tfvar nsx_username)"
@@ -189,8 +258,8 @@ step6_create_cert(){
   pause
 }
 
-step7_nsx_cloud(){
-  log "[7] NSXCloud Setup (Two-Pass)…"
+step8_nsx_cloud(){
+  log "[8] NSXCloud Setup (Two-Pass)…"
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="attach_ipam_now=false" \
     -target=avi_cloud.nsx_t_cloud \
@@ -207,20 +276,20 @@ step7_nsx_cloud(){
   pause
 }  
 
-step8_onboard_nsx_alb(){
-  log "[8] Onboarding Avi to NSX…"
+step9_onboard_nsx_alb(){
+  log "[9] Onboarding Avi to NSX…"
   bash "${ROOT_DIR}/scripts/nsx_onboard_alb.sh"
   pause
 }
 
-step9_install_sup(){
-  log "[9] Installing Supervisor in vSphere…"
+step10_install_sup(){
+  log "[10] Installing Supervisor in vSphere…"
   bash "${ROOT_DIR}/scripts/install_supervisor.sh"
   pause
 }
 
-step10_provision_vcfa_objects(){
-  log "[10] Provisioning VCFA Objects…"
+step11_provision_vcfa_objects(){
+  log "[11] Provisioning VCFA Objects…"
   # Add your final terraform apply commands here
   pause
 }
@@ -232,11 +301,12 @@ do_step() {
     3) step3_tf_init;;
     4) step4_create_nsx_objects;;
     5) step5_deploy_avi;;
-    6) step6_create_cert;;
-    7) step7_nsx_cloud;;
-    8) step8_onboard_nsx_alb;;
-    9) step9_install_sup;;
-   10) step10_provision_vcfa_objects;;
+    6) step6_init_avi;;
+    7) step7_create_cert;;
+    8) step8_nsx_cloud;;
+    9) step9_onboard_nsx_alb;;
+   10) step10_install_sup;;
+   11) step11_provision_vcfa_objects;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
@@ -244,7 +314,7 @@ do_step() {
 run() {
   local spec="${1:-all}"
   if [[ "$spec" == "all" ]]; then
-    for n in {1..10}; do do_step "$n"; done
+    for n in {1..11}; do do_step "$n"; done
     echo "All steps complete. ✅"
     return
   fi
