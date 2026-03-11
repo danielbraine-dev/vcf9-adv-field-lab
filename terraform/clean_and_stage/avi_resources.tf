@@ -194,7 +194,21 @@ variable "se_group_uuid" {
 data "nsxt_policy_transport_zone" "overlay_tz" {
   display_name = "overlay-vds01-wld01-01a"
 }
+data "nsxt_policy_tier1_gateway" "t1_mgmt" {
+  display_name = "t1-wld-a"
+}
 
+data "nsxt_policy_segment" "seg_mgmt" {
+  display_name = "SE-mgmt"
+}
+
+data "nsxt_policy_tier1_gateway" "t1_data" {
+  display_name = "t1-se-services"
+}
+
+data "nsxt_policy_segment" "seg_data" {
+  display_name = "SE-Data_VIP"
+}
 #########################################################
 # NSX-T Cloud Configuration
 #########################################################
@@ -229,8 +243,8 @@ resource "avi_cloud" "nsx_cloud" {
       tz_type        = "OVERLAY"
       transport_zone = data.nsxt_policy_transport_zone.overlay_tz.path
       overlay_segment {
-        tier1_lr_id = "/infra/tier-1s/t1-wld-a"
-        segment_id  = "/infra/segments/SE-mgmt"
+        tier1_lr_id = data.nsxt_policy_tier1_gateway.t1_mgmt.path
+        segment_id  = data.nsxt_policy_segment.seg_mgmt.path
       }
     }
 
@@ -242,8 +256,8 @@ resource "avi_cloud" "nsx_cloud" {
         segment_config_mode = "TIER1_SEGMENT_MANUAL"
         manual {
           tier1_lrs {
-            tier1_lr_id = "/infra/tier-1s/t1-se-services"
-            segment_id  = "/infra/segments/SE-Data_VIP"
+            tier1_lr_id = data.nsxt_policy_tier1_gateway.t1_data.path
+            segment_id  = data.nsxt_policy_segment.seg_data.path
           }
         }
       }
