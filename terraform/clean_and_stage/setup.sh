@@ -116,7 +116,7 @@ step4_create_nsx_objects(){
 step5_deploy_avi(){
   log "[5] Deploying Avi Controller via govc..."
 
-  # 1. Apply Terraform to build the Resource Pool & Content Library ONLY
+  # 1. Apply Terraform to build the Resource Pool & Content Library
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target='vsphere_resource_pool.avi' \
     -target='vsphere_content_library.avi_se_cl'
@@ -125,43 +125,17 @@ step5_deploy_avi(){
   FINAL_OVA_PATH=$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1)
   [[ -z "$FINAL_OVA_PATH" ]] && { error "No OVA found!"; exit 1; }
 
-  # 3. Generate the native vCenter OVF options JSON
-  # This flawlessly maps the properties without Terraform scrambling them
-  cat > "${ROOT_DIR}/avi-options.json" <<EOF
-{
-  "DiskProvisioning": "thin",
-  "IPAllocationPolicy": "staticManual",
-  "IPProtocol": "IPv4",
-  "NetworkMapping": [
-    {
-      "Name": "Management",
-      "Network": "mgmt-vds01-wld01-01a"
-    }
-  ],
-  "PropertyMapping": [
-    { "Key": "avi.mgmt-ip-v4-enable.CONTROLLER", "Value": "True" },
-    { "Key": "avi.mgmt-ip.CONTROLLER", "Value": "10.1.1.200" },
-    { "Key": "avi.mgmt-mask.CONTROLLER", "Value": "255.255.255.0" },
-    { "Key": "avi.default-gw.CONTROLLER", "Value": "10.1.1.1" },
-    { "Key": "avi.mgmt-ip-v6-enable.CONTROLLER", "Value": "False" },
-    { "Key": "avi.default-password.CONTROLLER", "Value": "VMware123!VMware123!" },
-    { "Key": "avi.sysadmin-public-key.CONTROLLER", "Value": "VMware123!VMware123!" }
-  ]
-}
-EOF
-
-  # 4. Set vCenter Auth (Ensure these match your lab)
+  # 3. Set vCenter Auth (Ensure these match your lab)
   export GOVC_URL="vc-wld01-a.site-a.vcf.lab"
   export GOVC_USERNAME="administrator@wld.sso"
   export GOVC_PASSWORD="VMware123!VMware123!"
   export GOVC_INSECURE=1
 
-
-  log "Importing OVA natively to vCenter (bypassing Terraform)..."
+  log "Importing OVA natively to vCenter via govc..."
   
-  # 5. Deploy via govc
+  # 4. Deploy via govc
   govc import.ova \
-    -options="${ROOT_DIR}/avi-options.json" \
+    -options="${ROOT_DIR}/avi_vapp_options.json" \
     -dc="dc-a" \
     -ds="vsan-wld01-01a" \
     -pool="cluster-wld01-01a/Resources/Avi-Controller" \
@@ -171,7 +145,7 @@ EOF
   log "Powering on Avi Controller..."
   govc vm.power -on "avi-controller01"
 
-  # 6. Wait for API
+  # 5. Wait for API
   log "Waiting for Avi API at https://10.1.1.200..."
   until curl -sk --max-time 5 "https://10.1.1.200/api/initial-data" >/dev/null; do
     printf "."
