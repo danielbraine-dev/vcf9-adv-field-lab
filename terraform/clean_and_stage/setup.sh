@@ -114,55 +114,66 @@ step4_create_nsx_objects(){
 }
 
 step5_deploy_avi(){
-  log "[5] Install AVI + NSX integration…"
+  log "[5] Deploying Avi Controller via govc..."
 
-  # 1. Remote vs Local OVA Logic
-  REMOTE_OVA_URL="http://your-server-ip/path/to/controller.ova"
-  LOCAL_OVA_PATH="${ROOT_DIR}/controller.ova"
-  FINAL_OVA_PATH=""
+  # 1. Apply Terraform to build the Resource Pool & Content Library ONLY
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+    -target='vsphere_resource_pool.avi' \
+    -target = 'vsphere_content_library.avi_se_cl'
 
-  log "Checking for remote OVA at ${REMOTE_OVA_URL}..."
-  if curl -IsL --max-time 5 "$REMOTE_OVA_URL" | grep -q "200 OK"; then
-    log "[+] Remote OVA found. Downloading..."
-    curl -L "$REMOTE_OVA_URL" -o "$LOCAL_OVA_PATH"
-    FINAL_OVA_PATH="$LOCAL_OVA_PATH"
-  else
-    warn "[-] Remote OVA not found. Searching local directory..."
-    LOCAL_SEARCH=$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1)
-    if [[ -n "$LOCAL_SEARCH" ]]; then
-      log "[+] Found local OVA: $(basename "$LOCAL_SEARCH")"
-      FINAL_OVA_PATH="$LOCAL_SEARCH"
-    else
-      error "[-] Critical: No OVA found remotely or locally."
-      exit 1
-    fi
-  fi
+  # 2. Locate the OVA
+  FINAL_OVA_PATH=$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1)
+  [[ -z "$FINAL_OVA_PATH" ]] && { error "No OVA found!"; exit 1; }
 
-  # 2. Variable Injection
-  # We ONLY inject the OVA path. We removed the AVI_MGMT_PG state lookup 
-  # so that your terraform.tfvars ("mgmt-vds01-wld01-01a") is respected.
-  cat > "${ROOT_DIR}/avi.auto.tfvars.json" <<EOF
+  # 3. Generate the native vCenter OVF options JSON
+  # This flawlessly maps the properties without Terraform scrambling them
+  cat > "${ROOT_DIR}/avi-options.json" <<EOF
 {
-  "avi_ova_path": "${FINAL_OVA_PATH}"
+  "DiskProvisioning": "thin",
+  "IPAllocationPolicy": "staticManual",
+  "IPProtocol": "IPv4",
+  "NetworkMapping": [
+    {
+      "Name": "Management",
+      "Network": "mgmt-vds01-wld01-01a"
+    }
+  ],
+  "PropertyMapping": [
+    { "Key": "avi.mgmt-ip-v4-enable.CONTROLLER", "Value": "True" },
+    { "Key": "avi.mgmt-ip.CONTROLLER", "Value": "10.1.1.200" },
+    { "Key": "avi.mgmt-mask.CONTROLLER", "Value": "255.255.255.0" },
+    { "Key": "avi.default-gw.CONTROLLER", "Value": "10.1.1.1" },
+    { "Key": "avi.mgmt-ip-v6-enable.CONTROLLER", "Value": "False" },
+    { "Key": "avi.default-password.CONTROLLER", "Value": "VMware123!VMware123!" },
+    { "Key": "avi.sysadmin-public-key.CONTROLLER", "Value": "VMware123!VMware123!" }
+  ]
 }
 EOF
-  
-  # 3. DNS Record Logic
-  log "Adding DNS record for Avi controller…"
-  # This script pulls AVI_IP from terraform.tfvars automatically
-  bash "${ROOT_DIR}/scripts/add_dns_record.sh"
-  
-  # 4. Terraform Deployment
-  log "Deploying Avi Controller via Terraform…"
-  # We target the VM; Terraform's graph will handle the Resource Pool and Library dependencies
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve -target='vsphere_virtual_machine.avi_controller'
 
-  # 5. API Availability Wait-Loop
-  # Extract IP for the curl loop (matching your tfvars variable name)
-  AVI_IP="$(awk -F= '/avi_mgmt_ip/{gsub(/"| /,"",$2);print $2}' "${TFVARS_FILE}")"
+  # 4. Set vCenter Auth (Ensure these match your lab)
+  export GOVC_URL="vc-wld01-a.site-a.vcf.lab"
+  export GOVC_USERNAME="administrator@wld.sso"
+  export GOVC_PASSWORD="VMware123!VMware123!"
+  export GOVC_INSECURE=1
+
+
+  log "Importing OVA natively to vCenter (bypassing Terraform)..."
   
-  log "Waiting for Avi Controller API at https://${AVI_IP}..."
-  until curl -sk --max-time 5 "https://${AVI_IP}/api/initial-data" >/dev/null; do
+  # 5. Deploy via govc
+  govc import.ova \
+    -options="${ROOT_DIR}/avi-options.json" \
+    -dc="dc-a" \
+    -ds="vsan-wld01-01a" \
+    -pool="cluster-wld01-01a/Resources/Avi-Controller" \
+    -name="avi-controller01" \
+    "${FINAL_OVA_PATH}"
+
+  log "Powering on Avi Controller..."
+  govc vm.power -on "avi-controller01"
+
+  # 6. Wait for API
+  log "Waiting for Avi API at https://10.1.1.200..."
+  until curl -sk --max-time 5 "https://10.1.1.200/api/initial-data" >/dev/null; do
     printf "."
     sleep 20
   done
