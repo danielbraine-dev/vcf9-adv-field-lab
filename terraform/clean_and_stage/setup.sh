@@ -118,7 +118,7 @@ step5_deploy_avi(){
 
   # 1. Apply Terraform to build the Resource Pool & Content Library ONLY
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target='vsphere_resource_pool.avi' \
+    -target = 'vsphere_resource_pool.avi' \
     -target = 'vsphere_content_library.avi_se_cl'
 
   # 2. Locate the OVA
