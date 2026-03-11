@@ -198,12 +198,11 @@ resource "avi_cloud" "nsx_cloud" {
   dhcp_enabled        = true
   ip6_autocfg_enabled = false 
 
-  # These attach during "Pass 2" of the setup script
-  ipam_provider_ref     = avi_ipamdnsproviderprofile.avi_ipam.id : null
-
-  dns_provider_ref      = avi_ipamdnsproviderprofile.avi_dns.id : null
-
-  se_group_template_ref = se_group_template_ref = var.se_group_uuid != "" ? "/api/serviceenginegroup/${var.se_group_uuid}" : null
+  ipam_provider_ref = avi_ipamdnsproviderprofile.avi_ipam.id
+  dns_provider_ref  = avi_ipamdnsproviderprofile.avi_dns.id
+  
+  # Cycle Breaker:  inject the UUID dynamically from the bash script
+  se_group_template_ref = var.se_group_uuid != "" ? "/api/serviceenginegroup/${var.se_group_uuid}" : null
 
   dns_resolvers {
     resolver_name = "Enterprise DNS"
