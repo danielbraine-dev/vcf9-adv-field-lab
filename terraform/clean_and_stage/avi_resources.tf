@@ -189,6 +189,13 @@ variable "se_group_uuid" {
 }
 
 #########################################################
+# NSX-T Data Lookups
+#########################################################
+data "nsxt_policy_transport_zone" "overlay_tz" {
+  display_name = "overlay-vds01-wld01-01a"
+}
+
+#########################################################
 # NSX-T Cloud Configuration
 #########################################################
 resource "avi_cloud" "nsx_cloud" {
@@ -220,7 +227,7 @@ resource "avi_cloud" "nsx_cloud" {
     # Management Network Setup
     management_network_config {
       tz_type        = "OVERLAY"
-      transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a"
+      transport_zone = data.nsxt_policy_transport_zone.overlay_tz.path
       overlay_segment {
         tier1_lr_id = "/infra/tier-1s/t1-wld-a"
         segment_id  = "/infra/segments/SE-mgmt"
@@ -230,7 +237,7 @@ resource "avi_cloud" "nsx_cloud" {
     # Data Network Setup
     data_network_config {
       tz_type        = "OVERLAY"
-      transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a"
+      transport_zone = data.nsxt_policy_transport_zone.overlay_tz.path
       tier1_segment_config {
         segment_config_mode = "TIER1_SEGMENT_MANUAL"
         manual {
