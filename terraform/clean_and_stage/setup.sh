@@ -291,34 +291,50 @@ step7_avi_base_config(){
 }
 
 step8_nsx_cloud(){
-  log "[8] NSXCloud Setup (Cycle-Breaker Deployment)…"
+  log "[8] NSXCloud Setup & DNS Virtual Service…"
   
   # Pass 1: Build the Cloud shell, vCenter, IPAM, and DNS. 
-  # (se_group_uuid defaults to "", so the template is left blank to avoid the cycle)
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=avi_cloud.nsx_cloud \
     -target=avi_vcenterserver.wld01_vc
   
-  # Pass 2: Build the Service Engine Group (which requires the Cloud ID)
+  # Pass 2: Build the Service Engine Group
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=avi_serviceenginegroup.avi_lab_se_group
 
-  # Pass 3: Extract the new SE Group UUID from the Terraform state file
+  # Extract SE Group UUID
   SE_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_serviceenginegroup.avi_lab_se_group | grep '^ *uuid' | awk '{print $3}' | tr -d '"')
-  
-  if [[ -z "$SE_UUID" ]]; then
-      error "[-] Failed to extract SE Group UUID from state file!"
-      exit 1
-  fi
+  [[ -z "$SE_UUID" ]] && { error "[-] Failed to extract SE Group UUID!"; exit 1; }
 
   log "Stitching SE Group UUID ($SE_UUID) back into the NSX Cloud..."
-  
-  # Pass 4: Apply the Cloud one last time, injecting the UUID variable
+  # Pass 3: Apply the Cloud with SE Group attached
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="se_group_uuid=${SE_UUID}" \
     -target=avi_cloud.nsx_cloud
-    
-  log "[+] NSX Cloud and Service Engine Group fully integrated!"
+
+  log "Waiting 15 seconds for Avi to sync NSX-T VRF Contexts..."
+  sleep 15
+
+  log "Deploying Delegated DNS Virtual Service..."
+  # Pass 4: Deploy VS VIP and Virtual Service (We keep passing SE_UUID so it doesn't revert)
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+    -var="se_group_uuid=${SE_UUID}" \
+    -target=data.avi_vrfcontext.t1_se_services \
+    -target=avi_vsvip.dns_vip \
+    -target=avi_virtualservice.delegated_dns
+
+  # Extract DNS VS UUID
+  DNS_VS_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_virtualservice.delegated_dns | grep '^ *uuid' | awk '{print $3}' | tr -d '"')
+  [[ -z "$DNS_VS_UUID" ]] && { error "[-] Failed to extract DNS VS UUID!"; exit 1; }
+
+  log "Attaching Delegated DNS to System Configuration..."
+  # Pass 5: Update System Config with the new DNS VS
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+    -var="se_group_uuid=${SE_UUID}" \
+    -var="dns_vs_uuid=${DNS_VS_UUID}" \
+    -target=avi_systemconfiguration.this
+
+  log "[+] Step 8 Complete! NSX Cloud Built and System DNS Delegated."
   pause
 }
 
