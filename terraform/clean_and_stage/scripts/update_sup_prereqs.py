@@ -22,7 +22,6 @@ def get_vcfa_token():
     print(f"Authenticating to VCFA ({VCFA_URL}) via legacy provider endpoint...")
     auth_url = f"{VCFA_URL}/cloudapi/1.0.0/sessions/provider"
     
-    # Auth requires the legacy 40.0 version header (Proven by teardown.py)
     headers = {"Accept": "application/json;version=40.0"} 
     auth = (f"{PROVIDER_USER}@system", PROVIDER_PASS) 
     
@@ -36,8 +35,26 @@ def get_vcfa_token():
         raise ValueError("Failed to extract access token!")
     return token
 
+def walk_and_update(obj):
+    """
+    Recursively traverses the JSON to safely update CIDRs and nested block names
+    to avoid VCD database unique constraint violations.
+    """
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            # Update the CIDR safely
+            if k == "cidr" and v == "10.1.0.0/28":
+                obj[k] = "10.1.0.0/26"
+            # If it's a nested name (like the IP block name), change west to east
+            elif k == "name" and isinstance(v, str) and "us-west" in v:
+                obj[k] = v.replace("us-west", "us-east")
+            elif isinstance(v, (dict, list)):
+                walk_and_update(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            walk_and_update(item)
+
 def update_vcfa_prereqs(token):
-    # Resource endpoints strictly use the VCF 9.0.0 OpenAPI spec
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
@@ -55,17 +72,15 @@ def update_vcfa_prereqs(token):
             if name in ["us-west-region-Default IP Space", "us-east-region-IP Space"]:
                 print(f"Found IP Space: {name}. Updating...")
                 
-                # Enforce new names
+                # Enforce new top-level names
                 if "name" in space: space["name"] = "us-east-region-IP Space"
                 if "display_name" in space: space["display_name"] = "us-east-region-IP Space"
                 
-                # Update CIDR via generic replacement
-                space_str = json.dumps(space)
-                space_str = space_str.replace("10.1.0.0/28", "10.1.0.0/26")
-                updated_space = json.loads(space_str)
+                # Recursively fix the internal blocks to avoid SQL constraints
+                walk_and_update(space)
                 
                 put_url = f"{VCFA_URL}/cloudapi/v1/ipSpaces/{space['id']}"
-                put_res = requests.put(put_url, headers=headers, json=updated_space, verify=False)
+                put_res = requests.put(put_url, headers=headers, json=space, verify=False)
                 
                 if put_res.status_code in [200, 201, 202, 204]:
                     print("[+] VCFA IP Space enforced!")
