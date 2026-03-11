@@ -85,7 +85,6 @@ resource "vsphere_virtual_machine" "avi_controller" {
       "avi.mgmt-ip-v6-enable.CONTROLLER"   = "False"
       "avi.default-password.CONTROLLER"    = var.avi_admin_password
       "avi.sysadmin-public-key.CONTROLLER" = var.avi_admin_password 
-      "avi.hostname.CONTROLLER"            = var.avi_vm_name
     }
   }
 
