@@ -257,13 +257,13 @@ step6_init_avi(){
   pause
 }
 
-step7_create_cert(){
-  log "[7] Creating Certificates and Uploading to NSX…"
-  AVI_FQDN="avi-controller01-a.site-a.vcf.lab"
-  log "Waiting for Avi API at https://${AVI_FQDN}…"
-  until curl -sk --max-time 5 "https://${AVI_FQDN}/api/initial-data" >/dev/null; do
-    sleep 10
-  done
+step7_avi_base_config(){
+  log "[7] Applying Day-1 Avi Config and Establishing NSX Trust…"
+  
+  # Quick validation to ensure API is ready
+  until curl -sk --max-time 5 "https://10.1.1.200/api/initial-data" >/dev/null; do sleep 5; done
+
+  terraform -chdir="${ROOT_DIR}" init -upgrade
 
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=tls_private_key.avi \
@@ -271,20 +271,22 @@ step7_create_cert(){
     -target=avi_sslkeyandcertificate.portal \
     -target=avi_systemconfiguration.this \
     -target=local_file.avi_cert_pem \
-    -target=local_file.avi_key_pem
+    -target=local_file.avi_key_pem \
+    -target=avi_cloudconnectoruser.vcenter_admin \
+    -target=avi_cloudconnectoruser.nsx_admin \
+    -target=avi_ipamdnsproviderprofile.avi_ipam \
+    -target=avi_ipamdnsproviderprofile.avi_dns
 
+  # Read variables for the NSX trust script
   NSX_HOST="$(read_tfvar nsx_host)"
   NSX_USER="$(read_tfvar nsx_username)"
   NSX_PASS="$(read_tfvar nsx_password)"
-  CERT_PATH="${ROOT_DIR}/out/avi-portal.crt"
-  CERT_NAME="$(read_tfvar avi_cert_name || echo avi-portal-cert)"
+  AVI_IP="$(read_tfvar avi_mgmt_ip)"
+  AVI_PASS="$(read_tfvar avi_admin_password)"
 
-  if [[ -z "${NSX_HOST}" || -z "${NSX_USER}" || -z "${NSX_PASS}" ]]; then
-    warn "NSX variables missing; skipping NSX trust upload."
-  else
-    log "Uploading Avi portal cert to NSX trust store…"
-    bash "${ROOT_DIR}/scripts/upload_nsx_cert.sh" "$NSX_HOST" "$NSX_USER" "$NSX_PASS" "$CERT_PATH" "$CERT_NAME"
-  fi
+  log "Triggering NSX ALB Onboarding Workflow..."
+  bash "${ROOT_DIR}/scripts/nsx_alb_onboarding.sh" "$NSX_HOST" "$NSX_USER" "$NSX_PASS" "$AVI_IP" "admin" "$AVI_PASS"
+  
   pause
 }
 
@@ -332,7 +334,7 @@ do_step() {
     4) step4_create_nsx_objects;;
     5) step5_deploy_avi;;
     6) step6_init_avi;;
-    7) step7_create_cert;;
+    7) step7_avi_base_config;;
     8) step8_nsx_cloud;;
     9) step9_onboard_nsx_alb;;
    10) step10_install_sup;;
