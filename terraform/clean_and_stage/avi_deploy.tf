@@ -17,10 +17,24 @@ data "vsphere_datastore" "avi_ds" {
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 }
 
-# REVERTED: Using the standard vsphere_network data source
 data "vsphere_network" "avi_net" {
   name          = var.avi_mgmt_pg
   datacenter_id = data.vsphere_datacenter.avi_dc.id
+}
+
+data "vsphere_ovf_vm_template" "avi_ova" {
+  name             = var.avi_vm_name
+  disk_provisioning = "thin"
+  resource_pool_id = vsphere_resource_pool.avi.id
+  datastore_id     = data.vsphere_datastore.avi_ds.id
+  
+  # GRAB THE FIRST HOST TO BYPASS DRS AND STOP THE HANG
+  host_system_id   = data.vsphere_compute_cluster.avi_cluster.host_system_ids[0] 
+  
+  local_ovf_path   = var.avi_ova_path
+  ovf_network_map  = {
+    "Management" = data.vsphere_network.avi_net.id
+  }
 }
 
 # vSphere: AVI Controller Resource Pool
@@ -43,6 +57,7 @@ resource "vsphere_virtual_machine" "avi_controller" {
   resource_pool_id = vsphere_resource_pool.avi.id
   datacenter_id = data.vsphere_datacenter.avi_dc.id
 
+  host_system_id   = data.vsphere_compute_cluster.avi_cluster.host_system_ids[0]
 
   num_cpus = 6
   memory   = 24576
