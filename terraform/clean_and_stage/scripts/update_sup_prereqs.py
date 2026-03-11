@@ -42,10 +42,8 @@ def walk_and_update(obj):
     """
     if isinstance(obj, dict):
         for k, v in obj.items():
-            # Update the CIDR safely
             if k == "cidr" and v == "10.1.0.0/28":
                 obj[k] = "10.1.0.0/26"
-            # If it's a nested name (like the IP block name), change west to east
             elif k == "name" and isinstance(v, str) and "us-west" in v:
                 obj[k] = v.replace("us-west", "us-east")
             elif isinstance(v, (dict, list)):
@@ -72,11 +70,9 @@ def update_vcfa_prereqs(token):
             if name in ["us-west-region-Default IP Space", "us-east-region-IP Space"]:
                 print(f"Found IP Space: {name}. Updating...")
                 
-                # Enforce new top-level names
                 if "name" in space: space["name"] = "us-east-region-IP Space"
                 if "display_name" in space: space["display_name"] = "us-east-region-IP Space"
                 
-                # Recursively fix the internal blocks to avoid SQL constraints
                 walk_and_update(space)
                 
                 put_url = f"{VCFA_URL}/cloudapi/v1/ipSpaces/{space['id']}"
@@ -114,20 +110,27 @@ def update_vcfa_prereqs(token):
         print(f"[-] Could not fetch VCFA Provider Gateways. HTTP {res.status_code}: {res.text}")
 
 def update_nsx_profile():
-    print("\nWaiting 15 seconds for VCFA to push changes down to NSX-T...")
-    time.sleep(15)
+    # Bumped to 20 seconds to give VCFA a little extra time to sync the block
+    print("\nWaiting 20 seconds for VCFA to push changes down to NSX-T...")
+    time.sleep(20)
     
     nsx_auth = (NSX_USER, NSX_PASS)
-    res = requests.get(f"https://{NSX_HOST}/policy/api/v1/infra/ip-spaces", auth=nsx_auth, verify=False)
-    nsx_space_path = None
+    
+    # FIX: Query ip-blocks instead of ip-spaces!
+    print("Fetching synced IP Blocks from NSX-T...")
+    res = requests.get(f"https://{NSX_HOST}/policy/api/v1/infra/ip-blocks", auth=nsx_auth, verify=False)
+    nsx_block_path = None
     if res.status_code == 200:
         for item in res.json().get("results", []):
-            if item.get("display_name") == "us-east-region-IP Space":
-                nsx_space_path = item.get("path")
+            name = item.get("display_name", "")
+            # FIX: Use 'in' to ignore the random '-p2aif' suffix
+            if "us-east-region" in name:
+                nsx_block_path = item.get("path")
+                print(f"[+] Found synced NSX-T IP Block: {name}")
                 break
     
-    if not nsx_space_path:
-        print("[-] Failed to find the synced IP Space in NSX-T! VCFA sync may be delayed.")
+    if not nsx_block_path:
+        print("[-] Failed to find the synced IP Block in NSX-T! VCFA sync may be delayed.")
         return
         
     print("Enforcing NSX-T VPC Profile state...")
@@ -135,12 +138,14 @@ def update_nsx_profile():
     if res.status_code == 200:
         for profile in res.json().get("results", []):
             if profile.get("display_name") in ["Default VPC Connectivity Profile", "default"]:
-                profile["external_ip_space_paths"] = [nsx_space_path]
+                
+                # FIX: Map it to external_ipv4_blocks since it's an IP Block, not an IP Space
+                profile["external_ipv4_blocks"] = [nsx_block_path]
                 
                 put_url = f"https://{NSX_HOST}/policy/api/v1/orgs/default/projects/default/vpc-connectivity-profiles/{profile['id']}"
                 put_res = requests.put(put_url, auth=nsx_auth, json=profile, verify=False)
                 if put_res.status_code == 200:
-                    print("[+] NSX-T VPC Profile successfully mapped to new IP Space!")
+                    print("[+] NSX-T VPC Profile successfully mapped to the new IP Block!")
                 else:
                     print(f"[-] Failed to update NSX-T VPC Profile: {put_res.text}")
                 break
