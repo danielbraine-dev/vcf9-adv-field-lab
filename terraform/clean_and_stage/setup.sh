@@ -341,15 +341,19 @@ step8_nsx_cloud(){
 step9_install_sup(){
   log "[10] Deploying vSphere Supervisor (VCF VPC Mode)…"
   
-  # Ensure the NSX IP Spaces and Profiles are updated first
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target=nsxt_policy_ip_space.east_region_ip_space \
-    -target=nsxt_policy_provider_gateway.east_region_pg \
-    -target=nsxt_policy_vpc_connectivity_profile.default_vpc_profile
+  VCFA_URL="$(read_tfvar vcfa_endpoint)"
+  VCFA_TOKEN="$(read_tfvar vcfa_token)"
+  NSX_HOST="$(read_tfvar nsx_host)"
+  NSX_USER="$(read_tfvar nsx_username)"
+  NSX_PASS="$(read_tfvar nsx_password)"
 
-  log "NSX Prerequisites Updated! Initiating Supervisor Deployment..."
+  log "Triggering VCFA to update Provider Gateways and IP Spaces..."
+  bash "${ROOT_DIR}/scripts/update_vcfa_nsx_prereqs.sh" "$VCFA_URL" "$VCFA_TOKEN" "$NSX_HOST" "$NSX_USER" "$NSX_PASS"
   
-  # Deploy the Supervisor
+  # Initialize the new supervisor.tf resources
+  terraform -chdir="${ROOT_DIR}" init -upgrade
+
+  log "Initiating Supervisor Deployment in vCenter..."
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=vsphere_supervisor.wld01_sup
 
