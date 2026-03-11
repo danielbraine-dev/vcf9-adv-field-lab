@@ -348,7 +348,7 @@ step9_install_sup(){
   NSX_PASS="$(read_tfvar nsx_password)"
 
   log "Triggering VCFA to update Provider Gateways and IP Spaces..."
-  bash "${ROOT_DIR}/scripts/update_vcfa_nsx_prereqs.sh" "$VCFA_URL" "$VCFA_TOKEN" "$NSX_HOST" "$NSX_USER" "$NSX_PASS"
+  bash "${ROOT_DIR}/scripts/update_sup_prereqs.sh" "$VCFA_URL" "$VCFA_TOKEN" "$NSX_HOST" "$NSX_USER" "$NSX_PASS"
   
   # Initialize the new supervisor.tf resources
   terraform -chdir="${ROOT_DIR}" init -upgrade
