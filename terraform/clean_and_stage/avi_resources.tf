@@ -179,7 +179,102 @@ resource "avi_systemconfiguration" "this" {
     tenant_vrf                   = false
   }
 }
+#########################################################
+# Circular Dependency Toggle
+#########################################################
+variable "attach_ipam_now" {
+  description = "Used to break circular dependencies during NSX Cloud creation"
+  type        = bool
+  default     = false
+}
 
+#########################################################
+# NSX-T Cloud Configuration
+#########################################################
+resource "avi_cloud" "nsx_cloud" {
+  name                = "NSX Cloud"
+  vtype               = "CLOUD_NSXT"
+  obj_name_prefix     = "avi-se-wld01"
+  dhcp_enabled        = true
+  ip6_autocfg_enabled = false 
+
+  # These attach during "Pass 2" of the setup script
+  ipam_provider_ref     = var.attach_ipam_now ? avi_ipamdnsproviderprofile.avi_ipam.id : null
+  dns_provider_ref      = var.attach_ipam_now ? avi_ipamdnsproviderprofile.avi_dns.id : null
+  se_group_template_ref = var.attach_ipam_now ? avi_serviceenginegroup.avi_lab_se_group.id : null
+
+  dns_resolvers {
+    resolver_name = "Enterprise DNS"
+    nameserver_ips {
+      addr = "10.1.1.1"
+      type = "V4"
+    }
+  }
+
+  nsxt_configuration {
+    nsxt_url             = "nsx-wld01-a.site-a.vcf.lab"
+    nsxt_credentials_ref = avi_cloudconnectoruser.nsx_admin.id
+    vpc_mode             = true
+
+    # Management Network Setup
+    management_network_config {
+      tz_type        = "OVERLAY"
+      transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a"
+      overlay_segment {
+        tier1_lr_id = "/infra/tier-1s/t1-wld-a"
+        segment_id  = "/infra/segments/SE-mgmt"
+      }
+    }
+
+    # Data Network Setup
+    data_network_config {
+      tz_type        = "OVERLAY"
+      transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a"
+      tier1_segment_config {
+        segment_config_mode = "ROUTING_MODE_GLOBAL"
+        manual {
+          tier1_lrs {
+            tier1_lr_id = "/infra/tier-1s/t1-se-services"
+            segment_id  = "/infra/segments/SE-Data_VIP"
+          }
+        }
+      }
+    }
+  }
+}
+
+#########################################################
+# vCenter Server Configuration
+#########################################################
+resource "avi_vcenterserver" "wld01_vc" {
+  name                    = "WLD01 vCenter"
+  vcenter_url             = "vc-wld01-a.site-a.vcf.lab"
+  vcenter_credentials_ref = avi_cloudconnectoruser.vcenter_admin.id
+  cloud_ref               = avi_cloud.nsx_cloud.id
+  
+  content_lib {
+    id = "AVI SE Content Library"
+  }
+}
+
+#########################################################
+# Service Engine Group
+#########################################################
+resource "avi_serviceenginegroup" "avi_lab_se_group" {
+  name                = "avi-lab-se-group"
+  cloud_ref           = avi_cloud.nsx_cloud.id
+  
+  # N+M High Availability Mode
+  ha_mode             = "HA_MODE_SHARED" 
+  buffer_se           = 0
+  min_scaleout_per_vs = 1
+  max_scaleout_per_vs = 1
+
+  realtime_se_metrics {
+    enabled  = true
+    duration = 5
+  }
+}
 ##########################################################################
 # Deploy OVA - Saving in-case I figure out how to do this instead of govc
 ##########################################################################
