@@ -1,74 +1,69 @@
-./setup.sh 8
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ ./setup.sh 8
 
 [8] NSXCloud Setup (Cycle-Breaker Deployment)…
 avi_cloudconnectoruser.nsx_admin: Refreshing state... [id=https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-b3c2cfa7-a0da-4b69-87bd-ccd1fba2840b]
-avi_ipamdnsproviderprofile.avi_dns: Refreshing state... [id=https://10.1.1.200/api/ipamdnsproviderprofile/ipamdnsproviderprofile-3c8b1dbe-adf9-4285-951b-ff896f6a75e0]
 avi_cloudconnectoruser.vcenter_admin: Refreshing state... [id=https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-16e399e6-87eb-41e4-a1c3-ee89744c449e]
+avi_ipamdnsproviderprofile.avi_dns: Refreshing state... [id=https://10.1.1.200/api/ipamdnsproviderprofile/ipamdnsproviderprofile-3c8b1dbe-adf9-4285-951b-ff896f6a75e0]
 avi_ipamdnsproviderprofile.avi_ipam: Refreshing state... [id=https://10.1.1.200/api/ipamdnsproviderprofile/ipamdnsproviderprofile-418a0285-b768-4a99-9feb-8b80f1de4a15]
+data.nsxt_policy_transport_zone.overlay_tz: Reading...
+data.nsxt_policy_transport_zone.overlay_tz: Read complete after 0s [id=25b6ebaf-41ba-4f72-b018-cff34a7a0e03]
+avi_cloud.nsx_cloud: Refreshing state... [id=https://10.1.1.200/api/cloud/cloud-3f194056-f4ba-4f86-94fb-e98b16ee42d7]
+avi_vcenterserver.wld01_vc: Refreshing state... [id=https://10.1.1.200/api/vcenterserver/vcenterserver-6b7c2f68-1f0c-4887-8a62-6e7eb326b27a]
 
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
-  + create
   ~ update in-place
 
 Terraform will perform the following actions:
 
-  # avi_cloud.nsx_cloud will be created
-  + resource "avi_cloud" "nsx_cloud" {
-      + autoscale_polling_interval   = "60"
-      + dhcp_enabled                 = "true"
-      + dns_provider_ref             = "https://10.1.1.200/api/ipamdnsproviderprofile/ipamdnsproviderprofile-3c8b1dbe-adf9-4285-951b-ff896f6a75e0"
-      + dns_resolution_on_se         = "false"
-      + east_west_dns_provider_ref   = (known after apply)
-      + east_west_ipam_provider_ref  = (known after apply)
-      + enable_vip_on_all_interfaces = "false"
-      + enable_vip_static_routes     = "false"
-      + id                           = (known after apply)
-      + ip6_autocfg_enabled          = "false"
-      + ipam_provider_ref            = "https://10.1.1.200/api/ipamdnsproviderprofile/ipamdnsproviderprofile-418a0285-b768-4a99-9feb-8b80f1de4a15"
-      + license_tier                 = (known after apply)
-      + license_type                 = (known after apply)
-      + maintenance_mode             = "false"
-      + metrics_polling_interval     = "300"
-      + mgmt_ip_v4_enabled           = "true"
-      + mgmt_ip_v6_enabled           = "true"
-      + mtu                          = "1500"
-      + name                         = "NSX Cloud"
-      + obj_name_prefix              = "avi-se-wld01"
-      + prefer_static_routes         = "false"
-      + resolve_fqdn_to_ipv6         = "false"
-      + se_group_template_ref        = (known after apply)
-      + state_based_dns_registration = "true"
-      + tenant_ref                   = (known after apply)
-      + uuid                         = (known after apply)
-      + vmc_deployment               = "false"
-      + vtype                        = "CLOUD_NSXT"
+  # avi_cloud.nsx_cloud will be updated in-place
+  ~ resource "avi_cloud" "nsx_cloud" {
+        id                           = "https://10.1.1.200/api/cloud/cloud-3f194056-f4ba-4f86-94fb-e98b16ee42d7"
+        name                         = "NSX Cloud"
+        # (24 unchanged attributes hidden)
 
-      + aws_configuration (known after apply)
+      - nsxt_configuration {
+          - automate_dfw_objects   = "true" -> null
+          - automate_dfw_rules     = "false" -> null
+          - domain_id              = "default" -> null
+          - enforcementpoint_id    = "default" -> null
+          - nsxt_credentials_ref   = "https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-b3c2cfa7-a0da-4b69-87bd-ccd1fba2840b" -> null
+          - nsxt_url               = "nsx-wld01-a.site-a.vcf.lab" -> null
+          - site_id                = "default" -> null
+          - verify_certificate     = "false" -> null
+          - vmc_mode               = "false" -> null
+          - vpc_mode               = "true" -> null
+            # (1 unchanged attribute hidden)
 
-      + azure_configuration (known after apply)
+          - data_network_config {
+              - transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a" -> null
+              - tz_type        = "OVERLAY" -> null
+              - vlan_segments  = [] -> null
 
-      + cloudstack_configuration (known after apply)
+              - tier1_segment_config {
+                  - segment_config_mode = "TIER1_SEGMENT_MANUAL" -> null
 
-      + configpb_attributes (known after apply)
+                  - manual {
+                      - tier1_lrs {
+                          - segment_id     = "/infra/segments/SE-Data_VIP" -> null
+                          - tier1_lr_id    = "/infra/tier-1s/t1-se-services" -> null
+                            # (1 unchanged attribute hidden)
+                        }
+                    }
+                }
+            }
 
-      + dns_resolvers {
-          + fixed_ttl     = (known after apply)
-          + min_ttl       = "5"
-          + resolver_name = "Enterprise DNS"
-          + use_mgmt      = "false"
+          - management_network_config {
+              - transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a" -> null
+              - tz_type        = "OVERLAY" -> null
+                # (1 unchanged attribute hidden)
 
-          + nameserver_ips {
-              + addr = "10.1.1.1"
-              + type = "V4"
+              - overlay_segment {
+                  - segment_id     = "/infra/segments/SE-mgmt" -> null
+                  - tier1_lr_id    = "/infra/tier-1s/t1-wld-a" -> null
+                    # (1 unchanged attribute hidden)
+                }
             }
         }
-
-      + docker_configuration (known after apply)
-
-      + gcp_configuration (known after apply)
-
-      + linuxserver_configuration (known after apply)
-
       + nsxt_configuration {
           + automate_dfw_objects   = "true"
           + automate_dfw_rules     = "false"
@@ -83,12 +78,12 @@ Terraform will perform the following actions:
           + vpc_mode               = "true"
 
           + data_network_config {
-              + transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a"
+              + transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/25b6ebaf-41ba-4f72-b018-cff34a7a0e03"
               + tz_type        = "OVERLAY"
               + vlan_segments  = []
 
               + tier1_segment_config {
-                  + segment_config_mode = "ROUTING_MODE_GLOBAL"
+                  + segment_config_mode = "TIER1_SEGMENT_MANUAL"
 
                   + automatic (known after apply)
 
@@ -103,7 +98,7 @@ Terraform will perform the following actions:
             }
 
           + management_network_config {
-              + transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/overlay-vds01-wld01-01a"
+              + transport_zone = "/infra/sites/default/enforcement-points/default/transport-zones/25b6ebaf-41ba-4f72-b018-cff34a7a0e03"
               + tz_type        = "OVERLAY"
               + vlan_segment   = (known after apply)
 
@@ -115,15 +110,7 @@ Terraform will perform the following actions:
             }
         }
 
-      + ntp_configuration (known after apply)
-
-      + proxy_configuration (known after apply)
-
-      + rancher_configuration (known after apply)
-
-      + vca_configuration (known after apply)
-
-      + vcenter_configuration (known after apply)
+        # (1 unchanged block hidden)
     }
 
   # avi_cloudconnectoruser.nsx_admin will be updated in-place
@@ -158,35 +145,17 @@ Terraform will perform the following actions:
         }
     }
 
-  # avi_vcenterserver.wld01_vc will be created
-  + resource "avi_vcenterserver" "wld01_vc" {
-      + cloud_ref               = (known after apply)
-      + id                      = (known after apply)
-      + name                    = "WLD01 vCenter"
-      + tenant_ref              = (known after apply)
-      + uuid                    = (known after apply)
-      + vcenter_credentials_ref = "https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-16e399e6-87eb-41e4-a1c3-ee89744c449e"
-      + vcenter_url             = "vc-wld01-a.site-a.vcf.lab"
-
-      + configpb_attributes (known after apply)
-
-      + content_lib {
-          + id   = "AVI SE Content Library"
-          + name = (known after apply)
-        }
-    }
-
-Plan: 2 to add, 2 to change, 0 to destroy.
+Plan: 0 to add, 3 to change, 0 to destroy.
 avi_cloudconnectoruser.vcenter_admin: Modifying... [id=https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-16e399e6-87eb-41e4-a1c3-ee89744c449e]
 avi_cloudconnectoruser.nsx_admin: Modifying... [id=https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-b3c2cfa7-a0da-4b69-87bd-ccd1fba2840b]
+avi_cloudconnectoruser.nsx_admin: Modifications complete after 1s [id=https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-b3c2cfa7-a0da-4b69-87bd-ccd1fba2840b]
 avi_cloudconnectoruser.vcenter_admin: Modifications complete after 1s [id=https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-16e399e6-87eb-41e4-a1c3-ee89744c449e]
-avi_cloudconnectoruser.nsx_admin: Modifications complete after 2s [id=https://10.1.1.200/api/cloudconnectoruser/cloudconnectoruser-b3c2cfa7-a0da-4b69-87bd-ccd1fba2840b]
-avi_cloud.nsx_cloud: Creating...
+avi_cloud.nsx_cloud: Modifying... [id=https://10.1.1.200/api/cloud/cloud-3f194056-f4ba-4f86-94fb-e98b16ee42d7]
 ╷
 │ Warning: Value for undeclared variable
 │ 
-│ The root module does not declare a variable named "sup_ntp_servers" but a value was found in file "terraform.tfvars". If you meant to use this
-│ value, add a "variable" block to the configuration.
+│ The root module does not declare a variable named "sup_mgmt_netmask" but a value was found in file "terraform.tfvars". If you meant to use
+│ this value, add a "variable" block to the configuration.
 │ 
 │ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your
 │ organization. To reduce the verbosity of these warnings, use the -compact-warnings option.
@@ -194,7 +163,7 @@ avi_cloud.nsx_cloud: Creating...
 ╷
 │ Warning: Value for undeclared variable
 │ 
-│ The root module does not declare a variable named "ext_ipblock_cidr" but a value was found in file "terraform.tfvars". If you meant to use
+│ The root module does not declare a variable named "tgw_ipblock_cidr" but a value was found in file "terraform.tfvars". If you meant to use
 │ this value, add a "variable" block to the configuration.
 │ 
 │ To silence these warnings, use TF_VAR_... environment variables to provide certain "global" settings to all configurations in your
@@ -225,12 +194,9 @@ avi_cloud.nsx_cloud: Creating...
 │ or mistakes, or when Terraform specifically suggests to use it as part of an error message.
 ╵
 ╷
-│ Error: Encountered an error on POST request to URL https://10.1.1.200/api/cloud: HTTP code: 400; error from Controller: map[error:Enum value not found in enum type NsxtTier1SegmentConfigMode]
+│ Error: Encountered an error on PUT request to URL https://10.1.1.200/api/cloud/cloud-3f194056-f4ba-4f86-94fb-e98b16ee42d7: HTTP code: 400; error from Controller: map[error:Cloud Nsxt transportzone cannot be changed.]
 │ 
 │   with avi_cloud.nsx_cloud,
-│   on avi_resources.tf line 194, in resource "avi_cloud" "nsx_cloud":
-│  194: resource "avi_cloud" "nsx_cloud" {
+│   on avi_resources.tf line 201, in resource "avi_cloud" "nsx_cloud":
+│  201: resource "avi_cloud" "nsx_cloud" {
 │ 
-╵
-holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ 
-
