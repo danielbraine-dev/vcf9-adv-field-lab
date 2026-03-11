@@ -71,6 +71,7 @@ resource "vsphere_virtual_machine" "avi_controller" {
     disk_provisioning         = "thin"
     allow_unverified_ssl_cert = true
     ip_protocol               = "IPv4"
+    ip_allocation_policy      = "STATIC_MANUAL"
     ovf_network_map = {
       "Management" = data.vsphere_network.avi_net.id
     }
@@ -78,13 +79,14 @@ resource "vsphere_virtual_machine" "avi_controller" {
 
   vapp {
     properties = {
-      "guestinfo.controller.ip"        = var.avi_mgmt_ip,
-      "guestinfo.controller.netmask"   = var.avi_mgmt_netmask,
-      "guestinfo.controller.gateway"   = var.avi_mgmt_gateway,
-      "guestinfo.controller.dns"       = join(",", var.avi_dns_servers),
-      "guestinfo.controller.domain"    = var.avi_domain_search,
-      "guestinfo.controller.ntp"       = join(",", var.avi_ntp_servers),
-      "guestinfo.admin_password"       = var.avi_admin_password
+      "avi.mgmt-ip-v4-enable.CONTROLLER"   = "True"
+      "avi.mgmt-ip.CONTROLLER"             = var.avi_mgmt_ip
+      "avi.mgmt-mask.CONTROLLER"           = var.avi_mgmt_netmask
+      "avi.default-gw.CONTROLLER"          = var.avi_mgmt_gateway
+      "avi.mgmt-ip-v6-enable.CONTROLLER"   = "False"
+      "avi.default-password.CONTROLLER"    = var.avi_admin_password
+      "avi.sysadmin-public-key.CONTROLLER" = var.avi_admin_password 
+      "avi.hostname.CONTROLLER"            = var.avi_vm_name
     }
   }
 
