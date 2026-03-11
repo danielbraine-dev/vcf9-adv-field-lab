@@ -339,8 +339,21 @@ step8_nsx_cloud(){
 }
 
 step9_install_sup(){
-  log "[10] Installing Supervisor in vSphere…"
-  bash "${ROOT_DIR}/scripts/install_supervisor.sh"
+  log "[10] Deploying vSphere Supervisor (VCF VPC Mode)…"
+  
+  # Ensure the NSX IP Spaces and Profiles are updated first
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+    -target=nsxt_policy_ip_space.east_region_ip_space \
+    -target=nsxt_policy_provider_gateway.east_region_pg \
+    -target=nsxt_policy_vpc_connectivity_profile.default_vpc_profile
+
+  log "NSX Prerequisites Updated! Initiating Supervisor Deployment..."
+  
+  # Deploy the Supervisor
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+    -target=vsphere_supervisor.wld01_sup
+
+  log "[+] vSphere Supervisor spin-up initiated! This will take ~15-20 minutes in vCenter."
   pause
 }
 
