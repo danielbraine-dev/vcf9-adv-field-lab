@@ -1,18 +1,80 @@
---- Step 3: Deleting Regional Networking Config ---
-[*] Found Regional Networking 'all-appsus-west-region'. Deleting...
-[*] Polling: Waiting for Regional Networking to be completely removed...
-    [0s elapsed] Still exists. Waiting 30s...
-[+] Success: Regional Networking successfully deleted.
-
---- Step 4: Deleting Regional Quota ---
-Traceback (most recent call last):
-  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 303, in <module>
-    main()
-  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 244, in main
-    quota_id, _ = get_resource_id(quota_list_url, provider_iaas_headers, quota_name)
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/holuser/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/teardown_vcfa.py", line 66, in get_resource_id
-    response.raise_for_status()
-  File "/usr/lib/python3/dist-packages/requests/models.py", line 1021, in raise_for_status
-    raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://auto-a.site-a.vcf.lab/iaas/api/fabric-compute-reservations
+<ProductSection>
+      <Info>Information about the installed software</Info>
+      <Product>Avi Cloud Controller</Product>
+      <Vendor>Avi Networks, Inc.</Vendor>
+      <Version>31.2.2</Version>
+      <FullVersion>31.2.2-9059-20260203.042947</FullVersion>
+      <ProductUrl>www.avinetworks.com</ProductUrl>
+      <VendorUrl>www.avinetworks.com</VendorUrl>
+      <Category>Application</Category>
+      <Property ovf:key="AVIOVFVERSION" ovf:type="string" ovf:userConfigurable="false" ovf:value="3">
+        <Label>Version of the OVF</Label>
+        <Description>Version of the OVF</Description>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="avi" ovf:instance="CONTROLLER">
+      <Info>Information about the installed software</Info>
+      <Category>Application</Category>
+      <Property ovf:key="default-password" ovf:password="true" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Default password</Label>
+	<Description>Default password for admin account. Should have minimum 8 characters and at least one occurrence for each of Uppercase, Lowercase, Digits, Special characters.</Description>
+      </Property>
+      <Property ovf:key="mgmt-ip-v4-enable" ovf:type="string" ovf:userConfigurable="true" ovf:value="True">
+        <Label>Enable IPv4</Label>
+        <Description>Enable IPv4 on the Management Interface. Acceptable values are True/true or False/false. This should be set to False if Enable IPv6 is set to True.</Description>
+      </Property>
+      <Property ovf:key="mgmt-ip" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Management Interface IP Address</Label>
+        <Description>IP address for the Management Interface. Leave blank if using DHCP. Example: 192.168.10.4. Ignored if Enable IPv4 is False.</Description>
+      </Property>
+      <Property ovf:key="mgmt-mask" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Management Interface Subnet Mask</Label>
+        <Description>Subnet mask for the Management Interface. Leave blank if using DHCP. Example : 24 or 255.255.255.0. Ignored if Enable IPv4 is False.</Description>
+      </Property>
+      <Property ovf:key="default-gw" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Default Gateway</Label>
+        <Description>Optional default gateway for the Management Network. Leave blank if using DHCP. Ignored if Enable IPv4 is False.</Description>
+      </Property>
+      <Property ovf:key="mgmt-ip-v6-enable" ovf:type="string" ovf:userConfigurable="true" ovf:value="False">
+        <Label>Enable IPv6</Label>
+        <Description>Enable IPv6 on the Management Interface. Acceptable values are True/true or False/false. Please specify a static V6 IP and Mask if this field is set to True. This should be set to False if Enable IPv4 is set to True.</Description>
+      </Property>
+      <Property ovf:key="mgmt-ip-v6" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Management Interface IPv6 Address</Label>
+        <Description>IPv6 address for the Management Interface. Ignored if Enable IPv6 is False.</Description>
+      </Property>
+      <Property ovf:key="mgmt-mask-v6" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Management Interface Subnet Mask</Label>
+        <Description>IPv6 Subnet mask for the Management Interface. Ignored if Enable IPv6 is False.</Description>
+      </Property>
+      <Property ovf:key="default-gw-v6" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Default v6 Gateway</Label>
+        <Description>Optional default IPv6 gateway for the Management Network. Ignored if Enable IPv6 is False.</Description>
+      </Property>
+      <Property ovf:key="sysadmin-public-key" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Sysadmin login authentication key</Label>
+        <Description>Sysadmin login authentication key</Description>
+      </Property>
+      <Property ovf:key="nsx-t-node-id" ovf:type="string" ovf:userConfigurable="true">
+        <Label>NSX-T Node ID</Label>
+        <Description>NSX-T Node ID to uniquely identify node in a NSX-T cluster (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
+      </Property>
+      <Property ovf:key="nsx-t-ip" ovf:type="string" ovf:userConfigurable="true">
+        <Label>NSX-T IP Address</Label>
+        <Description>IP address of the NSX-T which will manage this controller (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
+      </Property>
+      <Property ovf:key="nsx-t-auth-token" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Authentication token of NSX-T</Label>
+        <Description>Authentication token of the NSX-T which will manage this controller (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
+      </Property>
+      <Property ovf:key="nsx-t-thumbprint" ovf:type="string" ovf:userConfigurable="true">
+        <Label>NSX-T thumbprint</Label>
+        <Description>Thumbprint of the MP node of NSX-T which will manage this controller (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
+      </Property>
+      <Property ovf:key="hostname" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Hostname of Avi Controller</Label>
+        <Description>Hostname of Avi controller (For modification by NSX Manager only. This field should not be filled in or modified by the user directly)</Description>
+      </Property>
+    </ProductSection>
+  </VirtualSystem>
+</Envelope>
