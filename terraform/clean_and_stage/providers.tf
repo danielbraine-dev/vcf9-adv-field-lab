@@ -8,7 +8,7 @@ terraform {
     }
     avi = {
       source  = "vmware/avi"
-      version = "31.1.1"
+      version = "31.2.2"
     }
     vsphere = {
       source  = "vmware/vsphere"
