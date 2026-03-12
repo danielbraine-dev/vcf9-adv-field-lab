@@ -140,7 +140,7 @@ def update_nsx_profile():
             if profile.get("display_name") in ["Default VPC Connectivity Profile", "default"]:
                 
                 # FIX: Map it to external_ipv4_blocks since it's an IP Block, not an IP Space
-                profile["external_ip_space_paths"] = [nsx_block_path]
+                profile["external_ip_blocks"] = [nsx_block_path]
                 
                 put_url = f"https://{NSX_HOST}/policy/api/v1/orgs/default/projects/default/vpc-connectivity-profiles/{profile['id']}"
                 put_res = requests.put(put_url, auth=nsx_auth, json=profile, verify=False)
