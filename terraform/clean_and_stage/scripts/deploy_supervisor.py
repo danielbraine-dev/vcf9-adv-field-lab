@@ -19,7 +19,8 @@ ZONE_NAME = "z-wld-a"
 def api_get(endpoint, token):
     url = f"https://{VC_HOST}{endpoint}"
     res = requests.get(url, headers={"vmware-api-session-id": token}, verify=False)
-    res.raise_for_status()
+    if res.status_code != 200:
+        return None
     return res.json()
 
 def get_vcenter_session():
@@ -51,38 +52,48 @@ def lookup_morefs(token):
         if n.get("name") == MGMT_NET_NAME:
             morefs["network"] = n.get("network")
 
-    # 4. Zone (VCF 9 Specific)
+    # 4. Zone Discovery
     print(f"Searching for Zone: {ZONE_NAME}")
-    try:
-        # Try standard Namespace Management endpoint
-        zones = api_get("/api/vcenter/namespace-management/zones", token)
-        for z in zones:
-            if isinstance(z, dict) and z.get("name") == ZONE_NAME:
-                morefs["zone"] = z.get("zone")
-    except:
-        pass
+    search_paths = [
+        "/api/vcenter/namespace-management/zones",
+        "/api/vcenter/consumption-domains/zones",
+        "/api/vcenter/topology/zones"
+    ]
+    
+    found_zones_log = []
+    for path in search_paths:
+        resp = api_get(path, token)
+        if resp:
+            # Handle different list structures (some wrap in 'zones', some are raw lists)
+            z_list = resp.get("zones", resp) if isinstance(resp, dict) else resp
+            if isinstance(z_list, list):
+                for z in z_list:
+                    if isinstance(z, dict):
+                        z_name = z.get("name")
+                        z_id = z.get("zone")
+                        found_zones_log.append(f"{z_name} ({z_id}) at {path}")
+                        if z_name == ZONE_NAME:
+                            morefs["zone"] = z_id
+                            print(f"[+] Found Zone ID: {z_id} via {path}")
+                            break
+        if "zone" in morefs: break
 
     if "zone" not in morefs:
-        try:
-            # Try Consumption Domains endpoint
-            resp = api_get("/api/vcenter/consumption-domains/zones", token)
-            # Handle cases where response is a dict with a 'zones' list
-            zone_list = resp.get("zones", resp) if isinstance(resp, dict) else resp
-            for z in zone_list:
-                if isinstance(z, dict) and z.get("name") == ZONE_NAME:
-                    morefs["zone"] = z.get("zone")
-        except:
-            pass
+        print(f"[-] Could not find zone '{ZONE_NAME}'.")
+        print(f"[*] Discovery Log - Zones seen: {found_zones_log if found_zones_log else 'None'}")
+        # FALLBACK: If we know the name and the cluster is associated, 
+        # sometimes the name IS the ID in the enable spec. Let's try it as a last resort.
+        print("[!] Falling back to using the Zone Name as the ID...")
+        morefs["zone"] = ZONE_NAME
             
     if not all(k in morefs for k in ["cluster", "policy", "network", "zone"]):
-        print(f"[-] Missing MoRefs! Found: {morefs}")
+        print(f"[-] Missing MoRefs! Current state: {morefs}")
         sys.exit(1)
         
-    print(f"[+] Found all IDs: {morefs}")
     return morefs
 
 def deploy_supervisor(token, morefs):
-    print(f"\nTriggering Supervisor enable on {CLUSTER_NAME} (Zone: {morefs['zone']})...")
+    print(f"\nTriggering Supervisor enable (Cluster: {morefs['cluster']}, Zone: {morefs['zone']})...")
     
     payload = {
         "zone": morefs["zone"],
@@ -132,20 +143,17 @@ def wait_for_supervisor(token, cluster_id):
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{cluster_id}"
     headers = {"vmware-api-session-id": token}
     
-    for i in range(60): # 1 hour timeout
-        try:
-            res = requests.get(url, headers=headers, verify=False)
-            if res.status_code == 200:
-                status = res.json().get("config_status")
-                print(f"[{i+1}/60] Current Status: {status}")
-                if status == "RUNNING":
-                    print("[+] Supervisor is READY!")
-                    return
-                if status == "ERROR":
-                    print("[-] Deployment failed!")
-                    sys.exit(1)
-        except:
-            pass
+    for i in range(60): 
+        res = requests.get(url, headers=headers, verify=False)
+        if res.status_code == 200:
+            status = res.json().get("config_status")
+            print(f"[{i+1}/60] Current Status: {status}")
+            if status == "RUNNING":
+                print("[+] Supervisor is READY!")
+                return
+            if status == "ERROR":
+                print("[-] Deployment failed!")
+                sys.exit(1)
         time.sleep(60)
 
 if __name__ == "__main__":
