@@ -52,51 +52,47 @@ def lookup_morefs(token):
         if n.get("name") == MGMT_NET_NAME:
             morefs["network"] = n.get("network")
 
-    # 4. Zone Discovery
-    print(f"Searching for Zone: {ZONE_NAME}")
-    search_paths = [
-        "/api/vcenter/namespace-management/zones",
-        "/api/vcenter/consumption-domains/zones",
-        "/api/vcenter/topology/zones"
-    ]
+    # 4. Deep-Search Zone (VCF 9 hidden IDs)
+    print(f"Performing Deep-Search for Zone MoRef: {ZONE_NAME}")
     
-    found_zones_log = []
-    for path in search_paths:
-        resp = api_get(path, token)
-        if resp:
-            # Handle different list structures (some wrap in 'zones', some are raw lists)
-            z_list = resp.get("zones", resp) if isinstance(resp, dict) else resp
-            if isinstance(z_list, list):
-                for z in z_list:
-                    if isinstance(z, dict):
-                        z_name = z.get("name")
-                        z_id = z.get("zone")
-                        found_zones_log.append(f"{z_name} ({z_id}) at {path}")
-                        if z_name == ZONE_NAME:
-                            morefs["zone"] = z_id
-                            print(f"[+] Found Zone ID: {z_id} via {path}")
-                            break
-        if "zone" in morefs: break
+    # Try the hidden internal zone registry
+    zone_data = api_get("/api/vcenter/namespace-management/zones", token)
+    if not zone_data:
+        # Try finding it via the cluster's own association metadata
+        cluster_info = api_get(f"/api/vcenter/namespace-management/clusters/{morefs['cluster']}", token)
+        if cluster_info and "zone" in cluster_info:
+            morefs["zone"] = cluster_info["zone"]
+            print(f"[+] Discovered Zone ID from Cluster Metadata: {morefs['zone']}")
 
     if "zone" not in morefs:
-        print(f"[-] Could not find zone '{ZONE_NAME}'.")
-        print(f"[*] Discovery Log - Zones seen: {found_zones_log if found_zones_log else 'None'}")
-        # FALLBACK: If we know the name and the cluster is associated, 
-        # sometimes the name IS the ID in the enable spec. Let's try it as a last resort.
-        print("[!] Falling back to using the Zone Name as the ID...")
-        morefs["zone"] = ZONE_NAME
+        # Final stand: Search global folders/tags if needed, 
+        # but usually VCF 9 expects the zone ID to match the name if it's not a MoRef.
+        # Since 'z-wld-a' failed, let's try to query the available zones list specifically.
+        print("[!] Still searching... trying vAPI service dump.")
+        # Some VCF 9 builds use this specific lookup
+        zone_list = api_get("/api/vcenter/consumption-domains/zones", token)
+        if zone_list:
+            for z in zone_list.get('zones', []):
+                if z.get('name') == ZONE_NAME:
+                    morefs["zone"] = z.get('zone')
+                    break
+
+    if "zone" not in morefs:
+        print(f"[-] Could not find a MoRef for '{ZONE_NAME}'. Attempting to proceed without the zone key to see if vCenter auto-resolves...")
+        # If the cluster is 'already associated', sometimes OMITTING the zone 
+        # is actually the correct API move because the association is implicit.
+        morefs["zone"] = None
             
-    if not all(k in morefs for k in ["cluster", "policy", "network", "zone"]):
-        print(f"[-] Missing MoRefs! Current state: {morefs}")
+    if not all(k in morefs for k in ["cluster", "policy", "network"]):
+        print(f"[-] Missing basic MoRefs! Current state: {morefs}")
         sys.exit(1)
         
     return morefs
 
 def deploy_supervisor(token, morefs):
-    print(f"\nTriggering Supervisor enable (Cluster: {morefs['cluster']}, Zone: {morefs['zone']})...")
+    print(f"\nTriggering Supervisor enable (Cluster: {morefs['cluster']})...")
     
     payload = {
-        "zone": morefs["zone"],
         "size_hint": "SMALL",
         "service_cidr": {"address": "10.96.0.0", "prefix": 23},
         "network_provider": "NSXT_VPC", 
@@ -126,6 +122,10 @@ def deploy_supervisor(token, morefs):
         }
     }
 
+    # If we found a specific Zone MoRef, add it.
+    if morefs.get("zone"):
+        payload["zone"] = morefs["zone"]
+
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{morefs['cluster']}?action=enable"
     headers = {"vmware-api-session-id": token, "Content-Type": "application/json"}
     
@@ -137,6 +137,8 @@ def deploy_supervisor(token, morefs):
         print(f"[-] FAILED. HTTP {res.status_code}")
         print(res.text)
         sys.exit(1)
+
+# ... [wait_for_supervisor remains the same] ...
 
 def wait_for_supervisor(token, cluster_id):
     print("\nPolling for RUNNING status...")
