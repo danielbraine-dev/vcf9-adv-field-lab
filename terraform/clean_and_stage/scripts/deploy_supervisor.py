@@ -56,22 +56,26 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print("\nConstructing flat VCF 9 VPC EnableSpec Payload...")
     
-    # We are using the flat API structure based on the vCenter 400 error hints
     payload = {
         "size_hint": "SMALL",
         "service_cidr": {
             "address": "10.96.0.0",
             "prefix": 23
         },
-        "network_provider": "NSXT_VPC", # Forcing this to see if vCenter accepts the VPC Enum
-        "master_management_network": {
+        "network_provider": "NSXT_VPC", 
+        
+        # FIXED: Renamed to network_spec and added the address_range sub-object
+        "network_spec": {
             "network": morefs["network"],
             "mode": "STATICRANGE",
-            "starting_address": "10.1.1.85",
+            "address_range": {
+                "starting_address": "10.1.1.85",
+                "address_count": 11
+            },
             "subnet_mask": "255.255.255.0",
-            "gateway": "10.1.1.1",
-            "address_count": 11
+            "gateway": "10.1.1.1"
         },
+        
         "master_DNS_names": ["10.1.1.1"],
         "master_DNS_search_domains": ["site-a.vcf.lab"],
         "master_NTP_servers": ["10.1.1.1"],
@@ -79,9 +83,6 @@ def deploy_supervisor(token, morefs):
         "master_storage_policy": morefs["policy"],
         "ephemeral_storage_policy": morefs["policy"],
         
-        # Taking a calculated guess on the VPC structure name
-        # If this is wrong, vCenter will tell us: "Field 'nsxt_vpc_network_spec' is unrecognized" 
-        # and "Field 'xxxx' is missing"
         "nsxt_vpc_network_spec": {
             "project": "Default",
             "vpc_connectivity_profile": "Default VPC Connectivity Profile",
