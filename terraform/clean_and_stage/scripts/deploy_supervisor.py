@@ -3,6 +3,7 @@ import requests
 import urllib3
 import sys
 import json
+import time
 
 # Suppress insecure request warnings for the lab environment
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -61,7 +62,6 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print("\nConstructing VCF 9 VPC Supervisor Payload...")
     
-    # Translated 1:1 from the vsphere_supervisor_v2 schema
     payload = {
         "name": "wld01-sup",
         "control_plane": {
@@ -153,18 +153,63 @@ def deploy_supervisor(token, morefs):
     res = requests.post(url, headers=headers, json=payload, verify=False)
     
     if res.status_code in [200, 201, 202, 204]:
-        print("[+] SUCCESS! Supervisor deployment has been triggered natively in vCenter!")
+        print("[+] SUCCESS! Supervisor deployment triggered!")
+    elif res.status_code == 400 and "already enabled" in res.text.lower():
+        print("[*] Supervisor is already enabled or currently deploying. Moving to polling phase...")
     else:
-        # This will catch typos or missing keys instantly without deploying anything
         print(f"[-] FAILED. HTTP {res.status_code}")
         print(json.dumps(res.json(), indent=2))
         sys.exit(1)
+
+def wait_for_supervisor(token, cluster_id):
+    """
+    Blocks the script and polls vCenter until the Supervisor hits the RUNNING state.
+    Times out after 45 minutes to prevent infinite hangs.
+    """
+    print("\nWaiting for Supervisor deployment to complete...")
+    print("This involves deploying 3 control plane VMs and usually takes 15-25 minutes.")
+    
+    url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{cluster_id}"
+    headers = {"vmware-api-session-id": token}
+    
+    max_retries = 45 # 45 minutes max timeout
+    
+    for i in range(max_retries):
+        res = requests.get(url, headers=headers, verify=False)
+        
+        if res.status_code == 200:
+            data = res.json()
+            status = data.get("config_status", "UNKNOWN")
+            
+            if status == "RUNNING":
+                print("\n[+] SUCCESS! Supervisor is fully deployed and RUNNING!")
+                return
+            elif status == "ERROR":
+                print(f"\n[-] ERROR: Supervisor deployment failed! Check the vCenter UI Workload Management page for details.")
+                # We can optionally print the messages array here for deeper debugging
+                messages = data.get("messages", [])
+                for msg in messages:
+                    print(f"    -> {msg.get('default_message', '')}")
+                sys.exit(1)
+            else:
+                print(f"[{i+1}/{max_retries}] Status: {status}... sleeping 60 seconds.")
+        
+        elif res.status_code == 404:
+            print(f"[{i+1}/{max_retries}] Supervisor object not yet initialized... sleeping 60 seconds.")
+        else:
+            print(f"[{i+1}/{max_retries}] API check returned HTTP {res.status_code}... sleeping 60 seconds.")
+            
+        time.sleep(60)
+
+    print("\n[-] Timeout reached waiting for Supervisor to deploy. Please check vCenter UI.")
+    sys.exit(1)
 
 if __name__ == "__main__":
     try:
         token = get_vcenter_session()
         morefs = lookup_morefs(token)
         deploy_supervisor(token, morefs)
+        wait_for_supervisor(token, morefs['cluster'])
     except Exception as e:
         print(f"[-] Python Script Error: {e}")
         sys.exit(1)
