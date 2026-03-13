@@ -1,17 +1,5 @@
 Initiating Supervisor Deployment via vCenter API...
 Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
 Dynamically looking up vCenter MoRefs...
-
-Constructing VCF 9 V2 Supervisor Payload...
-Submitting Payload to Modern V2 vCenter API...
-[-] FAILED. HTTP 404
-{
-  "error_type": "NOT_FOUND",
-  "messages": [
-    {
-      "args": [],
-      "default_message": "Not found.",
-      "id": "com.vmware.vapi.rest.httpNotFound"
-    }
-  ]
-}
+[!] Standard zones endpoint failed, trying consumption-domains...
+[-] Script Error: 'str' object has no attribute 'get'
