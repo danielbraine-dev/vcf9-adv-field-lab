@@ -355,7 +355,7 @@ step9_install_sup(){
   log "Initiating Supervisor Deployment via vCenter API..."
   python3 "${ROOT_DIR}/scripts/deploy_supervisor.py" "$VC_HOST" "$VC_USER" "$VC_PASS"
 
-  log "[+] vSphere Supervisor spin-up initiated! This will take ~15-20 minutes in vCenter."
+  log "[+] Step 9 Complete! Supervisor is fully operational."
   pause
 }
 
