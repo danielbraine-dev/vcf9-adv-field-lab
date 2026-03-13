@@ -4,25 +4,15 @@ Dynamically looking up vCenter MoRefs...
 
 Constructing flat VCF 9 VPC EnableSpec Payload...
 Submitting Payload to vCenter API...
-[-] FAILED. HTTP 400
+[-] FAILED. HTTP 500
 {
-  "error_type": "INVALID_ARGUMENT",
   "messages": [
     {
       "args": [
-        "com.vmware.vcenter.namespace_management.clusters.network_spec",
-        "address_range"
+        "cluster domain-c10 is already associated with zone z-wld-a"
       ],
-      "default_message": "Structure 'com.vmware.vcenter.namespace_management.clusters.network_spec' has a union that is missing a required field 'address_range' for this case",
-      "id": "vapi.data.structure.union.missing"
-    },
-    {
-      "args": [
-        "com.vmware.vcenter.namespace_management.clusters.enable_spec",
-        "master_management_network"
-      ],
-      "default_message": "Invalid field 'master_management_network' in structure 'com.vmware.vcenter.namespace_management.clusters.enable_spec'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+      "default_message": "A general system error occurred. Error message: cluster domain-c10 is already associated with zone z-wld-a.",
+      "id": "vcenter.wcp.messagedsystemerror"
     }
   ]
 }
