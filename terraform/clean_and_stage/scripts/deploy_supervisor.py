@@ -54,52 +54,58 @@ def lookup_morefs(token):
     return morefs
 
 def deploy_supervisor(token, morefs):
-    print("\nConstructing flat VCF 9 VPC EnableSpec Payload...")
+    print("\nConstructing VCF 9 V2 Supervisor Payload...")
     
+    # We are now using the V2 structure to support pre-zoned clusters
     payload = {
-        "size_hint": "SMALL",
-        "service_cidr": {
-            "address": "10.96.0.0",
-            "prefix": 23
-        },
-        "network_provider": "NSXT_VPC", 
+        "cluster": morefs["cluster"],
+        "name": "wld01-sup",
         
-        # THE FIX: Correct Parent Key + Correct Singular Nested Object
-        "master_management_network": {
-            "network": morefs["network"],
-            "mode": "STATICRANGE",
-            "address_range": {
-                "starting_address": "10.1.1.85",
-                "address_count": 11,
-                "subnet_mask": "255.255.255.0",
-                "gateway": "10.1.1.1"
+        "control_plane": {
+            "size_hint": "SMALL",
+            "network_provider": "NSXT_VPC", 
+            "master_management_network": {
+                "network": morefs["network"],
+                "mode": "STATICRANGE",
+                "address_range": {
+                    "starting_address": "10.1.1.85",
+                    "address_count": 11,
+                    "subnet_mask": "255.255.255.0",
+                    "gateway": "10.1.1.1"
+                }
+            },
+            "master_DNS_names": ["10.1.1.1"],
+            "master_DNS_search_domains": ["site-a.vcf.lab"],
+            "master_NTP_servers": ["10.1.1.1"],
+            "worker_DNS": ["10.1.1.1"],
+            "master_storage_policy": morefs["policy"],
+            "ephemeral_storage_policy": morefs["policy"],
+            "image_storage": {
+                "storage_policy": morefs["policy"]
             }
         },
         
-        "master_DNS_names": ["10.1.1.1"],
-        "master_DNS_search_domains": ["site-a.vcf.lab"],
-        "master_NTP_servers": ["10.1.1.1"],
-        "worker_DNS": ["10.1.1.1"],
-        "master_storage_policy": morefs["policy"],
-        "ephemeral_storage_policy": morefs["policy"],
-        "image_storage": {
-            "storage_policy": morefs["policy"]
-        },
-        
-        "nsxt_vpc_network_spec": {
-            "project": "Default",
-            "vpc_connectivity_profile": "Default VPC Connectivity Profile",
-            "private_cidrs": [{
-                "address": "172.16.201.0",
-                "prefix": 24
-            }],
-            "dns_servers": ["10.1.1.1"],
-            "ntp_servers": ["10.1.1.1"]
+        "workloads": {
+            "service_cidr": {
+                "address": "10.96.0.0",
+                "prefix": 23
+            },
+            "nsxt_vpc_network_spec": {
+                "project": "Default",
+                "vpc_connectivity_profile": "Default VPC Connectivity Profile",
+                "private_cidrs": [{
+                    "address": "172.16.201.0",
+                    "prefix": 24
+                }],
+                "dns_servers": ["10.1.1.1"],
+                "ntp_servers": ["10.1.1.1"]
+            }
         }
     }
 
-    print("Submitting Payload to vCenter API...")
-    url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{morefs['cluster']}?action=enable"
+    print("Submitting Payload to Modern V2 vCenter API...")
+    # The new endpoint designed specifically for VCF 9 and Zoned Architectures
+    url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors"
     headers = {
         "vmware-api-session-id": token,
         "Content-Type": "application/json"
@@ -109,8 +115,10 @@ def deploy_supervisor(token, morefs):
     
     if res.status_code in [200, 201, 202, 204]:
         print("[+] SUCCESS! Supervisor deployment triggered!")
+        return res.json() if res.text else None
     elif res.status_code == 400 and "already enabled" in res.text.lower():
         print("[*] Supervisor is already enabled or currently deploying.")
+        return None
     else:
         print(f"[-] FAILED. HTTP {res.status_code}")
         print(json.dumps(res.json(), indent=2))
