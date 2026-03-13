@@ -5,7 +5,6 @@ import sys
 import json
 import time
 
-# Suppress insecure request warnings for the lab environment
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 VC_HOST = sys.argv[1]
@@ -16,6 +15,7 @@ VC_PASS = sys.argv[3]
 CLUSTER_NAME = "cluster-wld01-01a"
 POLICY_NAME = "vSAN Default Storage Policy"
 MGMT_NET_NAME = "mgmt-vds01-wld01-01a"
+ZONE_NAME = "z-wld-a"
 
 def api_get(endpoint, token):
     url = f"https://{VC_HOST}{endpoint}"
@@ -51,19 +51,35 @@ def lookup_morefs(token):
     for n in networks:
         if n.get("name") == MGMT_NET_NAME:
             morefs["network"] = n.get("network")
+
+    # 4. Get Zone ID (Crucial for VCF 9)
+    # The endpoint might be /api/vcenter/consumption-domains/zones or similar in VCF 9
+    try:
+        zones = api_get("/api/vcenter/namespace-management/zones", token)
+        for z in zones:
+            if z.get("name") == ZONE_NAME:
+                morefs["zone"] = z.get("zone")
+                print(f"[+] Found Zone ID: {morefs['zone']}")
+    except:
+        # Fallback: If the zones endpoint differs, we try consumption-domains
+        print("[!] Standard zones endpoint failed, trying consumption-domains...")
+        zones = api_get("/api/vcenter/consumption-domains/zones", token)
+        for z in zones:
+            if z.get("name") == ZONE_NAME:
+                morefs["zone"] = z.get("zone")
+                print(f"[+] Found Zone ID: {morefs['zone']}")
             
-    if not all(k in morefs for k in ["cluster", "policy", "network"]):
+    if not all(k in morefs for k in ["cluster", "policy", "network", "zone"]):
         print(f"[-] Failed to resolve all MoRefs! Found: {morefs}")
         sys.exit(1)
         
-    print(f"[+] Lookups Successful: {morefs}")
     return morefs
 
 def deploy_supervisor(token, morefs):
     print("\nConstructing Zone-Aware VCF 9 EnableSpec Payload...")
     
     payload = {
-        "zone": "z-wld-a", # Crucial for VCF 9 pre-zoned clusters
+        "zone": morefs["zone"], # Using the MoRef ID instead of the name
         "size_hint": "SMALL",
         "service_cidr": {
             "address": "10.96.0.0",
@@ -113,13 +129,10 @@ def deploy_supervisor(token, morefs):
     if res.status_code in [200, 201, 202, 204]:
         print("[+] SUCCESS! Supervisor deployment triggered!")
     elif res.status_code == 400 and "already enabled" in res.text.lower():
-        print("[*] Supervisor is already enabled or currently deploying. Moving to poll...")
+        print("[*] Supervisor is already enabled or currently deploying.")
     else:
         print(f"[-] FAILED. HTTP {res.status_code}")
-        try:
-            print(json.dumps(res.json(), indent=2))
-        except:
-            print(res.text)
+        print(res.text)
         sys.exit(1)
 
 def wait_for_supervisor(token, cluster_id):
@@ -127,20 +140,22 @@ def wait_for_supervisor(token, cluster_id):
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{cluster_id}"
     headers = {"vmware-api-session-id": token}
     
-    # 45-minute timeout (Supervisor deployment is slow)
     for i in range(45):
-        res = requests.get(url, headers=headers, verify=False)
-        if res.status_code == 200:
-            status = res.json().get("config_status", "UNKNOWN")
-            if status == "RUNNING":
-                print("\n[+] Supervisor is UP and RUNNING!")
-                return
-            elif status == "ERROR":
-                print("\n[-] Supervisor hit an ERROR state. Check vCenter UI.")
-                sys.exit(1)
-            else:
-                print(f"[{i+1}/45] Status: {status}... waiting 60s")
-        time.sleep(60)
+        try:
+            res = requests.get(url, headers=headers, verify=False)
+            if res.status_code == 200:
+                status = res.json().get("config_status", "UNKNOWN")
+                if status == "RUNNING":
+                    print("\n[+] Supervisor is UP and RUNNING!")
+                    return
+                elif status == "ERROR":
+                    print("\n[-] Supervisor hit an ERROR state. Check vCenter UI.")
+                    sys.exit(1)
+                else:
+                    print(f"[{i+1}/45] Status: {status}... waiting 60s")
+            time.sleep(60)
+        except:
+            time.sleep(60)
     
     print("[-] Timeout waiting for Supervisor.")
     sys.exit(1)
