@@ -3,6 +3,7 @@ import requests
 import urllib3
 import sys
 import json
+import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -63,17 +64,16 @@ def deploy_supervisor(token, morefs):
         },
         "network_provider": "NSXT_VPC", 
         
+        # THE FIX: Correct Parent Key + Correct Singular Nested Object
         "master_management_network": {
             "network": morefs["network"],
             "mode": "STATICRANGE",
-            "address_ranges": [
-                {
-                    "starting_address": "10.1.1.85",
-                    "address_count": 11,
-                    "subnet_mask": "255.255.255.0",
-                    "gateway": "10.1.1.1"
-                }
-            ]
+            "address_range": {
+                "starting_address": "10.1.1.85",
+                "address_count": 11,
+                "subnet_mask": "255.255.255.0",
+                "gateway": "10.1.1.1"
+            }
         },
         
         "master_DNS_names": ["10.1.1.1"],
