@@ -2,17 +2,16 @@ Initiating Supervisor Deployment via vCenter API...
 Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
 Dynamically looking up vCenter MoRefs...
 
-Constructing flat VCF 9 VPC EnableSpec Payload...
-Submitting Payload to vCenter API...
-[-] FAILED. HTTP 500
+Constructing VCF 9 V2 Supervisor Payload...
+Submitting Payload to Modern V2 vCenter API...
+[-] FAILED. HTTP 404
 {
+  "error_type": "NOT_FOUND",
   "messages": [
     {
-      "args": [
-        "cluster domain-c10 is already associated with zone z-wld-a"
-      ],
-      "default_message": "A general system error occurred. Error message: cluster domain-c10 is already associated with zone z-wld-a.",
-      "id": "vcenter.wcp.messagedsystemerror"
+      "args": [],
+      "default_message": "Not found.",
+      "id": "com.vmware.vapi.rest.httpNotFound"
     }
   ]
 }
