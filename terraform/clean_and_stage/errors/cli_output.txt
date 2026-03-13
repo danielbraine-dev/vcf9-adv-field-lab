@@ -1,4 +1,4 @@
-tiating Supervisor Deployment via vCenter API...
+Initiating Supervisor Deployment via vCenter API...
 Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
 Dynamically looking up vCenter MoRefs...
 
@@ -10,10 +10,10 @@ Submitting Payload to vCenter API...
   "messages": [
     {
       "args": [
-        "master_management_network",
+        "image_storage",
         "com.vmware.vcenter.namespace_management.clusters.enable_spec"
       ],
-      "default_message": "Field 'master_management_network' missing from structure 'com.vmware.vcenter.namespace_management.clusters.enable_spec'",
+      "default_message": "Field 'image_storage' missing from structure 'com.vmware.vcenter.namespace_management.clusters.enable_spec'",
       "id": "vapi.bindings.typeconverter.struct.field.missing"
     }
   ]
