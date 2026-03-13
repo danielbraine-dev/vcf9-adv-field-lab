@@ -64,7 +64,7 @@ def deploy_supervisor(token, morefs):
         },
         "network_provider": "NSXT_VPC", 
         
-        # FIXED: Renamed to network_spec and nested the address_range
+        # This is the key that was failing! It is now correctly named and nested.
         "network_spec": {
             "network": morefs["network"],
             "mode": "STATICRANGE",
