@@ -11,7 +11,6 @@ VC_HOST = sys.argv[1]
 VC_USER = sys.argv[2]
 VC_PASS = sys.argv[3]
 
-# Lab Specific Names
 CLUSTER_NAME = "cluster-wld01-01a"
 POLICY_NAME = "vSAN Default Storage Policy"
 MGMT_NET_NAME = "mgmt-vds01-wld01-01a"
@@ -34,57 +33,61 @@ def lookup_morefs(token):
     print("Dynamically looking up vCenter MoRefs...")
     morefs = {}
     
-    # 1. Get Cluster ID
+    # 1. Cluster
     clusters = api_get("/api/vcenter/cluster", token)
     for c in clusters:
         if c.get("name") == CLUSTER_NAME:
             morefs["cluster"] = c.get("cluster")
             
-    # 2. Get Storage Policy ID
+    # 2. Storage Policy
     policies = api_get("/api/vcenter/storage/policies", token)
     for p in policies:
         if p.get("name") == POLICY_NAME:
             morefs["policy"] = p.get("policy")
             
-    # 3. Get Network ID
+    # 3. Network
     networks = api_get("/api/vcenter/network", token)
     for n in networks:
         if n.get("name") == MGMT_NET_NAME:
             morefs["network"] = n.get("network")
 
-    # 4. Get Zone ID (Crucial for VCF 9)
-    # The endpoint might be /api/vcenter/consumption-domains/zones or similar in VCF 9
+    # 4. Zone (VCF 9 Specific)
+    print(f"Searching for Zone: {ZONE_NAME}")
     try:
+        # Try standard Namespace Management endpoint
         zones = api_get("/api/vcenter/namespace-management/zones", token)
         for z in zones:
-            if z.get("name") == ZONE_NAME:
+            if isinstance(z, dict) and z.get("name") == ZONE_NAME:
                 morefs["zone"] = z.get("zone")
-                print(f"[+] Found Zone ID: {morefs['zone']}")
     except:
-        # Fallback: If the zones endpoint differs, we try consumption-domains
-        print("[!] Standard zones endpoint failed, trying consumption-domains...")
-        zones = api_get("/api/vcenter/consumption-domains/zones", token)
-        for z in zones:
-            if z.get("name") == ZONE_NAME:
-                morefs["zone"] = z.get("zone")
-                print(f"[+] Found Zone ID: {morefs['zone']}")
+        pass
+
+    if "zone" not in morefs:
+        try:
+            # Try Consumption Domains endpoint
+            resp = api_get("/api/vcenter/consumption-domains/zones", token)
+            # Handle cases where response is a dict with a 'zones' list
+            zone_list = resp.get("zones", resp) if isinstance(resp, dict) else resp
+            for z in zone_list:
+                if isinstance(z, dict) and z.get("name") == ZONE_NAME:
+                    morefs["zone"] = z.get("zone")
+        except:
+            pass
             
     if not all(k in morefs for k in ["cluster", "policy", "network", "zone"]):
-        print(f"[-] Failed to resolve all MoRefs! Found: {morefs}")
+        print(f"[-] Missing MoRefs! Found: {morefs}")
         sys.exit(1)
         
+    print(f"[+] Found all IDs: {morefs}")
     return morefs
 
 def deploy_supervisor(token, morefs):
-    print("\nConstructing Zone-Aware VCF 9 EnableSpec Payload...")
+    print(f"\nTriggering Supervisor enable on {CLUSTER_NAME} (Zone: {morefs['zone']})...")
     
     payload = {
-        "zone": morefs["zone"], # Using the MoRef ID instead of the name
+        "zone": morefs["zone"],
         "size_hint": "SMALL",
-        "service_cidr": {
-            "address": "10.96.0.0",
-            "prefix": 23
-        },
+        "service_cidr": {"address": "10.96.0.0", "prefix": 23},
         "network_provider": "NSXT_VPC", 
         "master_management_network": {
             "network": morefs["network"],
@@ -102,70 +105,55 @@ def deploy_supervisor(token, morefs):
         "worker_DNS": ["10.1.1.1"],
         "master_storage_policy": morefs["policy"],
         "ephemeral_storage_policy": morefs["policy"],
-        "image_storage": {
-            "storage_policy": morefs["policy"]
-        },
+        "image_storage": {"storage_policy": morefs["policy"]},
         "nsxt_vpc_network_spec": {
             "project": "Default",
             "vpc_connectivity_profile": "Default VPC Connectivity Profile",
-            "private_cidrs": [{
-                "address": "172.16.201.0",
-                "prefix": 24
-            }],
+            "private_cidrs": [{"address": "172.16.201.0", "prefix": 24}],
             "dns_servers": ["10.1.1.1"],
             "ntp_servers": ["10.1.1.1"]
         }
     }
 
-    print("Submitting Payload to vCenter Enable API...")
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{morefs['cluster']}?action=enable"
-    headers = {
-        "vmware-api-session-id": token,
-        "Content-Type": "application/json"
-    }
+    headers = {"vmware-api-session-id": token, "Content-Type": "application/json"}
     
     res = requests.post(url, headers=headers, json=payload, verify=False)
     
     if res.status_code in [200, 201, 202, 204]:
         print("[+] SUCCESS! Supervisor deployment triggered!")
-    elif res.status_code == 400 and "already enabled" in res.text.lower():
-        print("[*] Supervisor is already enabled or currently deploying.")
     else:
         print(f"[-] FAILED. HTTP {res.status_code}")
         print(res.text)
         sys.exit(1)
 
 def wait_for_supervisor(token, cluster_id):
-    print("\nPolling vCenter for Supervisor status (BLOCKING)...")
+    print("\nPolling for RUNNING status...")
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{cluster_id}"
     headers = {"vmware-api-session-id": token}
     
-    for i in range(45):
+    for i in range(60): # 1 hour timeout
         try:
             res = requests.get(url, headers=headers, verify=False)
             if res.status_code == 200:
-                status = res.json().get("config_status", "UNKNOWN")
+                status = res.json().get("config_status")
+                print(f"[{i+1}/60] Current Status: {status}")
                 if status == "RUNNING":
-                    print("\n[+] Supervisor is UP and RUNNING!")
+                    print("[+] Supervisor is READY!")
                     return
-                elif status == "ERROR":
-                    print("\n[-] Supervisor hit an ERROR state. Check vCenter UI.")
+                if status == "ERROR":
+                    print("[-] Deployment failed!")
                     sys.exit(1)
-                else:
-                    print(f"[{i+1}/45] Status: {status}... waiting 60s")
-            time.sleep(60)
         except:
-            time.sleep(60)
-    
-    print("[-] Timeout waiting for Supervisor.")
-    sys.exit(1)
+            pass
+        time.sleep(60)
 
 if __name__ == "__main__":
     try:
-        token = get_vcenter_session()
-        morefs = lookup_morefs(token)
-        deploy_supervisor(token, morefs)
-        wait_for_supervisor(token, morefs['cluster'])
+        sess_token = get_vcenter_session()
+        data = lookup_morefs(sess_token)
+        deploy_supervisor(sess_token, data)
+        wait_for_supervisor(sess_token, data['cluster'])
     except Exception as e:
         print(f"[-] Script Error: {e}")
         sys.exit(1)
