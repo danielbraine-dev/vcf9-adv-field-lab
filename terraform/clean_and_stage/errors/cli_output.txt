@@ -1,59 +1,21 @@
-VCF Automation OpenAPI
+Initiating Supervisor Deployment via vCenter API...
+Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
+Dynamically looking up vCenter MoRefs...
+[+] Lookups Successful: {'cluster': 'domain-c10', 'policy': 'aa6d5a82-1c88-45da-85d3-3d74b91a5bad', 'network': 'dvportgroup-16'}
 
- 9.0.0 
-
-[ Base URL: /cloudapi ]
-
-/tm/api-explorer/provider/cloudapi.json
-
-VCF Automation OpenAPI is a new API that is defined using the OpenAPI standards.
-
-This RESTful API borrows some elements of the legacy Tenant Manager API and establishes new patterns for use
-as described below.
-Authentication
-
-Authentication and Authorization schemes are the same as those for the legacy APIs. You can authenticate
-using the JWT token via the Authorization header or specifying a session using
-x-vcloud-authorization (The latter form is deprecated).
-Important Headers
-
-    X-VMWARE-VCLOUD-TENANT-CONTEXT - This header is used to perform any API action within a tenant organization. System administrators and Sub-provider administrators must include this header in the request if they want to perform actions in a tenant context. This header specifies the target organization's id.
-    X-VMWARE-VCLOUD-AUTH-CONTEXT - This header specifies the name of the organization to validate the JWT against and perform the API action requested. This is only needed in multisite scenarios where the JWT from one org is used to authenticate to another org.
-
-Operation Patterns
-This API follows the following general guidelines to establish a consistent CRUD pattern:
-Operation	Description	Response Code	Response Content
-GET /items	Returns a paginated list of items	200	Response will include Navigational links to the items in the list.
-POST /items	Returns newly created item	201	Content-Location header links to the newly created item
-GET /items/urn	Returns an individual item	200	A single item using same data type as that included in list above
-PUT /items/urn	Updates an individual item	200	Updated view of the item is returned
-DELETE /items/urn	Deletes the item	204	No content is returned.
-Asynchronous operations
-Asynchronous operations are determined by the server. In those cases, instead of responding as described above, the server responds with an HTTP Response code 202 and an empty body. The tracking task (which is the same task as all legacy API operations use) is linked via the URI provided in the Location header.
-All API calls can choose to service a request asynchronously or synchronously as determined by the server upon interpreting the request. Operations that choose to exhibit this dual behavior will have both options documented by specifying both response code(s) below. The caller must be prepared to handle responses to such API calls by inspecting the HTTP Response code.
-Error Conditions
-All operations report errors using the following error reporting rules:
-
-    400: Bad Request - In event of bad request due to incorrect data or other user error
-    401: Bad Request - If user is unauthenticated or their session has expired
-    403: Forbidden - If the user is not authorized or the entity does not exist
-
-OpenAPI Design Concepts and Principles
-
-    IDs are full Uniform Resource Names (URNs).
-    Uses Content-Type: application/json instead of application/xml or similar custom xml based mime types, where applicable.
-    REST links are in the Link header.
-        Multiple relationships for any link are represented by multiple values in a space-separated list.
-        Links have a custom VCF Automation-specific "model" attribute that hints at the applicable data type for the links.
-        title + rel + model attributes evaluates to a unique link.
-        Links follow Hypermedia as the Engine of Application State (HATEOAS) principles. Links are present if certain operations are present and permitted for the user"s current role and the state of the referred entities.
-    APIs follow a flat structure relying on cross-referencing other entities instead of the navigational style used by the legacy Tenant Manager APIs.
-    Most endpoints that return a list support filtering and sorting similar to the query service in the legacy Tenant Manager APIs.
-    Unless otherwise specified by a particular operation, accept header must be included to specify the API version for the request similar to calls to existing legacy Tenant Manager APIs. For example application/json;version=9.0.0, or application/json;version=41.0.0-alpha. A client may choose the api version with which it works(up to 5 major versions back). Unless stated otherwise(typically due to critical bug fixes), operations and data structures will behave as specified at the requested API version, even if the latest API version may have evolved to behave differently. See point 'OpenApi custom extensions' for more information on how operations and data structures declare their API version.
-    Each feature has a version in the path element present in its URL.
-    Note API URL's without a version in their paths must be considered experimental.
-    OpenApi custom extensions:
-    Versioning Extensions:
-        x-vcloud-added-in - declares the api version when an operation, a data model, or a property was added. For example a new field was added to some data structure. This field will be involved in the operations only if the client requested that- or a later API version. It will not be included in the (json) representations otherwise.
-        x-vcloud-deprecated-in and x-vcloud-deprecated-alternative - declares the api version in which an operation, a data model, or a property is deprecated and gives an alternative to use in next api versions.
-        x-vcloud-removed-in - declares the api version in which an operation, a data model, or a property is removed. This is analogous to x-vcloud-added-in in behaviour, but for removal of some 
+Constructing VCF 9 VPC Supervisor Payload...
+Submitting Payload to vCenter API...
+[-] FAILED. HTTP 400
+{
+  "error_type": "INVALID_ARGUMENT",
+  "messages": [
+    {
+      "args": [
+        "service_cidr",
+        "com.vmware.vcenter.namespace_management.clusters.enable_spec"
+      ],
+      "default_message": "Field 'service_cidr' missing from structure 'com.vmware.vcenter.namespace_management.clusters.enable_spec'",
+      "id": "vapi.bindings.typeconverter.struct.field.missing"
+    }
+  ]
+}
