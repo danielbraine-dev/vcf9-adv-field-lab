@@ -1,3 +1,7 @@
+Initiating Supervisor Deployment via vCenter API...
+Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
+Dynamically looking up vCenter MoRefs...
+
 Constructing flat VCF 9 VPC EnableSpec Payload...
 Submitting Payload to vCenter API...
 [-] FAILED. HTTP 400
@@ -6,19 +10,11 @@ Submitting Payload to vCenter API...
   "messages": [
     {
       "args": [
-        "subnet_mask",
-        "com.vmware.vcenter.namespace_management.clusters.ipv4_range"
+        "com.vmware.vcenter.namespace_management.clusters.network_spec",
+        "address_range"
       ],
-      "default_message": "Field 'subnet_mask' missing from structure 'com.vmware.vcenter.namespace_management.clusters.ipv4_range'",
-      "id": "vapi.bindings.typeconverter.struct.field.missing"
-    },
-    {
-      "args": [
-        "address_range",
-        "com.vmware.vcenter.namespace_management.clusters.network_spec"
-      ],
-      "default_message": "Invalid field 'address_range' in structure 'com.vmware.vcenter.namespace_management.clusters.network_spec'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+      "default_message": "Structure 'com.vmware.vcenter.namespace_management.clusters.network_spec' has a union that is missing a required field 'address_range' for this case",
+      "id": "vapi.data.structure.union.missing"
     },
     {
       "args": [
