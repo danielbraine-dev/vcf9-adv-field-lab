@@ -64,7 +64,7 @@ def deploy_supervisor(token, morefs):
         },
         "network_provider": "NSXT_VPC", 
         
-        # FIXED: Renamed to network_spec and added the address_range sub-object
+        # FIXED: Renamed to network_spec and nested the address_range
         "network_spec": {
             "network": morefs["network"],
             "mode": "STATICRANGE",
