@@ -63,9 +63,7 @@ def deploy_supervisor(token, morefs):
         },
         "network_provider": "NSXT_VPC", 
         
-        # FIXED: Changed back to network_spec, used address_ranges array, 
-        # and moved gateway/mask inside the ipv4_range object!
-        "network_spec": {
+        "master_management_network": {
             "network": morefs["network"],
             "mode": "STATICRANGE",
             "address_ranges": [
