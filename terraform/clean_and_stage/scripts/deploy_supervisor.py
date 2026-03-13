@@ -3,7 +3,6 @@ import requests
 import urllib3
 import sys
 import json
-import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -81,6 +80,11 @@ def deploy_supervisor(token, morefs):
         "worker_DNS": ["10.1.1.1"],
         "master_storage_policy": morefs["policy"],
         "ephemeral_storage_policy": morefs["policy"],
+        
+        # FIXED: Added the required image_storage block
+        "image_storage": {
+            "storage_policy": morefs["policy"]
+        },
         
         "nsxt_vpc_network_spec": {
             "project": "Default",
