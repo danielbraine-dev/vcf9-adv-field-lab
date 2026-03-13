@@ -1,4 +1,4 @@
-nitiating Supervisor Deployment via vCenter API...
+Initiating Supervisor Deployment via vCenter API...
 Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
 Dynamically looking up vCenter MoRefs...
 
@@ -10,19 +10,11 @@ Submitting Payload to vCenter API...
   "messages": [
     {
       "args": [
-        "com.vmware.vcenter.namespace_management.clusters.network_spec",
-        "address_range"
-      ],
-      "default_message": "Structure 'com.vmware.vcenter.namespace_management.clusters.network_spec' has a union that is missing a required field 'address_range' for this case",
-      "id": "vapi.data.structure.union.missing"
-    },
-    {
-      "args": [
-        "master_management_network",
+        "image_storage",
         "com.vmware.vcenter.namespace_management.clusters.enable_spec"
       ],
-      "default_message": "Invalid field 'master_management_network' in structure 'com.vmware.vcenter.namespace_management.clusters.enable_spec'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+      "default_message": "Field 'image_storage' missing from structure 'com.vmware.vcenter.namespace_management.clusters.enable_spec'",
+      "id": "vapi.bindings.typeconverter.struct.field.missing"
     }
   ]
 }
