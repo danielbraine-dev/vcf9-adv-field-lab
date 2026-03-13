@@ -16,13 +16,6 @@ POLICY_NAME = "vSAN Default Storage Policy"
 MGMT_NET_NAME = "mgmt-vds01-wld01-01a"
 ZONE_NAME = "z-wld-a"
 
-def api_get(endpoint, token):
-    url = f"https://{VC_HOST}{endpoint}"
-    res = requests.get(url, headers={"vmware-api-session-id": token}, verify=False)
-    if res.status_code != 200:
-        return None
-    return res.json()
-
 def get_vcenter_session():
     print(f"Authenticating to vCenter ({VC_HOST})...")
     url = f"https://{VC_HOST}/api/session"
@@ -30,69 +23,58 @@ def get_vcenter_session():
     res.raise_for_status()
     return res.json()
 
+def api_get(endpoint, token):
+    url = f"https://{VC_HOST}{endpoint}"
+    headers = {"vmware-api-session-id": token}
+    res = requests.get(url, headers=headers, verify=False)
+    return res.json() if res.status_code == 200 else None
+
 def lookup_morefs(token):
     print("Dynamically looking up vCenter MoRefs...")
     morefs = {}
     
-    # 1. Cluster
-    clusters = api_get("/api/vcenter/cluster", token)
-    for c in clusters:
+    # 1. Cluster MoRef
+    resp = api_get("/api/vcenter/cluster", token)
+    for c in resp:
         if c.get("name") == CLUSTER_NAME:
             morefs["cluster"] = c.get("cluster")
             
-    # 2. Storage Policy
-    policies = api_get("/api/vcenter/storage/policies", token)
-    for p in policies:
+    # 2. Storage Policy MoRef
+    resp = api_get("/api/vcenter/storage/policies", token)
+    for p in resp:
         if p.get("name") == POLICY_NAME:
             morefs["policy"] = p.get("policy")
             
-    # 3. Network
-    networks = api_get("/api/vcenter/network", token)
-    for n in networks:
+    # 3. Network MoRef
+    resp = api_get("/api/vcenter/network", token)
+    for n in resp:
         if n.get("name") == MGMT_NET_NAME:
             morefs["network"] = n.get("network")
 
-    # 4. Deep-Search Zone (VCF 9 hidden IDs)
-    print(f"Performing Deep-Search for Zone MoRef: {ZONE_NAME}")
+    # 4. FIND THE HIDDEN ZONE MoRef (VCF 9 style)
+    print(f"Searching for MoRef for Zone: {ZONE_NAME}")
+    # This is the modern endpoint for Supervisor Zones
+    zones_resp = api_get("/api/vcenter/namespace-management/zones", token)
     
-    # Try the hidden internal zone registry
-    zone_data = api_get("/api/vcenter/namespace-management/zones", token)
-    if not zone_data:
-        # Try finding it via the cluster's own association metadata
-        cluster_info = api_get(f"/api/vcenter/namespace-management/clusters/{morefs['cluster']}", token)
-        if cluster_info and "zone" in cluster_info:
-            morefs["zone"] = cluster_info["zone"]
-            print(f"[+] Discovered Zone ID from Cluster Metadata: {morefs['zone']}")
+    # zones_resp is typically a list of dicts: [{'zone': 'zone-1', 'name': 'z-wld-a'}]
+    if zones_resp and isinstance(zones_resp, list):
+        for z in zones_resp:
+            if z.get("name") == ZONE_NAME:
+                morefs["zone"] = z.get("zone")
+                print(f"[+] Found Zone MoRef: {morefs['zone']}")
 
-    if "zone" not in morefs:
-        # Final stand: Search global folders/tags if needed, 
-        # but usually VCF 9 expects the zone ID to match the name if it's not a MoRef.
-        # Since 'z-wld-a' failed, let's try to query the available zones list specifically.
-        print("[!] Still searching... trying vAPI service dump.")
-        # Some VCF 9 builds use this specific lookup
-        zone_list = api_get("/api/vcenter/consumption-domains/zones", token)
-        if zone_list:
-            for z in zone_list.get('zones', []):
-                if z.get('name') == ZONE_NAME:
-                    morefs["zone"] = z.get('zone')
-                    break
-
-    if "zone" not in morefs:
-        print(f"[-] Could not find a MoRef for '{ZONE_NAME}'. Attempting to proceed without the zone key to see if vCenter auto-resolves...")
-        # If the cluster is 'already associated', sometimes OMITTING the zone 
-        # is actually the correct API move because the association is implicit.
-        morefs["zone"] = None
-            
-    if not all(k in morefs for k in ["cluster", "policy", "network"]):
-        print(f"[-] Missing basic MoRefs! Current state: {morefs}")
+    if not all(k in morefs for k in ["cluster", "policy", "network", "zone"]):
+        print(f"[-] Missing MoRefs! Found: {morefs}")
+        print("[!] If 'zone' is missing, the API didn't return z-wld-a in the list.")
         sys.exit(1)
         
     return morefs
 
 def deploy_supervisor(token, morefs):
-    print(f"\nTriggering Supervisor enable (Cluster: {morefs['cluster']})...")
+    print(f"\nTriggering Zone-Aware Enable (Zone: {morefs['zone']})...")
     
     payload = {
+        "zone": morefs["zone"], # We are now passing the REAL MoRef ID
         "size_hint": "SMALL",
         "service_cidr": {"address": "10.96.0.0", "prefix": 23},
         "network_provider": "NSXT_VPC", 
@@ -122,10 +104,6 @@ def deploy_supervisor(token, morefs):
         }
     }
 
-    # If we found a specific Zone MoRef, add it.
-    if morefs.get("zone"):
-        payload["zone"] = morefs["zone"]
-
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{morefs['cluster']}?action=enable"
     headers = {"vmware-api-session-id": token, "Content-Type": "application/json"}
     
@@ -138,32 +116,21 @@ def deploy_supervisor(token, morefs):
         print(res.text)
         sys.exit(1)
 
-# ... [wait_for_supervisor remains the same] ...
-
 def wait_for_supervisor(token, cluster_id):
-    print("\nPolling for RUNNING status...")
+    print("\nPolling status until RUNNING...")
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{cluster_id}"
     headers = {"vmware-api-session-id": token}
-    
-    for i in range(60): 
-        res = requests.get(url, headers=headers, verify=False)
-        if res.status_code == 200:
-            status = res.json().get("config_status")
-            print(f"[{i+1}/60] Current Status: {status}")
-            if status == "RUNNING":
-                print("[+] Supervisor is READY!")
-                return
-            if status == "ERROR":
-                print("[-] Deployment failed!")
-                sys.exit(1)
+    for i in range(60):
+        resp = requests.get(url, headers=headers, verify=False)
+        if resp.status_code == 200:
+            status = resp.json().get("config_status")
+            print(f"[{i+1}/60] Status: {status}")
+            if status == "RUNNING": return
+            if status == "ERROR": sys.exit(1)
         time.sleep(60)
 
 if __name__ == "__main__":
-    try:
-        sess_token = get_vcenter_session()
-        data = lookup_morefs(sess_token)
-        deploy_supervisor(sess_token, data)
-        wait_for_supervisor(sess_token, data['cluster'])
-    except Exception as e:
-        print(f"[-] Script Error: {e}")
-        sys.exit(1)
+    token = get_vcenter_session()
+    ids = lookup_morefs(token)
+    deploy_supervisor(token, ids)
+    wait_for_supervisor(token, ids['cluster'])
