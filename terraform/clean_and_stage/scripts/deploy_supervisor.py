@@ -63,15 +63,19 @@ def deploy_supervisor(token, morefs):
         },
         "network_provider": "NSXT_VPC", 
         
-        "master_management_network": {
+        # FIXED: Changed back to network_spec, used address_ranges array, 
+        # and moved gateway/mask inside the ipv4_range object!
+        "network_spec": {
             "network": morefs["network"],
             "mode": "STATICRANGE",
-            "address_range": {
-                "starting_address": "10.1.1.85",
-                "address_count": 11
-            },
-            "subnet_mask": "255.255.255.0",
-            "gateway": "10.1.1.1"
+            "address_ranges": [
+                {
+                    "starting_address": "10.1.1.85",
+                    "address_count": 11,
+                    "subnet_mask": "255.255.255.0",
+                    "gateway": "10.1.1.1"
+                }
+            ]
         },
         
         "master_DNS_names": ["10.1.1.1"],
@@ -80,8 +84,6 @@ def deploy_supervisor(token, morefs):
         "worker_DNS": ["10.1.1.1"],
         "master_storage_policy": morefs["policy"],
         "ephemeral_storage_policy": morefs["policy"],
-        
-        # FIXED: Added the required image_storage block
         "image_storage": {
             "storage_policy": morefs["policy"]
         },
