@@ -1,9 +1,8 @@
-Initiating Supervisor Deployment via vCenter API...
+nitiating Supervisor Deployment via vCenter API...
 Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
 Dynamically looking up vCenter MoRefs...
-[+] Lookups Successful: {'cluster': 'domain-c10', 'policy': 'aa6d5a82-1c88-45da-85d3-3d74b91a5bad', 'network': 'dvportgroup-16'}
 
-Constructing VCF 9 VPC Supervisor Payload...
+Constructing flat VCF 9 VPC EnableSpec Payload...
 Submitting Payload to vCenter API...
 [-] FAILED. HTTP 400
 {
@@ -11,11 +10,19 @@ Submitting Payload to vCenter API...
   "messages": [
     {
       "args": [
-        "service_cidr",
+        "com.vmware.vcenter.namespace_management.clusters.network_spec",
+        "address_range"
+      ],
+      "default_message": "Structure 'com.vmware.vcenter.namespace_management.clusters.network_spec' has a union that is missing a required field 'address_range' for this case",
+      "id": "vapi.data.structure.union.missing"
+    },
+    {
+      "args": [
+        "master_management_network",
         "com.vmware.vcenter.namespace_management.clusters.enable_spec"
       ],
-      "default_message": "Field 'service_cidr' missing from structure 'com.vmware.vcenter.namespace_management.clusters.enable_spec'",
-      "id": "vapi.bindings.typeconverter.struct.field.missing"
+      "default_message": "Invalid field 'master_management_network' in structure 'com.vmware.vcenter.namespace_management.clusters.enable_spec'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
     }
   ]
 }
