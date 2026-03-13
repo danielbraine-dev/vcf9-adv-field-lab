@@ -345,16 +345,15 @@ step9_install_sup(){
   NSX_HOST="$(read_tfvar nsx_host)"
   NSX_USER="$(read_tfvar nsx_username)"
   NSX_PASS="$(read_tfvar nsx_password)"
+  VC_HOST="$(read_tfvar vsphere_server)"
+  VC_USER="$(read_tfvar vsphere_user)"
+  VC_PASS="$(read_tfvar vsphere_password)"
 
-  log "Executing Python automation for VCFA/NSX prerequisites & token extraction..."
-  python3 "${ROOT_DIR}/scripts/update_sup_prereqs.py" "$VCFA_URL" "$NSX_HOST" "$NSX_USER" "$NSX_PASS" "${TFVARS_FILE}"
+  log "Executing Python automation for VCFA/NSX prerequisites..."
+  python3 "${ROOT_DIR}/scripts/update_sup_prereqs.py" "$VCFA_URL" "$NSX_HOST" "$NSX_USER" "$NSX_PASS"
   
-  # Initialize the new supervisor.tf resources
-  terraform -chdir="${ROOT_DIR}" init -upgrade
-
-  log "Initiating Supervisor Deployment in vCenter..."
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target=vsphere_supervisor.wld01_sup
+  log "Initiating Supervisor Deployment via vCenter API..."
+  python3 "${ROOT_DIR}/scripts/deploy_supervisor.py" "$VC_HOST" "$VC_USER" "$VC_PASS"
 
   log "[+] vSphere Supervisor spin-up initiated! This will take ~15-20 minutes in vCenter."
   pause
