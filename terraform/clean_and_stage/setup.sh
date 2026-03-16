@@ -44,65 +44,6 @@ step2_teardown_environment() {
 }
 
 step3_tf_init() {
-  echo "[3] terraform init/validate…"
-  if [[ ! -f "${TFVARS_FILE}" ]]; then
-    log "Creating ${TFVARS_FILE} with ALL original lab defaults…"
-    cat > "${TFVARS_FILE}" <<'EOF'
-  # ---- NSX ----
-  nsx_host                 = "nsx-wld01-a.site-a.vcf.lab"
-  nsx_username             = "admin"
-  nsx_password             = "VMware123!VMware123!"
-  nsx_allow_unverified_ssl = true
-  
-  # ---- vSphere ----
-  vsphere_server     = "vc-wld01-a.site-a.vcf.lab"
-  vsphere_user       = "administrator@wld.sso"
-  vsphere_password   = "VMware123!VMware123!"
-  vsphere_datacenter = "dc-a"
-  vsphere_cluster    = "cluster-wld01-01a"
-  vsphere_datastore  = "vsan-wld01-01a"
-  
-  # ---- VCFA provider ----
-  vcfa_endpoint    = "https://auto-a.site-a.vcf.lab"
-  vcfa_token       = ""
-  
-  # ---- AVI OVA deploy ----
-  avi_ova_path           = "/path/to/Controller.ova"
-  avi_vm_name            = "avi-controller01"
-  avi_mgmt_pg            = "mgmt-vds01-wld01-01a"
-  avi_mgmt_ip            = "10.1.1.200"
-  avi_mgmt_netmask       = "255.255.255.0"
-  avi_mgmt_gateway       = "10.1.1.1"
-  avi_dns_servers        = ["10.1.1.1"]
-  avi_ntp_servers        = ["10.1.1.1"]
-  avi_domain_search      = "site-a.vcf.lab"
-  avi_admin_password     = "VMware123!VMware123!"
-  
-  # ---- Supervisor enable
-  sup_mgmt_ip_range      = "10.1.1.85-10.1.1.95"
-  sup_mgmt_netmask       = "255.255.255.0"
-  sup_mgmt_gateway       = "10.1.1.1"
-  sup_dns_servers        = ["10.1.1.1"]
-  sup_ntp_servers        = ["10.1.1.1"]
-  sup_dns_search         = "site-a.vcf.lab"
-
-  # Workload settings
-  nsx_project_name             = "Default"
-  nsx_vpc_connectivity_profile = "Default VPC Connectivity Profile"
-  ext_ipblock_name             = "VPC-External-Block"
-  ext_ipblock_cidr             = "10.1.0.0/24"
-  ext_ipblock_range            = "10.1.0.7-10.1.0.255"
-  tgw_ipblock_name             = "Supervisor TGW IP Block"
-  tgw_ipblock_cidr             = "172.16.101.0/24"
-  tgw_ipblock_range            = "172.16.101.1-172.16.101.254"
-  workload_vpc_cidrs           = ["172.16.201.0/24"]
-  service_cidr                 = "10.96.0.0/23"
-EOF
-fi
-  log "Running terraform init…"
-  terraform -chdir="${ROOT_DIR}" init -upgrade
-  terraform -chdir="${ROOT_DIR}" validate
-  pause
 }
 
 step4_create_nsx_objects(){
@@ -118,6 +59,12 @@ step4_create_nsx_objects(){
 
 step5_deploy_avi(){
   log "[5] Deploying Avi Controller via govc..."
+
+  # FIXED: Adding the DNS record generation back!
+  if [[ -f "${ROOT_DIR}/scripts/add_dns_record.sh" ]]; then
+    log "Injecting DNS Records for Avi components..."
+    bash "${ROOT_DIR}/scripts/add_dns_record.sh" || warn "Failed to add DNS records."
+  fi
 
   # 1. Apply Terraform to build the Resource Pool & Content Library
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
@@ -159,135 +106,9 @@ step5_deploy_avi(){
 }
 
 step6_init_avi(){
-  log "[6] Initializing Avi Controller System Configuration (Zero-Touch)..."
-
-  AVI_IP=$(read_tfvar avi_mgmt_ip)
-  AVI_PASS=$(read_tfvar avi_admin_password)
-  DOMAIN=$(read_tfvar avi_domain_search)
-  AVI_VERSION="31.2.2" 
-  
-  DNS_IP=$(grep 'avi_dns_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
-  NTP_IP=$(grep 'avi_ntp_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
-
-  log "Authenticating with Avi API at ${AVI_IP}..."
-  curl -sk -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
-    -d "username=admin&password=${AVI_PASS}" > /dev/null
-
-  CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
-  [[ -z "$CSRF_TOKEN" ]] && { error "Failed to get CSRF token. Is the VM booted?"; exit 1; }
-
-  # 1. BYPASS USER SETUP
-  log "Bypassing initial Admin Setup screen..."
-  HTTP_SETUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
-    -H "X-CSRFToken: ${CSRF_TOKEN}" \
-    -H "X-Avi-Version: ${AVI_VERSION}" \
-    -H "Content-Type: application/json" \
-    -H "Referer: https://${AVI_IP}/" \
-    -d "{\"username\":\"admin\",\"password\":\"${AVI_PASS}\",\"old_password\":\"${AVI_PASS}\",\"name\":\"admin\",\"email\":\"admin@${DOMAIN}\"}" \
-    "https://${AVI_IP}/api/useraccount")
-
-  if [[ "$HTTP_SETUP" == "200" || "$HTTP_SETUP" == "201" ]]; then
-      log "[+] Admin account finalized!"
-  else
-      error "[-] Failed to set password. HTTP: $HTTP_SETUP"
-      exit 1
-  fi
-
-  # 2. SET BACKUP PASSPHRASE
-  log "Retrieving Backup Configuration..."
-  curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
-    -H "X-Avi-Version: ${AVI_VERSION}" \
-    "https://${AVI_IP}/api/backupconfiguration" > "${ROOT_DIR}/backupconf_raw.json"
-
-  BACKUP_UUID=$(jq -r '.results[0].uuid' "${ROOT_DIR}/backupconf_raw.json")
-
-  log "Setting Backup Passphrase..."
-  jq --arg pass "${AVI_PASS}" \
-     '.results[0] | .passphrase = $pass' \
-     "${ROOT_DIR}/backupconf_raw.json" > "${ROOT_DIR}/backupconf_updated.json"
-
-  HTTP_BACKUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
-    -H "X-CSRFToken: ${CSRF_TOKEN}" \
-    -H "X-Avi-Version: ${AVI_VERSION}" \
-    -H "Referer: https://${AVI_IP}/" \
-    -H "Content-Type: application/json" \
-    -d @"${ROOT_DIR}/backupconf_updated.json" \
-    "https://${AVI_IP}/api/backupconfiguration/${BACKUP_UUID}")
-
-  if [[ "$HTTP_BACKUP" == "200" || "$HTTP_BACKUP" == "201" ]]; then
-    log "[+] Backup Configuration (Passphrase) applied successfully!"
-  else
-    warn "[-] Failed to set Backup Passphrase. HTTP: $HTTP_BACKUP"
-  fi
-
-  # 3. SET SYSTEM CONFIGURATION & COMPLETE WORKFLOW
-  log "Retrieving factory system configuration..."
-  curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
-    -H "X-Avi-Version: ${AVI_VERSION}" \
-    "https://${AVI_IP}/api/systemconfiguration" > "${ROOT_DIR}/sysconf_raw.json"
-
-  # We add '.welcome_workflow_complete = true' to bypass the UI wizard entirely
-  log "Injecting DNS ($DNS_IP), NTP ($NTP_IP), and bypassing Welcome wizard..."
-  jq --arg dns "$DNS_IP" \
-     --arg domain "$DOMAIN" \
-     --arg ntp "$NTP_IP" \
-     '.dns_configuration.server_list = [{"type": "V4", "addr": $dns}] | 
-      .dns_configuration.search_domain = $domain | 
-      .ntp_configuration.ntp_servers = [{"server": {"type": "V4", "addr": $ntp}}] |
-      .welcome_workflow_complete = true' \
-     "${ROOT_DIR}/sysconf_raw.json" > "${ROOT_DIR}/sysconf_updated.json"
-
-  log "Applying updated system configuration..."
-  HTTP_STATUS=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
-    -H "X-CSRFToken: ${CSRF_TOKEN}" \
-    -H "X-Avi-Version: ${AVI_VERSION}" \
-    -H "Referer: https://${AVI_IP}/" \
-    -H "Content-Type: application/json" \
-    -d @"${ROOT_DIR}/sysconf_updated.json" \
-    "https://${AVI_IP}/api/systemconfiguration")
-
-  if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then
-    log "[+] Avi Controller System Configuration applied successfully!"
-  else
-    error "[-] Failed to apply configuration. HTTP Status: $HTTP_STATUS"
-    exit 1
-  fi
-
-  rm -f "${ROOT_DIR}"/*_raw.json "${ROOT_DIR}"/*_updated.json "${ROOT_DIR}/avi_cookies.txt"
-  pause
 }
 
 step7_avi_base_config(){
-  log "[7] Applying Day-1 Avi Config and Establishing NSX Trust…"
-  
-  # Quick validation to ensure API is ready
-  until curl -sk --max-time 5 "https://10.1.1.200/api/initial-data" >/dev/null; do sleep 5; done
-
-  terraform -chdir="${ROOT_DIR}" init -upgrade
-
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target=tls_private_key.avi \
-    -target=tls_self_signed_cert.avi \
-    -target=avi_sslkeyandcertificate.portal \
-    -target=avi_systemconfiguration.this \
-    -target=local_file.avi_cert_pem \
-    -target=local_file.avi_key_pem \
-    -target=avi_cloudconnectoruser.vcenter_admin \
-    -target=avi_cloudconnectoruser.nsx_admin \
-    -target=avi_ipamdnsproviderprofile.avi_ipam \
-    -target=avi_ipamdnsproviderprofile.avi_dns
-
-  # Read variables for the NSX trust script
-  NSX_HOST="$(read_tfvar nsx_host)"
-  NSX_USER="$(read_tfvar nsx_username)"
-  NSX_PASS="$(read_tfvar nsx_password)"
-  AVI_IP="$(read_tfvar avi_mgmt_ip)"
-  AVI_PASS="$(read_tfvar avi_admin_password)"
-
-  log "Triggering NSX ALB Onboarding Workflow..."
-  bash "${ROOT_DIR}/scripts/nsx_alb_onboarding.sh" "$NSX_HOST" "$NSX_USER" "$NSX_PASS" "$AVI_IP" "admin" "$AVI_PASS"
-  
-  pause
 }
 
 step8_nsx_cloud(){
@@ -360,7 +181,7 @@ step9_install_sup(){
 }
 
 step10_provision_vcfa_objects(){
-  log "[11] Provisioning VCFA Objects…"
+  log "[10] Provisioning VCFA Objects…"
   # Add your final terraform apply commands here
   pause
 }
@@ -376,7 +197,7 @@ do_step() {
     7) step7_avi_base_config;;
     8) step8_nsx_cloud;;
     9) step9_install_sup;;
-   10) step11_provision_vcfa_objects;;
+   10) step10_provision_vcfa_objects;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
