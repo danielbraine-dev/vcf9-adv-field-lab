@@ -57,36 +57,41 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Compute Cluster Enable (Cluster: {morefs['cluster']})...")
     
+    # THE FIX: Grouping the flat configs into "control_plane" and "workloads" blocks
     payload = {
-        # THE FIX: Explicitly naming the Supervisor for VCF 9
-        "name": "wld01-supervisor", 
+        "name": "wld01-supervisor",
+        "network_provider": "NSXT_VPC",
         
-        "size_hint": "SMALL",
-        "service_cidr": {"address": "10.96.0.0", "prefix": 23},
-        "network_provider": "NSXT_VPC", 
-        "master_management_network": {
-            "network": morefs["network"],
-            "mode": "STATICRANGE",
-            "address_range": {
-                "starting_address": "10.1.1.85",
-                "address_count": 11,
-                "subnet_mask": "255.255.255.0",
-                "gateway": "10.1.1.1"
-            }
+        "control_plane": {
+            "size_hint": "SMALL",
+            "master_management_network": {
+                "network": morefs["network"],
+                "mode": "STATICRANGE",
+                "address_range": {
+                    "starting_address": "10.1.1.85",
+                    "address_count": 11,
+                    "subnet_mask": "255.255.255.0",
+                    "gateway": "10.1.1.1"
+                }
+            },
+            "master_DNS_names": ["10.1.1.1"],
+            "master_DNS_search_domains": ["site-a.vcf.lab"],
+            "master_NTP_servers": ["10.1.1.1"],
+            "worker_DNS": ["10.1.1.1"],
+            "master_storage_policy": morefs["policy"],
+            "ephemeral_storage_policy": morefs["policy"],
+            "image_storage": {"storage_policy": morefs["policy"]}
         },
-        "master_DNS_names": ["10.1.1.1"],
-        "master_DNS_search_domains": ["site-a.vcf.lab"],
-        "master_NTP_servers": ["10.1.1.1"],
-        "worker_DNS": ["10.1.1.1"],
-        "master_storage_policy": morefs["policy"],
-        "ephemeral_storage_policy": morefs["policy"],
-        "image_storage": {"storage_policy": morefs["policy"]},
-        "nsxt_vpc_network_spec": {
-            "project": "Default",
-            "vpc_connectivity_profile": "Default VPC Connectivity Profile",
-            "private_cidrs": [{"address": "172.16.201.0", "prefix": 24}],
-            "dns_servers": ["10.1.1.1"],
-            "ntp_servers": ["10.1.1.1"]
+        
+        "workloads": {
+            "service_cidr": {"address": "10.96.0.0", "prefix": 23},
+            "nsxt_vpc_network_spec": {
+                "project": "Default",
+                "vpc_connectivity_profile": "Default VPC Connectivity Profile",
+                "private_cidrs": [{"address": "172.16.201.0", "prefix": 24}],
+                "dns_servers": ["10.1.1.1"],
+                "ntp_servers": ["10.1.1.1"]
+            }
         }
     }
 
