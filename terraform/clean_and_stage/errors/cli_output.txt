@@ -5,4 +5,16 @@ Dynamically looking up basic vCenter MoRefs...
 
 Triggering V9 Compute Cluster Enable (Cluster: domain-c10)...
 [-] FAILED. HTTP 400
-{"error_type":"INVALID_ARGUMENT","messages":[{"args":["name","com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec"],"default_message":"Field 'name' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'","id":"vapi.bindings.typeconverter.struct.field.missing"}]}
+{
+  "error_type": "INVALID_ARGUMENT",
+  "messages": [
+    {
+      "args": [
+        "control_plane",
+        "com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec"
+      ],
+      "default_message": "Field 'control_plane' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
+      "id": "vapi.bindings.typeconverter.struct.field.missing"
+    }
+  ]
+}
