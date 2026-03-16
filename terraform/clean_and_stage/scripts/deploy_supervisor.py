@@ -52,17 +52,16 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Enable on {CLUSTER_NAME}...")
     
+    # We are stripping the redundant union keys to satisfy 'vapi.data.structure.union.extra'
     payload = {
         "name": "wld01-supervisor",
         "control_plane": {
             "size": "SMALL",
             "storage_policy": morefs["policy"],
             "network": {
+                # THE FIX: Directly provide the MoRef. 
+                # The API 'union' logic handles the backing automatically based on the ID format.
                 "network": morefs["network"],
-                "backing": {
-                    "network": morefs["network"],
-                    "backing": morefs["network"]
-                },
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
@@ -91,18 +90,17 @@ def deploy_supervisor(token, morefs):
                     "default_private_cidrs": [{"address": "172.16.201.0", "prefix": 24}]
                 }
             },
-            # THE FIX: Mandatory 'edge' block for Load Balancing
             "edge": {
                 "provider": "NSX_ADVANCED",
                 "load_balancer_address_ranges": [
                     {
-                        "address": "10.1.0.7", # Matches your TF logic for LB VIPs
-                        "count": 32            # Providing a slice of the 10.1.0.0/26 block
+                        "address": "10.1.0.7",
+                        "count": 32
                     }
                 ],
                 "nsx_advanced": {
                     "server": {
-                        "host": "10.1.1.200", # Avi Controller IP
+                        "host": "10.1.1.200",
                         "port": 443
                     },
                     "username": "admin",
