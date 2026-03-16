@@ -63,16 +63,18 @@ def deploy_supervisor(token, morefs):
         
         "control_plane": {
             "size_hint": "SMALL",
-            # THE FIX: This must be named 'network' and contains the mgmt details
             "network": {
-                "network": morefs["network"],
+                # THE FIX: Wrapped in 'backing' and switched to 'address_ranges' array
+                "backing": morefs["network"],
                 "mode": "STATICRANGE",
-                "address_range": {
-                    "starting_address": "10.1.1.85",
-                    "address_count": 11,
-                    "subnet_mask": "255.255.255.0",
-                    "gateway": "10.1.1.1"
-                }
+                "address_ranges": [
+                    {
+                        "starting_address": "10.1.1.85",
+                        "address_count": 11,
+                        "subnet_mask": "255.255.255.0",
+                        "gateway": "10.1.1.1"
+                    }
+                ]
             },
             "master_DNS_names": ["10.1.1.1"],
             "master_DNS_search_domains": ["site-a.vcf.lab"],
