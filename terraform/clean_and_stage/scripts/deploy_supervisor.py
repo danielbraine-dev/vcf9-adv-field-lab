@@ -57,14 +57,14 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Compute Cluster Enable (Cluster: {morefs['cluster']})...")
     
-    # THE FIX: Grouping the flat configs into "control_plane" and "workloads" blocks
     payload = {
         "name": "wld01-supervisor",
         "network_provider": "NSXT_VPC",
         
         "control_plane": {
             "size_hint": "SMALL",
-            "master_management_network": {
+            # THE FIX: This must be named 'network' and contains the mgmt details
+            "network": {
                 "network": morefs["network"],
                 "mode": "STATICRANGE",
                 "address_range": {
