@@ -56,14 +56,12 @@ def deploy_supervisor(token, morefs):
     payload = {
         "name": "wld01-supervisor",
         "controlplane": {
-            "size": "SMALL",
-            "storagepolicy": morefs["policy"],
             "network": {
                 "network": morefs["network"],
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
-                        "search_domains": ["site-a.vcf.lab"]
+                        "searchdomains": ["site-a.vcf.lab"]
                     },
                     "ntp": {
                         "servers": ["10.1.1.1"]
@@ -84,8 +82,9 @@ def deploy_supervisor(token, morefs):
                         }
                     ]
                 }
-                # No floatingipaddress needed for single-cluster lab, but it's optional
-            }
+            },
+            "size": "SMALL",
+            "storagepolicy": morefs["policy"]
         },
         "workloads": {
             "network": {
