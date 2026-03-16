@@ -52,61 +52,57 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Enable on {CLUSTER_NAME}...")
     
-    # We are stripping the redundant union keys to satisfy 'vapi.data.structure.union.extra'
+    # Matching the Broadcom Developer Example exactly
     payload = {
         "name": "wld01-supervisor",
-        "control_plane": {
+        "controlplane": {
             "size": "SMALL",
-            "storage_policy": morefs["policy"],
+            "storagepolicy": morefs["policy"],
             "network": {
-                # THE FIX: Directly provide the MoRef. 
-                # The API 'union' logic handles the backing automatically based on the ID format.
                 "network": morefs["network"],
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
                         "search_domains": ["site-a.vcf.lab"]
                     },
-                    "ntp": {"servers": ["10.1.1.1"]}
+                    "ntp": {
+                        "servers": ["10.1.1.1"]
+                    }
                 },
-                "ip_management": {
-                    "dhcp_enabled": False,
-                    "gateway_address": "10.1.1.1",
-                    "ip_assignments": [
+                "ipmanagement": {
+                    "dhcpenabled": False,
+                    "gatewayaddress": "10.1.1.1",
+                    "ipassignments": [
                         {
-                            "assignee": "KUBERNETES",
-                            "ranges": [{"address": "10.1.1.85", "count": 11}]
+                            "assignee": "KUBERNETES_CONTROL_PLANE",
+                            "ranges": [
+                                {
+                                    "address": "10.1.1.85",
+                                    "count": 11
+                                }
+                            ]
                         }
                     ]
                 }
+                # No floatingipaddress needed for single-cluster lab, but it's optional
             }
         },
         "workloads": {
             "network": {
-                "network_type": "NSX_VPC",
-                "nsx_vpc": {
-                    "nsx_project": "Default",
-                    "vpc_connectivity_profile": "Default VPC Connectivity Profile",
-                    "default_private_cidrs": [{"address": "172.16.201.0", "prefix": 24}]
+                "networktype": "NSX_VPC",
+                "nsxvpc": {
+                    "nsxproject": "Default",
+                    "vpcconnectivityprofile": "Default VPC Connectivity Profile",
+                    "defaultprivatecidrs": [
+                        {
+                            "address": "172.16.201.0",
+                            "prefix": 24
+                        }
+                    ]
                 }
             },
             "edge": {
-                "provider": "NSX_ADVANCED",
-                "load_balancer_address_ranges": [
-                    {
-                        "address": "10.1.0.7",
-                        "count": 32
-                    }
-                ],
-                "nsx_advanced": {
-                    "server": {
-                        "host": "10.1.1.200",
-                        "port": 443
-                    },
-                    "username": "admin",
-                    "password": "VMware123!VMware123!",
-                    "cloud_name": "nsx_cloud"
-                }
+                "provider": "NSX_VPC" # The example shows 'NSX_VPC' as the provider here
             }
         }
     }
