@@ -1,3 +1,8 @@
+nitiating Supervisor Deployment via vCenter API...
+Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
+Dynamically looking up basic vCenter MoRefs...
+[+] Found Core IDs: {'cluster': 'domain-c10', 'policy': 'aa6d5a82-1c88-45da-85d3-3d74b91a5bad', 'network': 'dvportgroup-16'}
+
 Triggering V9 Compute Cluster Enable (Cluster: domain-c10)...
 [-] FAILED. HTTP 400
 {
@@ -5,11 +10,19 @@ Triggering V9 Compute Cluster Enable (Cluster: domain-c10)...
   "messages": [
     {
       "args": [
+        "backing",
+        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network"
+      ],
+      "default_message": "Field 'backing' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
+      "id": "vapi.bindings.typeconverter.struct.field.missing"
+    },
+    {
+      "args": [
         "network",
         "com.vmware.vcenter.namespace_management.supervisors.control_plane"
       ],
-      "default_message": "Field 'network' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.control_plane'",
-      "id": "vapi.bindings.typeconverter.struct.field.missing"
+      "default_message": "Invalid field 'network' in structure 'com.vmware.vcenter.namespace_management.supervisors.control_plane'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
     },
     {
       "args": [
