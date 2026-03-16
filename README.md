@@ -10,7 +10,7 @@ cd ~/Downloads && \
 git clone https://github.com/danielbraine-dev/vcf9-adv-field-lab.git && \
 cd vcf9-adv-field-lab/terraform/clean_and_stage && \
 chmod +x setup.sh && \
-./setup.sh 1:4
+./setup.sh 1:9
 
 
 
