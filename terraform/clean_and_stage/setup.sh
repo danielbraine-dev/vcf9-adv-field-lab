@@ -64,12 +64,12 @@ step3_tf_init() {
   
   # ---- VCFA provider ----
   vcfa_endpoint    = "https://auto-a.site-a.vcf.lab"
-  vcfa_token       = "<PUT_YOUR_VCFA_TOKEN_HERE>"
+  vcfa_token       = ""
   
   # ---- AVI OVA deploy ----
   avi_ova_path           = "/path/to/Controller.ova"
-  avi_vm_name            = "avi-controller01-a"
-  avi_mgmt_pg            = "<MGMT_PORTGROUP_NAME>"
+  avi_vm_name            = "avi-controller01"
+  avi_mgmt_pg            = "mgmt-vds01-wld01-01a"
   avi_mgmt_ip            = "10.1.1.200"
   avi_mgmt_netmask       = "255.255.255.0"
   avi_mgmt_gateway       = "10.1.1.1"
