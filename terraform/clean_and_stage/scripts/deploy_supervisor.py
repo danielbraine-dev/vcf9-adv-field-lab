@@ -52,7 +52,6 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Enable on {CLUSTER_NAME}...")
     
-    # Strictly following the 9.0 enable_on_compute_cluster_spec discovered
     payload = {
         "name": "wld01-supervisor",
         "control_plane": {
@@ -62,16 +61,14 @@ def deploy_supervisor(token, morefs):
                 "network": morefs["network"],
                 "backing": {
                     "network": morefs["network"],
-                    "backing": morefs["network"] # Union requirement for portgroup
+                    "backing": morefs["network"]
                 },
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
                         "search_domains": ["site-a.vcf.lab"]
                     },
-                    "ntp": {
-                        "servers": ["10.1.1.1"]
-                    }
+                    "ntp": {"servers": ["10.1.1.1"]}
                 },
                 "ip_management": {
                     "dhcp_enabled": False,
@@ -79,12 +76,7 @@ def deploy_supervisor(token, morefs):
                     "ip_assignments": [
                         {
                             "assignee": "KUBERNETES",
-                            "ranges": [
-                                {
-                                    "address": "10.1.1.85",
-                                    "count": 11
-                                }
-                            ]
+                            "ranges": [{"address": "10.1.1.85", "count": 11}]
                         }
                     ]
                 }
@@ -96,23 +88,27 @@ def deploy_supervisor(token, morefs):
                 "nsx_vpc": {
                     "nsx_project": "Default",
                     "vpc_connectivity_profile": "Default VPC Connectivity Profile",
-                    "default_private_cidrs": [
-                        {
-                            "address": "172.16.201.0",
-                            "prefix": 24
-                        }
-                    ]
-                },
-                "services": {
-                    "dns": {
-                        "servers": ["10.1.1.1"],
-                        "search_domains": ["site-a.vcf.lab"]
-                    }
+                    "default_private_cidrs": [{"address": "172.16.201.0", "prefix": 24}]
                 }
             },
-            "storage": {
-                "ephemeral_storage_policy": morefs["policy"],
-                "image_storage_policy": morefs["policy"]
+            # THE FIX: Mandatory 'edge' block for Load Balancing
+            "edge": {
+                "provider": "NSX_ADVANCED",
+                "load_balancer_address_ranges": [
+                    {
+                        "address": "10.1.0.7", # Matches your TF logic for LB VIPs
+                        "count": 32            # Providing a slice of the 10.1.0.0/26 block
+                    }
+                ],
+                "nsx_advanced": {
+                    "server": {
+                        "host": "10.1.1.200", # Avi Controller IP
+                        "port": 443
+                    },
+                    "username": "admin",
+                    "password": "VMware123!VMware123!",
+                    "cloud_name": "nsx_cloud"
+                }
             }
         }
     }
