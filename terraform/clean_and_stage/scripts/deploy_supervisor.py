@@ -54,45 +54,41 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Enable on {CLUSTER_NAME}...")
     
-    # This is the strict VCF 9 / vSphere 9.0 Schema
+    # This structure is designed to satisfy the 'enable_on_compute_cluster_spec' 
+    # requirement exactly as requested by the vAPI type converter.
     payload = {
-        "spec": {
-            "name": "wld01-supervisor",
-            "control_plane": {
-                "size_hint": "SMALL",
-                "network": {
-                    "backing": {
-                        "network": morefs["network"],
-                        "type": "VSPHERE_DISTRIBUTED_PORTGROUP"
-                    },
-                    "mode": "STATICRANGE",
-                    "address_ranges": [
-                        {
-                            "starting_address": "10.1.1.85",
-                            "address_count": 11,
-                            "subnet_mask": "255.255.255.0",
-                            "gateway": "10.1.1.1"
-                        }
-                    ]
-                },
-                "master_DNS_names": ["10.1.1.1"],
-                "master_DNS_search_domains": ["site-a.vcf.lab"],
-                "master_NTP_servers": ["10.1.1.1"],
-                "worker_DNS": ["10.1.1.1"],
-                "master_storage_policy": morefs["policy"],
-                "ephemeral_storage_policy": morefs["policy"],
-                "image_storage": {"storage_policy": morefs["policy"]}
+        "name": "wld01-supervisor",
+        "control_plane": {
+            "size_hint": "SMALL",
+            "network": {
+                "backing": morefs["network"], # Reverting to direct MoRef; backing often doesn't need the nested 'network' key in this specific union.
+                "mode": "STATICRANGE",
+                "address_ranges": [
+                    {
+                        "starting_address": "10.1.1.85",
+                        "address_count": 11,
+                        "subnet_mask": "255.255.255.0",
+                        "gateway": "10.1.1.1"
+                    }
+                ]
             },
-            "workloads": {
-                "service_cidr": {"address": "10.96.0.0", "prefix": 23},
-                "network_provider": "NSXT_VPC",
-                "nsxt_vpc_network_spec": {
-                    "project": "Default",
-                    "vpc_connectivity_profile": "Default VPC Connectivity Profile",
-                    "private_cidrs": [{"address": "172.16.201.0", "prefix": 24}],
-                    "dns_servers": ["10.1.1.1"],
-                    "ntp_servers": ["10.1.1.1"]
-                }
+            "master_DNS_names": ["10.1.1.1"],
+            "master_DNS_search_domains": ["site-a.vcf.lab"],
+            "master_NTP_servers": ["10.1.1.1"],
+            "worker_DNS": ["10.1.1.1"],
+            "master_storage_policy": morefs["policy"],
+            "ephemeral_storage_policy": morefs["policy"],
+            "image_storage": {"storage_policy": morefs["policy"]}
+        },
+        "workloads": {
+            "network_provider": "NSXT_VPC",
+            "service_cidr": {"address": "10.96.0.0", "prefix": 23},
+            "nsxt_vpc_network_spec": {
+                "project": "Default",
+                "vpc_connectivity_profile": "Default VPC Connectivity Profile",
+                "private_cidrs": [{"address": "172.16.201.0", "prefix": 24}],
+                "dns_servers": ["10.1.1.1"],
+                "ntp_servers": ["10.1.1.1"]
             }
         }
     }
