@@ -58,7 +58,7 @@ step3_tf_init() {
   vsphere_server     = "vc-wld01-a.site-a.vcf.lab"
   vsphere_user       = "administrator@wld.sso"
   vsphere_password   = "VMware123!VMware123!"
-  vsphere_datacenter = "wld-01a-DC"
+  vsphere_datacenter = "dc-a"
   vsphere_cluster    = "cluster-wld01-01a"
   vsphere_datastore  = "cluster-wld01-01a-vsan01"
   
