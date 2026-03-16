@@ -1,5 +1,6 @@
 Initiating Supervisor Deployment via vCenter API...
-Looking up MoRefs...
+Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
+Dynamically looking up vCenter MoRefs...
 
 Triggering V9 Enable on cluster-wld01-01a...
 [-] FAILED. HTTP 400
@@ -8,11 +9,19 @@ Triggering V9 Enable on cluster-wld01-01a...
   "messages": [
     {
       "args": [
-        "name",
-        "com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec"
+        "edge",
+        "com.vmware.vcenter.namespace_management.supervisors.workloads"
       ],
-      "default_message": "Field 'name' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
+      "default_message": "Field 'edge' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.workloads'",
       "id": "vapi.bindings.typeconverter.struct.field.missing"
+    },
+    {
+      "args": [
+        "com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec",
+        "workloads"
+      ],
+      "default_message": "Invalid field 'workloads' in structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
     }
   ]
 }
