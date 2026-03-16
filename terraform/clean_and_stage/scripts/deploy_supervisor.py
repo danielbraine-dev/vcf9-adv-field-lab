@@ -14,7 +14,6 @@ VC_PASS = sys.argv[3]
 CLUSTER_NAME = "cluster-wld01-01a"
 POLICY_NAME = "vSAN Default Storage Policy"
 MGMT_NET_NAME = "mgmt-vds01-wld01-01a"
-ZONE_NAME = "z-wld-a"
 
 def get_vcenter_session():
     print(f"Authenticating to vCenter ({VC_HOST})...")
@@ -30,51 +29,36 @@ def api_get(endpoint, token):
     return res.json() if res.status_code == 200 else None
 
 def lookup_morefs(token):
-    print("Dynamically looking up vCenter MoRefs...")
+    print("Dynamically looking up basic vCenter MoRefs...")
     morefs = {}
     
-    # 1. Cluster MoRef
     resp = api_get("/api/vcenter/cluster", token)
     for c in resp:
         if c.get("name") == CLUSTER_NAME:
             morefs["cluster"] = c.get("cluster")
             
-    # 2. Storage Policy MoRef
     resp = api_get("/api/vcenter/storage/policies", token)
     for p in resp:
         if p.get("name") == POLICY_NAME:
             morefs["policy"] = p.get("policy")
             
-    # 3. Network MoRef
     resp = api_get("/api/vcenter/network", token)
     for n in resp:
         if n.get("name") == MGMT_NET_NAME:
             morefs["network"] = n.get("network")
 
-    # 4. FIND THE HIDDEN ZONE MoRef (VCF 9 style)
-    print(f"Searching for MoRef for Zone: {ZONE_NAME}")
-    # This is the modern endpoint for Supervisor Zones
-    zones_resp = api_get("/api/vcenter/namespace-management/zones", token)
-    
-    # zones_resp is typically a list of dicts: [{'zone': 'zone-1', 'name': 'z-wld-a'}]
-    if zones_resp and isinstance(zones_resp, list):
-        for z in zones_resp:
-            if z.get("name") == ZONE_NAME:
-                morefs["zone"] = z.get("zone")
-                print(f"[+] Found Zone MoRef: {morefs['zone']}")
-
-    if not all(k in morefs for k in ["cluster", "policy", "network", "zone"]):
+    if not all(k in morefs for k in ["cluster", "policy", "network"]):
         print(f"[-] Missing MoRefs! Found: {morefs}")
-        print("[!] If 'zone' is missing, the API didn't return z-wld-a in the list.")
         sys.exit(1)
         
+    print(f"[+] Found Core IDs: {morefs}")
     return morefs
 
 def deploy_supervisor(token, morefs):
-    print(f"\nTriggering Zone-Aware Enable (Zone: {morefs['zone']})...")
+    print(f"\nTriggering V9 Compute Cluster Enable (Cluster: {morefs['cluster']})...")
     
+    # We omit the zone key entirely because enable_on_compute_cluster inherits it natively
     payload = {
-        "zone": morefs["zone"], # We are now passing the REAL MoRef ID
         "size_hint": "SMALL",
         "service_cidr": {"address": "10.96.0.0", "prefix": 23},
         "network_provider": "NSXT_VPC", 
@@ -104,20 +88,21 @@ def deploy_supervisor(token, morefs):
         }
     }
 
-    url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{morefs['cluster']}?action=enable"
+    # THE FIX: Hitting the V9 API endpoint discovered in the docs!
+    url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {"vmware-api-session-id": token, "Content-Type": "application/json"}
     
     res = requests.post(url, headers=headers, json=payload, verify=False)
     
     if res.status_code in [200, 201, 202, 204]:
-        print("[+] SUCCESS! Supervisor deployment triggered!")
+        print("[+] SUCCESS! V9 Supervisor deployment triggered!")
     else:
         print(f"[-] FAILED. HTTP {res.status_code}")
         print(res.text)
         sys.exit(1)
 
 def wait_for_supervisor(token, cluster_id):
-    print("\nPolling status until RUNNING...")
+    print("\nPolling status until RUNNING (this takes 15-20 mins)...")
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/clusters/{cluster_id}"
     headers = {"vmware-api-session-id": token}
     for i in range(60):
