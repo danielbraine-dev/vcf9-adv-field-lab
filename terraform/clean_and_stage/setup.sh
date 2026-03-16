@@ -45,9 +45,9 @@ step2_teardown_environment() {
 
 step3_tf_init() {
   echo "[3] terraform init/validate…"
-    if [[ ! -f "${TFVARS_FILE}" ]]; then
-      log "Creating ${TFVARS_FILE} with ALL original lab defaults…"
-      cat > "${TFVARS_FILE}" <<'EOF'
+  if [[ ! -f "${TFVARS_FILE}" ]]; then
+    log "Creating ${TFVARS_FILE} with ALL original lab defaults…"
+    cat > "${TFVARS_FILE}" <<'EOF'
     # ---- NSX ----
     nsx_host                 = "nsx-wld01-a.site-a.vcf.lab"
     nsx_username             = "admin"
@@ -97,12 +97,12 @@ step3_tf_init() {
     tgw_ipblock_range            = "172.16.101.1-172.16.101.254"
     workload_vpc_cidrs           = ["172.16.201.0/24"]
     service_cidr                 = "10.96.0.0/23"
-  EOF
+EOF
   fi
-    log "Running terraform init…"
-    terraform -chdir="${ROOT_DIR}" init -upgrade
-    terraform -chdir="${ROOT_DIR}" validate
-    pause
+  log "Running terraform init…"
+  terraform -chdir="${ROOT_DIR}" init -upgrade
+  terraform -chdir="${ROOT_DIR}" validate
+  pause
 }
 
 step4_create_nsx_objects(){
