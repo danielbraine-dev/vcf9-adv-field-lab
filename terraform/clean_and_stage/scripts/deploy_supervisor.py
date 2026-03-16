@@ -57,8 +57,10 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Compute Cluster Enable (Cluster: {morefs['cluster']})...")
     
-    # We omit the zone key entirely because enable_on_compute_cluster inherits it natively
     payload = {
+        # THE FIX: Explicitly naming the Supervisor for VCF 9
+        "name": "wld01-supervisor", 
+        
         "size_hint": "SMALL",
         "service_cidr": {"address": "10.96.0.0", "prefix": 23},
         "network_provider": "NSXT_VPC", 
@@ -88,7 +90,6 @@ def deploy_supervisor(token, morefs):
         }
     }
 
-    # THE FIX: Hitting the V9 API endpoint discovered in the docs!
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {"vmware-api-session-id": token, "Content-Type": "application/json"}
     
@@ -96,9 +97,14 @@ def deploy_supervisor(token, morefs):
     
     if res.status_code in [200, 201, 202, 204]:
         print("[+] SUCCESS! V9 Supervisor deployment triggered!")
+    elif res.status_code == 400 and "already enabled" in res.text.lower():
+        print("[*] Supervisor is already enabled or currently deploying.")
     else:
         print(f"[-] FAILED. HTTP {res.status_code}")
-        print(res.text)
+        try:
+            print(json.dumps(res.json(), indent=2))
+        except:
+            print(res.text)
         sys.exit(1)
 
 def wait_for_supervisor(token, cluster_id):
