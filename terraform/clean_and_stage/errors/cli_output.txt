@@ -1,14 +1,18 @@
-Triggering V9 Compute Cluster Enable (Cluster: domain-c10)...
+Initiating Supervisor Deployment via vCenter API...
+Looking up MoRefs...
+
+Triggering V9 Enable on cluster-wld01-01a...
 [-] FAILED. HTTP 400
 {
   "error_type": "INVALID_ARGUMENT",
   "messages": [
     {
       "args": [
-        "spec"
+        "name",
+        "com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec"
       ],
-      "default_message": "Unable to parse property with name spec.",
-      "id": "com.vmware.vapi.rest.parsePropertyException"
+      "default_message": "Field 'name' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
+      "id": "vapi.bindings.typeconverter.struct.field.missing"
     }
   ]
 }
