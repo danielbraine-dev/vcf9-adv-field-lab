@@ -60,7 +60,7 @@ step3_tf_init() {
   vsphere_password   = "VMware123!VMware123!"
   vsphere_datacenter = "dc-a"
   vsphere_cluster    = "cluster-wld01-01a"
-  vsphere_datastore  = "cluster-wld01-01a-vsan01"
+  vsphere_datastore  = "vsan-wld01-01a"
   
   # ---- VCFA provider ----
   vcfa_endpoint    = "https://auto-a.site-a.vcf.lab"
