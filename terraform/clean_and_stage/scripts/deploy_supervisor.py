@@ -4,6 +4,8 @@ import urllib3
 import sys
 import json
 import time
+import ssl
+import socket
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -14,6 +16,20 @@ VC_PASS = sys.argv[3]
 CLUSTER_NAME = "cluster-wld01-01a"
 POLICY_NAME = "vSAN Default Storage Policy"
 MGMT_NET_NAME = "mgmt-vds01-wld01-01a"
+
+def get_avi_cert(host, port=443):
+    print(f"Dynamically fetching SSL certificate from Avi Controller ({host})...")
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    try:
+        with socket.create_connection((host, port), timeout=5) as sock:
+            with context.wrap_socket(sock, server_hostname=host) as ssock:
+                cert_der = ssock.getpeercert(binary_form=True)
+                return ssl.DER_cert_to_PEM_cert(cert_der)
+    except Exception as e:
+        print(f"[-] Failed to fetch Avi cert: {e}")
+        sys.exit(1)
 
 def get_vcenter_session():
     print(f"Authenticating to vCenter ({VC_HOST})...")
@@ -53,6 +69,8 @@ def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Enable on {CLUSTER_NAME}...")
     
     # Matching the Broadcom Developer Example exactly
+    
+    avi_cert = get_avi_cert("10.1.1.200")
     payload = {
         "name": "wld01-supervisor",
         "control_plane": {
@@ -102,9 +120,28 @@ def deploy_supervisor(token, morefs):
                         }
                     ]
                 }
-            }
+            },
+            "edge": {
+                "provider": "NSX_ADVANCED_LB",
+                "load_balancer_address_ranges": [
+                    {
+                        "address": "10.1.0.7",
+                        "count": 32
+                    }
+                ],
+                "nsx_advanced": {
+                    "server": {
+                        "host": "10.1.1.200",
+                        "port": 443
+                    },
+                    "username": "admin",
+                    "password": "VMware123!VMware123!",
+                    "cloud_name": "nsx_cloud",
+                    "certificate_authority_chain": avi_cert 
+                }           
             }
         }
+    }
     
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {
