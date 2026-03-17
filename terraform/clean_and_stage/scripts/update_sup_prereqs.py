@@ -48,17 +48,21 @@ def update_vcfa_prereqs(token):
     ip_spaces_url = f"{VCFA_URL}/cloudapi/v1/ipSpaces"
     pg_url = f"{VCFA_URL}/cloudapi/v1/providerGateways"
 
-    # Fetch existing configurations
+    # Fetch the "lite" summaries
     spaces = requests.get(ip_spaces_url, headers=headers, verify=False).json().get("values", [])
     pgs = requests.get(pg_url, headers=headers, verify=False).json().get("values", [])
 
-    # Locate our specific targets
-    target_space = next((s for s in spaces if "us-east-region" in s.get("name", "") or "us-west" in s.get("name", "")), None)
-    target_pg = next((p for p in pgs if "us-east-region" in p.get("name", "") or "us-west" in p.get("name", "")), None)
+    space_summary = next((s for s in spaces if "us-east-region" in s.get("name", "") or "us-west" in s.get("name", "")), None)
+    pg_summary = next((p for p in pgs if "us-east-region" in p.get("name", "") or "us-west" in p.get("name", "")), None)
 
-    if not target_space or not target_pg:
-        print("[-] Could not find target IP Space or Provider Gateway!")
+    if not space_summary or not pg_summary:
+        print("[-] Could not find target IP Space or Provider Gateway summaries!")
         return
+
+    # THE FIX: Fetch the FULL objects using their direct IDs
+    print(f"Fetching full objects for Space ({space_summary['id']}) and PG ({pg_summary['id']})...")
+    target_space = requests.get(f"{ip_spaces_url}/{space_summary['id']}", headers=headers, verify=False).json()
+    target_pg = requests.get(f"{pg_url}/{pg_summary['id']}", headers=headers, verify=False).json()
 
     # Standardize top-level names 
     target_space["name"] = "us-east-region-IP Space"
@@ -66,55 +70,59 @@ def update_vcfa_prereqs(token):
     target_pg["name"] = "us-east-region-PG"
     target_pg["display_name"] = "us-east-region-PG"
 
-    # Ensure ipBlocks arrays exist even if they are empty
     if "ipBlocks" not in target_space: target_space["ipBlocks"] = []
     if "ipBlocks" not in target_pg: target_pg["ipBlocks"] = []
 
     # Print what the API actually sees right now
-    print("\n--- Current IP Blocks Detected ---")
+    print("\n--- Current IP Blocks in IP Space ---")
     correct_block_found = False
     for b in target_space["ipBlocks"]:
         print(f"  Found Block -> Name: '{b.get('name')}', CIDR: '{b.get('cidr')}'")
-        # POSITIVE CHECK: Does the exact block we need exist?
         if b.get("cidr") == "10.1.0.0/26":
             correct_block_found = True
-    print("----------------------------------\n")
+    print("-------------------------------------\n")
 
     if not correct_block_found:
-        print("  [!] Correct /26 block is MISSING or INCORRECT. Executing rebuild sequence...")
+        print("  [!] Correct /26 block is MISSING. Executing rebuild sequence...")
 
-        # 1. DETACH FROM PG (Clear out anything that isn't the /26)
+        # 1. DETACH FROM PG
         print("  [1/4] Detaching old blocks from Provider Gateway...")
         target_pg["ipBlocks"] = [b for b in target_pg["ipBlocks"] if b.get("cidr") == "10.1.0.0/26"]
-        requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
+        r1 = requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
+        if r1.status_code not in [200, 201, 202, 204]: print(f"[-] PG Detach Error: {r1.text}")
 
         # 2. DELETE FROM IP SPACE 
         print("  [2/4] Deleting old blocks from IP Space...")
         target_space["ipBlocks"] = [b for b in target_space["ipBlocks"] if b.get("cidr") == "10.1.0.0/26"]
-        requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        r2 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        if r2.status_code not in [200, 201, 202, 204]: print(f"[-] IP Space Delete Error: {r2.text}")
 
         # 3. RECREATE IN IP SPACE
         print("  [3/4] Creating new 10.1.0.0/26 block in IP Space...")
         target_space["ipBlocks"].append({"name": "VPC-External-Block", "cidr": "10.1.0.0/26"})
-        requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        r3 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        if r3.status_code not in [200, 201, 202, 204]: 
+            print(f"[-] IP Space Recreate Error: {r3.text}")
+            sys.exit(1)
 
         # Fetch the IP space fresh to grab the newly generated database ID
         fresh_space = requests.get(f"{ip_spaces_url}/{target_space['id']}", headers=headers, verify=False).json()
         new_block = next((b for b in fresh_space.get("ipBlocks", []) if b.get("cidr") == "10.1.0.0/26"), None)
 
         if not new_block:
-            print("[-] Failed to find the newly created block ID!")
+            print("[-] Failed to find the newly created block ID after PUT!")
             sys.exit(1)
 
         # 4. ATTACH TO PG
-        print("  [4/4] Attaching new block (with new ID) to Provider Gateway...")
+        print("  [4/4] Attaching new block to Provider Gateway...")
         target_pg["ipBlocks"].append(new_block) 
-        res = requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
+        r4 = requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
         
-        if res.status_code in [200, 201, 202, 204]:
+        if r4.status_code in [200, 201, 202, 204]:
             print("[+] SUCCESS! IP Space and Provider Gateway fully rebuilt and enforced!")
         else:
-            print(f"[-] Final PG update failed: {res.text}")
+            print(f"[-] Final PG update failed: {r4.text}")
+            sys.exit(1)
     else:
         print("  [!] CIDR is correctly set to /26. Enforcing top-level names...")
         requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
