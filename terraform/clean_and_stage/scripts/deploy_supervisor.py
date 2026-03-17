@@ -126,7 +126,14 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "NSX_REGISTERED_AVI"
+                "provider": "NSX_ADVANCED",
+                "nsx_advanced": {
+                    "certificate_authority_chain": avi-cert,
+                    "cloud_name": "nsx_cloud",
+                    "password": "VMware123!VMware123!",
+                    "server": "10.1.1.200",
+                    "username": "admin"
+                }
             }
         }
     }
