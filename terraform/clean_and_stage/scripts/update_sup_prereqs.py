@@ -42,7 +42,7 @@ def update_vcfa_prereqs(token):
         "Content-Type": "application/json;version=9.0.0"
     }
 
-    print("\nStarting IP Block Replacement Workflow (Bypassing CIDR Immutability)...")
+    print("\nStarting IP Block Replacement Workflow...")
 
     # API Endpoints
     ip_spaces_url = f"{VCFA_URL}/cloudapi/v1/ipSpaces"
@@ -60,29 +60,33 @@ def update_vcfa_prereqs(token):
         print("[-] Could not find target IP Space or Provider Gateway!")
         return
 
-    # Check if the block is stuck on the wrong CIDR
-    needs_rebuild = False
-    for b in target_space.get("ipBlocks", []):
-        if ("External-Block" in b.get("name", "") or "us-west" in b.get("name", "")) and b.get("cidr") != "10.1.0.0/26":
-            needs_rebuild = True
-
-    # Standardize top-level names for BOTH the IP Space and the Provider Gateway
+    # Standardize top-level names 
     target_space["name"] = "us-east-region-IP Space"
     target_space["display_name"] = "us-east-region-IP Space"
     target_pg["name"] = "us-east-region-PG"
     target_pg["display_name"] = "us-east-region-PG"
 
-    if needs_rebuild:
-        print("  [!] Block is immutable. Executing Detach -> Delete -> Recreate -> Attach sequence.")
+    # Print what the API actually sees right now
+    print("\n--- Current IP Blocks Detected ---")
+    needs_rebuild = False
+    for b in target_space.get("ipBlocks", []):
+        print(f"  Found Block -> Name: '{b.get('name')}', CIDR: '{b.get('cidr')}'")
+        # TARGET BY CIDR: If it's not our desired /26, trigger the rebuild
+        if b.get("cidr") != "10.1.0.0/26":
+            needs_rebuild = True
+    print("----------------------------------\n")
 
-        # 1. DETACH FROM PG (This PUT also applies the new "us-east-region-PG" name)
+    if needs_rebuild:
+        print("  [!] Incorrect CIDR detected. Executing Detach -> Delete -> Recreate -> Attach sequence.")
+
+        # 1. DETACH FROM PG (Filter out anything that isn't the /26)
         print("  [1/4] Detaching old block from Provider Gateway...")
-        target_pg["ipBlocks"] = [b for b in target_pg.get("ipBlocks", []) if "External-Block" not in b.get("name", "") and "us-west" not in b.get("name", "")]
+        target_pg["ipBlocks"] = [b for b in target_pg.get("ipBlocks", []) if b.get("cidr") == "10.1.0.0/26"]
         requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
 
-        # 2. DELETE FROM IP SPACE (This PUT also applies the new "us-east-region-IP Space" name)
+        # 2. DELETE FROM IP SPACE 
         print("  [2/4] Deleting old block from IP Space...")
-        target_space["ipBlocks"] = [b for b in target_space.get("ipBlocks", []) if "External-Block" not in b.get("name", "") and "us-west" not in b.get("name", "")]
+        target_space["ipBlocks"] = [b for b in target_space.get("ipBlocks", []) if b.get("cidr") == "10.1.0.0/26"]
         requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
 
         # 3. RECREATE IN IP SPACE
@@ -92,7 +96,7 @@ def update_vcfa_prereqs(token):
 
         # Fetch the IP space fresh to grab the newly generated database ID
         fresh_space = requests.get(f"{ip_spaces_url}/{target_space['id']}", headers=headers, verify=False).json()
-        new_block = next((b for b in fresh_space.get("ipBlocks", []) if "External-Block" in b.get("name", "")), None)
+        new_block = next((b for b in fresh_space.get("ipBlocks", []) if b.get("cidr") == "10.1.0.0/26"), None)
 
         if not new_block:
             print("[-] Failed to find the newly created block ID!")
@@ -108,16 +112,7 @@ def update_vcfa_prereqs(token):
         else:
             print(f"[-] Final PG update failed: {res.text}")
     else:
-        # If the block is already a /26, just ensure the nested block names are corrected
-        print("  [!] CIDR is already correct. Enforcing nested names...")
-        for block in target_space.get("ipBlocks", []):
-            if "us-west" in block.get("name", ""):
-                block["name"] = block["name"].replace("us-west", "us-east")
-        for block in target_pg.get("ipBlocks", []):
-            if "us-west" in block.get("name", ""):
-                block["name"] = block["name"].replace("us-west", "us-east")
-
-        # Pushing the updates down
+        print("  [!] CIDR is already correct. Enforcing top-level names...")
         requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
         requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
         print("[+] Names enforced successfully.")
