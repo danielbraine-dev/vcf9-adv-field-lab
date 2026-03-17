@@ -76,7 +76,7 @@ def deploy_supervisor(token, morefs):
                     "gatewayaddress": "10.1.1.1",
                     "ipassignments": [
                         {
-                            "assignee": "CONTROL_PLANE",
+                            "assignee": "KUBERNETES_CONTROL_PLANE",
                             "ranges": [
                                 {
                                     "address": "10.1.1.85",
@@ -105,7 +105,22 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "nsx_advanced"
+                "provider": "NSX_ADVANCED",
+                "load_balancer_address_ranges": [
+                    {
+                        "address": "10.1.0.7",
+                        "count": 32
+                    }
+                ],
+                "nsx_advanced": {
+                    "server": {
+                        "host": "10.1.1.200",
+                        "port": 443
+                    },
+                    "username": "admin",
+                    "password": "VMware123!VMware123!",
+                    "cloud_name": "nsx_cloud"
+                }
             }
         }
     }
