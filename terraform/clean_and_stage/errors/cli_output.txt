@@ -9,19 +9,11 @@ Triggering V9 Enable on cluster-wld01-01a...
   "messages": [
     {
       "args": [
-        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network_backing",
-        "network"
-      ],
-      "default_message": "Structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network_backing' has a union with a field 'network' not required for this case",
-      "id": "vapi.data.structure.union.extra"
-    },
-    {
-      "args": [
         "backing",
         "com.vmware.vcenter.namespace_management.supervisors.networks.management.network"
       ],
-      "default_message": "Invalid field 'backing' in structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+      "default_message": "Field 'backing' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
+      "id": "vapi.bindings.typeconverter.struct.field.missing"
     },
     {
       "args": [
