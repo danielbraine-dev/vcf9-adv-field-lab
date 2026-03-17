@@ -104,7 +104,7 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "NSX_ADVANCED_LB",
+                "provider": "NSX_ADVANCED",
                 "load_balancer_address_ranges": [
                     {
                         "address": "10.1.0.7",
