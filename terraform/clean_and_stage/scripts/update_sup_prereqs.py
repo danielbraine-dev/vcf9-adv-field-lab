@@ -65,65 +65,69 @@ def update_vcfa_prereqs(token):
     target_pg = requests.get(f"{pg_url}/{pg_summary['id']}", headers=headers, verify=False).json()
 
     # CLEANUP: Scrub bad keys we might have injected previously
-    target_space.pop("display_name", None)
-    target_space.pop("ipBlocks", None) 
-    target_pg.pop("display_name", None)
-    target_pg.pop("ipBlocks", None)
+    target_space.pop("display_name", None); target_space.pop("ipBlocks", None) 
+    target_pg.pop("display_name", None); target_pg.pop("ipBlocks", None)
+
+    # Helper function to push changes, wait for VCD locks to clear, and fetch fresh state
+    def push_space_update(space_obj, step_desc):
+        print(f"  {step_desc}")
+        r = requests.put(f"{ip_spaces_url}/{space_obj['id']}", headers=headers, json=space_obj, verify=False)
+        if r.status_code not in [200, 201, 202, 204]:
+            print(f"  [-] Failed: {r.text}"); sys.exit(1)
+        print("  [zZz] Waiting 15 seconds for VCD backend to unlock the entity...")
+        time.sleep(15)
+        # MUST return a fresh object to get the latest database 'etag'/version
+        return requests.get(f"{ip_spaces_url}/{space_obj['id']}", headers=headers, verify=False).json()
 
     # 1. Update Provider Gateway Name
-    print("Enforcing Provider Gateway Name...")
+    print("\nEnforcing Provider Gateway Name...")
     target_pg["name"] = "us-east-region-PG"
     r_pg = requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
-    if r_pg.status_code in [200, 201, 202, 204]:
-        print("  [+] Provider Gateway name updated successfully.")
+    if r_pg.status_code in [200, 201, 202, 204]: print("  [+] Provider Gateway name updated.")
+
+    # 2. Update IP Space Name First
+    print("\nEnforcing IP Space Name...")
+    if target_space.get("name") != "us-east-region-IP Space":
+        target_space["name"] = "us-east-region-IP Space"
+        target_space = push_space_update(target_space, "Updating IP Space Name...")
     else:
-        print(f"  [-] PG Update Error: {r_pg.text}")
+        print("  [+] IP Space name is correct.")
 
-    # 2. IP Space CIDR Logic
-    target_space["name"] = "us-east-region-IP Space"
-    
-    needs_rebuild = False
-    if "internalScopeCidrBlocks" in target_space:
-        for block in target_space["internalScopeCidrBlocks"]:
-            if block.get("cidr") != "10.1.0.0/26":
-                needs_rebuild = True
+    # 3. State-Machine CIDR Logic
+    blocks = target_space.get("internalScopeCidrBlocks", [])
+    has_26 = any(b.get("cidr") == "10.1.0.0/26" for b in blocks)
+    has_28 = any(b.get("cidr") == "10.1.0.0/28" for b in blocks)
+    has_dummy = any(b.get("name") == "Dummy-Block" for b in blocks)
 
-    if needs_rebuild:
-        print("\n  [!] Incorrect CIDR detected. Executing 'Dummy Block Shuffle' to bypass constraints...")
+    if has_28 or not has_26 or has_dummy:
+        print("\n  [!] Reconciling CIDR blocks (Handling VCD locks safely)...")
         
-        # Step 1: Inject Non-Overlapping Dummy Block
-        print("  [1/4] Injecting temporary non-overlapping Dummy Block...")
-        target_space["internalScopeCidrBlocks"].append({"name": "Dummy-Block", "cidr": "192.168.255.0/29"})
-        r1 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r1.status_code not in [200, 201, 202, 204]:
-            print(f"  [-] Failed to add dummy block: {r1.text}"); sys.exit(1)
+        # Step 1: Inject Dummy (Skip if it already exists from the previous crash!)
+        if has_28 and not has_dummy:
+            target_space["internalScopeCidrBlocks"].append({"name": "Dummy-Block", "cidr": "192.168.255.0/29"})
+            target_space = push_space_update(target_space, "[1/4] Injecting Non-Overlapping Dummy Block...")
+        elif has_dummy:
+            print("  [1/4] Dummy Block already exists (Recovered from previous run).")
 
-        # Step 2: Delete the old /28 block
-        print("  [2/4] Purging the old /28 block...")
-        target_space["internalScopeCidrBlocks"] = [b for b in target_space["internalScopeCidrBlocks"] if b.get("name") == "Dummy-Block"]
-        r2 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r2.status_code not in [200, 201, 202, 204]:
-            print(f"  [-] Failed to delete old block: {r2.text}"); sys.exit(1)
+        # Step 2: Purge /28
+        if has_28:
+            target_space["internalScopeCidrBlocks"] = [b for b in target_space["internalScopeCidrBlocks"] if b.get("cidr") != "10.1.0.0/28"]
+            target_space = push_space_update(target_space, "[2/4] Purging the old /28 block...")
 
-        # Step 3: Inject the real /26 block
-        print("  [3/4] Injecting the correct 10.1.0.0/26 block...")
-        target_space["internalScopeCidrBlocks"].append({"name": "VPC-External-Block", "cidr": "10.1.0.0/26"})
-        r3 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r3.status_code not in [200, 201, 202, 204]:
-            print(f"  [-] Failed to inject new block: {r3.text}"); sys.exit(1)
+        # Step 3: Inject /26
+        if not has_26:
+            target_space["internalScopeCidrBlocks"].append({"name": "VPC-External-Block", "cidr": "10.1.0.0/26"})
+            target_space = push_space_update(target_space, "[3/4] Injecting the correct 10.1.0.0/26 block...")
 
-        # Step 4: Purge the Dummy Block
-        print("  [4/4] Removing temporary Dummy Block...")
-        target_space["internalScopeCidrBlocks"] = [b for b in target_space["internalScopeCidrBlocks"] if b.get("name") != "Dummy-Block"]
-        r4 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r4.status_code in [200, 201, 202, 204]:
-            print("  [+] SUCCESS! IP Space CIDR perfectly resized to /26.")
-        else:
-            print(f"  [-] Failed to remove dummy block: {r4.text}"); sys.exit(1)
-            
+        # Step 4: Purge Dummy
+        has_dummy_now = any(b.get("name") == "Dummy-Block" for b in target_space.get("internalScopeCidrBlocks", []))
+        if has_dummy_now:
+            target_space["internalScopeCidrBlocks"] = [b for b in target_space["internalScopeCidrBlocks"] if b.get("name") != "Dummy-Block"]
+            target_space = push_space_update(target_space, "[4/4] Removing temporary Dummy Block...")
+
+        print("  [+] SUCCESS! IP Space CIDR perfectly resized and reconciled.")
     else:
-        print("\n  [+] CIDR is already correct. Enforcing top-level names...")
-        requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        print("\n  [+] CIDR blocks are already perfectly configured. No changes needed.")
 
 def update_nsx_profile():
     print("\nWaiting 20 seconds for VCFA to push changes down to NSX-T...")
