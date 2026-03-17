@@ -74,6 +74,7 @@ def deploy_supervisor(token, morefs):
     
     payload = {
         "name": "wld01-supervisor",
+        "zone": "z-wld-a",
         "control_plane": {
             "count": 1,
             "network": {
