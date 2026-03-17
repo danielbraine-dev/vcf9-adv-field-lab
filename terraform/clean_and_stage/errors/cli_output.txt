@@ -3,25 +3,18 @@ Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
 Dynamically looking up vCenter MoRefs...
 
 Triggering V9 Enable on cluster-wld01-01a...
+Dynamically fetching SSL certificate from Avi Controller (10.1.1.200)...
 [-] FAILED. HTTP 400
 {
   "error_type": "INVALID_ARGUMENT",
   "messages": [
     {
       "args": [
-        "com.vmware.vcenter.namespace_management.networks.edges.NSX_advanced_LB_config",
-        "certificate_authority_chain"
-      ],
-      "default_message": "Field 'certificate_authority_chain' missing from structure 'com.vmware.vcenter.namespace_management.networks.edges.NSX_advanced_LB_config'",
-      "id": "vapi.bindings.typeconverter.struct.field.missing"
-    },
-    {
-      "args": [
         "nsx_advanced",
         "com.vmware.vcenter.namespace_management.networks.edges.edge"
       ],
-      "default_message": "Invalid field 'nsx_advanced' in structure 'com.vmware.vcenter.namespace_management.networks.edges.edge'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+      "default_message": "Structure 'com.vmware.vcenter.namespace_management.networks.edges.edge' has a union with a field 'nsx_advanced' not required for this case",
+      "id": "vapi.data.structure.union.extra"
     },
     {
       "args": [
