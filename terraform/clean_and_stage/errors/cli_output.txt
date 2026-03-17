@@ -9,42 +9,34 @@ Triggering V9 Enable on cluster-wld01-01a...
   "messages": [
     {
       "args": [
-        "search_domains",
-        "com.vmware.vcenter.namespace_management.networks.service.DNS"
+        "com.vmware.vcenter.namespace_management.networks.edges.NSX_advanced_LB_config",
+        "certificate_authority_chain"
       ],
-      "default_message": "Field 'search_domains' missing from structure 'com.vmware.vcenter.namespace_management.networks.service.DNS'",
+      "default_message": "Field 'certificate_authority_chain' missing from structure 'com.vmware.vcenter.namespace_management.networks.edges.NSX_advanced_LB_config'",
       "id": "vapi.bindings.typeconverter.struct.field.missing"
     },
     {
       "args": [
-        "dns",
-        "com.vmware.vcenter.namespace_management.networks.services"
+        "nsx_advanced",
+        "com.vmware.vcenter.namespace_management.networks.edges.edge"
       ],
-      "default_message": "Invalid field 'dns' in structure 'com.vmware.vcenter.namespace_management.networks.services'",
+      "default_message": "Invalid field 'nsx_advanced' in structure 'com.vmware.vcenter.namespace_management.networks.edges.edge'",
       "id": "vapi.bindings.typeconverter.struct.field.invalid"
     },
     {
       "args": [
-        "services",
-        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network"
+        "edge",
+        "com.vmware.vcenter.namespace_management.supervisors.workloads"
       ],
-      "default_message": "Invalid field 'services' in structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
+      "default_message": "Invalid field 'edge' in structure 'com.vmware.vcenter.namespace_management.supervisors.workloads'",
       "id": "vapi.bindings.typeconverter.struct.field.invalid"
     },
     {
       "args": [
-        "com.vmware.vcenter.namespace_management.supervisors.control_plane",
-        "network"
-      ],
-      "default_message": "Invalid field 'network' in structure 'com.vmware.vcenter.namespace_management.supervisors.control_plane'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
-    },
-    {
-      "args": [
-        "control_plane",
+        "workloads",
         "com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec"
       ],
-      "default_message": "Invalid field 'control_plane' in structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
+      "default_message": "Invalid field 'workloads' in structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
       "id": "vapi.bindings.typeconverter.struct.field.invalid"
     }
   ]
