@@ -110,19 +110,11 @@ def deploy_supervisor(token, morefs):
                         "address": "10.1.0.7",
                         "count": 32
                     }
-                ],
-                "nsx_advanced": {
-                    "server": {
-                        "host": "10.1.1.200",
-                        "port": 443
-                    },
-                    "username": "admin",
-                    "password": "VMware123!VMware123!",
-                    "cloud_name": "nsx_cloud"
+                ]
                 }
             }
         }
-    }   
+    
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {
         "vmware-api-session-id": token,
