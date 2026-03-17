@@ -57,8 +57,12 @@ def deploy_supervisor(token, morefs):
         "name": "wld01-supervisor",
         "control_plane": {
             "network": {
-                # Just the MoRef. No 'backing' dictionary needed!
+                # Provide the Portgroup MoRef at the root
                 "network": morefs["network"],
+                "backing": {
+                    # Provide ONLY the enum discriminator here to satisfy the union
+                    "backing": "VSPHERE_DVS"
+                },
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
@@ -73,7 +77,8 @@ def deploy_supervisor(token, morefs):
                     "gatewayaddress": "10.1.1.1",
                     "ipassignments": [
                         {
-                            "assignee": "KUBERNETES_CONTROL_PLANE",
+                            # Correct VCF 9 Enum
+                            "assignee": "CONTROL_PLANE",
                             "ranges": [
                                 {
                                     "address": "10.1.1.85",
@@ -102,7 +107,8 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "NSX_ADVANCED",
+                # Correct VCF 9 Enum for Avi
+                "provider": "NSX_ADVANCED_LB",
                 "load_balancer_address_ranges": [
                     {
                         "address": "10.1.0.7",
@@ -120,7 +126,7 @@ def deploy_supervisor(token, morefs):
                 }
             }
         }
-    }
+    }     
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {
         "vmware-api-session-id": token,
