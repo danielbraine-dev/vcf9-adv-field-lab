@@ -58,6 +58,10 @@ def deploy_supervisor(token, morefs):
         "control_plane": {
             "network": {
                 "network": morefs["network"],
+                "backing": {
+                    "network": "morefs["network"],
+                    "backing": "VSPHERE_DVS"
+                },
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
