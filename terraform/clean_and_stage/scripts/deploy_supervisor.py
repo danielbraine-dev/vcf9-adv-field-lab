@@ -75,7 +75,7 @@ def deploy_supervisor(token, morefs):
             "network": {
                 "network": morefs["network"],
                 "backing": {
-                    "backing": "VSPHERE"
+                    "backing": "VSPHERE_NETWORK"
                 },
                 "services": {
                     "dns": {
