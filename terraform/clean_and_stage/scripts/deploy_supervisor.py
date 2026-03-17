@@ -68,9 +68,7 @@ def lookup_morefs(token):
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Enable on {CLUSTER_NAME}...")
     
-    # Matching the Broadcom Developer Example exactly
-    
-    avi_cert = get_avi_cert("10.1.1.200")
+    # The "Lean" VCF 9 Payload (Trusting NSX to handle Avi)
     payload = {
         "name": "wld01-supervisor",
         "control_plane": {
@@ -82,13 +80,13 @@ def deploy_supervisor(token, morefs):
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
-                        "search_domains": ["site-a.vcf.lab"] 
+                        "search_domains": ["site-a.vcf.lab"]
                     },
                     "ntp": {
                         "servers": ["10.1.1.1"]
                     }
                 },
-                "ip_management": { 
+                "ip_management": {
                     "dhcp_enabled": False,
                     "gateway_address": "10.1.1.1",
                     "ip_assignments": [
@@ -105,7 +103,7 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "size": "SMALL",
-            "storage_policy": morefs["policy"] 
+            "storage_policy": morefs["policy"]
         },
         "workloads": {
             "network": {
@@ -128,20 +126,25 @@ def deploy_supervisor(token, morefs):
                         "address": "10.1.0.7",
                         "count": 32
                     }
-                ],
-                "nsx_advanced_lb": {
-                    "server": {
-                        "host": "10.1.1.200",
-                        "port": 443
-                    },
-                    "username": "admin",
-                    "password": "VMware123!VMware123!",
-                    "cloud_name": "nsx_cloud",
-                    "certificate_authority_chain": avi_cert 
-                }           
+                ]
             }
         }
     }
+
+    url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
+    headers = {
+        "vmware-api-session-id": token,
+        "Content-Type": "application/json"
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, verify=False)
+    
+    if res.status_code in [200, 201, 202, 204]:
+        print("[+] SUCCESS! VCF 9 Supervisor deployment triggered!")
+    else:
+        print(f"[-] FAILED. HTTP {res.status_code}")
+        print(json.dumps(res.json(), indent=2))
+        sys.exit(1)
     
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {
