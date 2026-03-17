@@ -128,9 +128,8 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                # THE FIX: 9.0 enum and dictionary structure
-                "provider": "NSX_ADVANCED_LB",
-                "nsx_advanced_lb": {
+                "provider": "NSX_ADVANCED",
+                "nsx_advanced": {
                     "certificate_authority_chain": avi_cert,
                     "cloud_name": "nsx_cloud",
                     "password": "VMware123!VMware123!",
