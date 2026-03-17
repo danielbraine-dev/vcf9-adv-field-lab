@@ -78,7 +78,6 @@ def deploy_supervisor(token, morefs):
                     "backing": "NETWORK",
                     "network": morefs["network"]
                 },
-                "floating_ip_address": "10.1.1.84",
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
@@ -93,7 +92,7 @@ def deploy_supervisor(token, morefs):
                     "gateway_address": "10.1.1.1",
                     "ip_assignments": [
                         {
-                            "assignee": "CONTROL_PLANE",
+                            "assignee": "KUBERNETES_CONTROL_PLANE",
                             "ranges": [
                                 {
                                     "address": "10.1.1.85",
