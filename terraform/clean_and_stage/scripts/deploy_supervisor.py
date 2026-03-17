@@ -67,6 +67,8 @@ def lookup_morefs(token):
 
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Enable on {CLUSTER_NAME}...")
+
+avi_cert = get_avi_cert("10.1.1.200")
     
     # The "Lean" VCF 9 Payload (Trusting NSX to handle Avi)
     payload = {
