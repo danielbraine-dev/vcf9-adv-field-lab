@@ -66,27 +66,31 @@ def update_vcfa_prereqs(token):
     target_pg["name"] = "us-east-region-PG"
     target_pg["display_name"] = "us-east-region-PG"
 
+    # Ensure ipBlocks arrays exist even if they are empty
+    if "ipBlocks" not in target_space: target_space["ipBlocks"] = []
+    if "ipBlocks" not in target_pg: target_pg["ipBlocks"] = []
+
     # Print what the API actually sees right now
     print("\n--- Current IP Blocks Detected ---")
-    needs_rebuild = False
-    for b in target_space.get("ipBlocks", []):
+    correct_block_found = False
+    for b in target_space["ipBlocks"]:
         print(f"  Found Block -> Name: '{b.get('name')}', CIDR: '{b.get('cidr')}'")
-        # TARGET BY CIDR: If it's not our desired /26, trigger the rebuild
-        if b.get("cidr") != "10.1.0.0/26":
-            needs_rebuild = True
+        # POSITIVE CHECK: Does the exact block we need exist?
+        if b.get("cidr") == "10.1.0.0/26":
+            correct_block_found = True
     print("----------------------------------\n")
 
-    if needs_rebuild:
-        print("  [!] Incorrect CIDR detected. Executing Detach -> Delete -> Recreate -> Attach sequence.")
+    if not correct_block_found:
+        print("  [!] Correct /26 block is MISSING or INCORRECT. Executing rebuild sequence...")
 
-        # 1. DETACH FROM PG (Filter out anything that isn't the /26)
-        print("  [1/4] Detaching old block from Provider Gateway...")
-        target_pg["ipBlocks"] = [b for b in target_pg.get("ipBlocks", []) if b.get("cidr") == "10.1.0.0/26"]
+        # 1. DETACH FROM PG (Clear out anything that isn't the /26)
+        print("  [1/4] Detaching old blocks from Provider Gateway...")
+        target_pg["ipBlocks"] = [b for b in target_pg["ipBlocks"] if b.get("cidr") == "10.1.0.0/26"]
         requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
 
         # 2. DELETE FROM IP SPACE 
-        print("  [2/4] Deleting old block from IP Space...")
-        target_space["ipBlocks"] = [b for b in target_space.get("ipBlocks", []) if b.get("cidr") == "10.1.0.0/26"]
+        print("  [2/4] Deleting old blocks from IP Space...")
+        target_space["ipBlocks"] = [b for b in target_space["ipBlocks"] if b.get("cidr") == "10.1.0.0/26"]
         requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
 
         # 3. RECREATE IN IP SPACE
@@ -112,7 +116,7 @@ def update_vcfa_prereqs(token):
         else:
             print(f"[-] Final PG update failed: {res.text}")
     else:
-        print("  [!] CIDR is already correct. Enforcing top-level names...")
+        print("  [!] CIDR is correctly set to /26. Enforcing top-level names...")
         requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
         requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
         print("[+] Names enforced successfully.")
