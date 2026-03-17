@@ -72,6 +72,7 @@ def deploy_supervisor(token, morefs):
     payload = {
         "name": "wld01-supervisor",
         "control_plane": {
+            "count": 1,
             "network": {
                 "network": morefs["network"],
                 "backing": {
@@ -89,10 +90,10 @@ def deploy_supervisor(token, morefs):
                 },
                 "ip_management": {
                     "dhcp_enabled": False,
-                    "gateway_address": "10.1.1.1",
+                    "gateway_address": "10.1.1.1/24",
                     "ip_assignments": [
                         {
-                            "assignee": "KUBERNETES_CONTROL_PLANE",
+                            "assignee": "NODE",
                             "ranges": [
                                 {
                                     "address": "10.1.1.85",
