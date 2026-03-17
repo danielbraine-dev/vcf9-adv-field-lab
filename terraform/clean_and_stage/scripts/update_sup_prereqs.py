@@ -50,20 +50,21 @@ def update_vcfa_prereqs(token):
         spaces = res.json().get("values", res.json().get("content", []))
         for space in spaces:
             name = space.get("name", space.get("display_name", ""))
+            # Target both potential names for safety
             if name in ["us-west-region-Default IP Space", "us-east-region-IP Space"]:
                 print(f"Found IP Space: {name}. Updating...")
                 
-                # Update top-level names
-                if "name" in space: space["name"] = "us-east-region-IP Space"
+                space["name"] = "us-east-region-IP Space"
                 if "display_name" in space: space["display_name"] = "us-east-region-IP Space"
                 
-                # Update IP Blocks (In-place modification to preserve IDs!)
                 if "ipBlocks" in space:
                     for block in space["ipBlocks"]:
-                        if "cidr" in block and block["cidr"] == "10.1.0.0/28":
+                        # TARGET BY NAME: If the block is our external block, force the CIDR
+                        block_name = block.get("name", "")
+                        if "External-Block" in block_name or "us-west" in block_name:
+                            print(f"  [>] Updating Block: {block_name} to 10.1.0.0/26")
                             block["cidr"] = "10.1.0.0/26"
-                        if "name" in block and "us-west" in block["name"]:
-                            block["name"] = block["name"].replace("us-west", "us-east")
+                            block["name"] = block_name.replace("us-west", "us-east")
                 
                 put_url = f"{VCFA_URL}/cloudapi/v1/ipSpaces/{space['id']}"
                 put_res = requests.put(put_url, headers=headers, json=space, verify=False)
@@ -71,9 +72,7 @@ def update_vcfa_prereqs(token):
                 if put_res.status_code in [200, 201, 202, 204]:
                     print("[+] VCFA IP Space enforced safely!")
                 else:
-                    print(f"[-] Failed to update IP Space. HTTP {put_res.status_code}: {put_res.text}")
-    else:
-        print(f"[-] Could not fetch VCFA IP Spaces. HTTP {res.status_code}: {res.text}")
+                    print(f"[-] Failed to update IP Space: {put_res.text}")
 
     # 2. Update Provider Gateway
     print("\nEnforcing VCFA Provider Gateway state via /cloudapi/v1/providerGateways...")
