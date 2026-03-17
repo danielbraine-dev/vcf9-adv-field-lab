@@ -42,7 +42,7 @@ def update_vcfa_prereqs(token):
         "Content-Type": "application/json;version=9.0.0"
     }
 
-    print("\nStarting IP Block Replacement Workflow...")
+    print("\nStarting IP Space CIDR Correction Workflow...")
 
     # API Endpoints
     ip_spaces_url = f"{VCFA_URL}/cloudapi/v1/ipSpaces"
@@ -64,72 +64,46 @@ def update_vcfa_prereqs(token):
     target_space = requests.get(f"{ip_spaces_url}/{space_summary['id']}", headers=headers, verify=False).json()
     target_pg = requests.get(f"{pg_url}/{pg_summary['id']}", headers=headers, verify=False).json()
 
-    # THE FIX: Standardize top-level names AND purge display_name if it exists
-    target_space["name"] = "us-east-region-IP Space"
+    # ---------------------------------------------------------
+    # CLEANUP: Scrub bad keys we might have injected previously
+    # ---------------------------------------------------------
     target_space.pop("display_name", None)
+    target_space.pop("ipBlocks", None) 
     
-    target_pg["name"] = "us-east-region-PG"
     target_pg.pop("display_name", None)
+    target_pg.pop("ipBlocks", None)
 
-    if "ipBlocks" not in target_space: target_space["ipBlocks"] = []
-    if "ipBlocks" not in target_pg: target_pg["ipBlocks"] = []
-
-    # Print what the API actually sees right now
-    print("\n--- Current IP Blocks in IP Space ---")
-    correct_block_found = False
-    for b in target_space["ipBlocks"]:
-        print(f"  Found Block -> Name: '{b.get('name')}', CIDR: '{b.get('cidr')}'")
-        if b.get("cidr") == "10.1.0.0/26":
-            correct_block_found = True
-    print("-------------------------------------\n")
-
-    if not correct_block_found:
-        print("  [!] Correct /26 block is MISSING. Executing rebuild sequence...")
-
-        # 1. DETACH FROM PG
-        print("  [1/4] Detaching old blocks from Provider Gateway...")
-        target_pg["ipBlocks"] = [b for b in target_pg["ipBlocks"] if b.get("cidr") == "10.1.0.0/26"]
-        r1 = requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
-        if r1.status_code not in [200, 201, 202, 204]: print(f"[-] PG Detach Error: {r1.text}")
-
-        # 2. DELETE FROM IP SPACE 
-        print("  [2/4] Deleting old blocks from IP Space...")
-        target_space["ipBlocks"] = [b for b in target_space["ipBlocks"] if b.get("cidr") == "10.1.0.0/26"]
-        r2 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r2.status_code not in [200, 201, 202, 204]: print(f"[-] IP Space Delete Error: {r2.text}")
-
-        # 3. RECREATE IN IP SPACE
-        print("  [3/4] Creating new 10.1.0.0/26 block in IP Space...")
-        target_space["ipBlocks"].append({"name": "VPC-External-Block", "cidr": "10.1.0.0/26"})
-        r3 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r3.status_code not in [200, 201, 202, 204]: 
-            print(f"[-] IP Space Recreate Error: {r3.text}")
-            sys.exit(1)
-
-        # Fetch the IP space fresh to grab the newly generated database ID
-        fresh_space = requests.get(f"{ip_spaces_url}/{target_space['id']}", headers=headers, verify=False).json()
-        new_block = next((b for b in fresh_space.get("ipBlocks", []) if b.get("cidr") == "10.1.0.0/26"), None)
-
-        if not new_block:
-            print("[-] Failed to find the newly created block ID after PUT!")
-            sys.exit(1)
-
-        # 4. ATTACH TO PG
-        print("  [4/4] Attaching new block to Provider Gateway...")
-        target_pg["ipBlocks"].append(new_block) 
-        r4 = requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
-        
-        if r4.status_code in [200, 201, 202, 204]:
-            print("[+] SUCCESS! IP Space and Provider Gateway fully rebuilt and enforced!")
-        else:
-            print(f"[-] Final PG update failed: {r4.text}")
-            sys.exit(1)
+    # 1. Update Provider Gateway Name
+    print("Enforcing Provider Gateway Name...")
+    target_pg["name"] = "us-east-region-PG"
+    r_pg = requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
+    if r_pg.status_code in [200, 201, 202, 204]:
+        print("  [+] Provider Gateway name updated successfully.")
     else:
-        print("  [!] CIDR is correctly set to /26. Enforcing top-level names...")
-        requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
-        print("[+] Names enforced successfully.")
+        print(f"  [-] PG Update Error: {r_pg.text}")
 
+    # 2. Update IP Space Name & Internal CIDR Blocks
+    print("\nEnforcing IP Space and sizing CIDR...")
+    target_space["name"] = "us-east-region-IP Space"
+    
+    # THE FIX: Target the real VCF 9 array
+    cidr_updated = False
+    if "internalScopeCidrBlocks" in target_space:
+        for block in target_space["internalScopeCidrBlocks"]:
+            print(f"  Found Block -> Name: '{block.get('name')}', CIDR: '{block.get('cidr')}'")
+            if block.get("cidr") != "10.1.0.0/26":
+                print("  [!] Incorrect CIDR detected. Resizing to 10.1.0.0/26...")
+                block["cidr"] = "10.1.0.0/26"
+                cidr_updated = True
+
+    r_space = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+    if r_space.status_code in [200, 201, 202, 204]:
+        print("  [+] IP Space updated successfully.")
+        if cidr_updated:
+            print("  [+] Block CIDR successfully resized to /26.")
+    else:
+        print(f"  [-] IP Space Update Error: {r_space.text}")
+        sys.exit(1)
 
 def update_nsx_profile():
     print("\nWaiting 20 seconds for VCFA to push changes down to NSX-T...")
