@@ -138,16 +138,20 @@ def update_nsx_profile():
     print("Fetching synced IP Blocks from NSX-T...")
     res = requests.get(f"https://{NSX_HOST}/policy/api/v1/infra/ip-blocks", auth=nsx_auth, verify=False)
     nsx_block_path = None
+    
     if res.status_code == 200:
         for item in res.json().get("results", []):
             name = item.get("display_name", "")
-            if "us-east-region" in name:
+            cidr = item.get("cidr", "")
+            
+            # THE FIX: Target the block specifically by its unique /26 CIDR
+            if cidr == "10.1.0.0/26":
                 nsx_block_path = item.get("path")
-                print(f"[+] Found synced NSX-T IP Block: {name}")
+                print(f"[+] Found synced NSX-T IP Block: {name} ({cidr})")
                 break
     
     if not nsx_block_path:
-        print("[-] Failed to find the synced IP Block in NSX-T! VCFA sync may be delayed.")
+        print("[-] Failed to find the 10.1.0.0/26 IP Block in NSX-T! VCFA sync may be delayed.")
         return
         
     print("Enforcing NSX-T VPC Profile state...")
@@ -156,12 +160,14 @@ def update_nsx_profile():
         for profile in res.json().get("results", []):
             if profile.get("display_name") in ["Default VPC Connectivity Profile", "default"]:
                 
+                # Attach our newly found /26 block path
                 profile["external_ip_blocks"] = [nsx_block_path]
                 
                 put_url = f"https://{NSX_HOST}/policy/api/v1/orgs/default/projects/default/vpc-connectivity-profiles/{profile['id']}"
                 put_res = requests.put(put_url, auth=nsx_auth, json=profile, verify=False)
+                
                 if put_res.status_code == 200:
-                    print("[+] NSX-T VPC Profile successfully mapped to the new IP Block!")
+                    print("[+] NSX-T VPC Profile successfully mapped to the new 10.1.0.0/26 IP Block!")
                 else:
                     print(f"[-] Failed to update NSX-T VPC Profile: {put_res.text}")
                 break
