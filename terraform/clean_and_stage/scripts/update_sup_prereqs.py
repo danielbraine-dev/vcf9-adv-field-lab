@@ -83,30 +83,41 @@ def update_vcfa_prereqs(token):
     target_space["name"] = "us-east-region-IP Space"
     
     needs_rebuild = False
+    old_block_index = -1
+    
     if "internalScopeCidrBlocks" in target_space:
-        for block in target_space["internalScopeCidrBlocks"]:
+        for i, block in enumerate(target_space["internalScopeCidrBlocks"]):
             if block.get("cidr") != "10.1.0.0/26":
                 needs_rebuild = True
+                old_block_index = i
 
-    if needs_rebuild:
-        print("\n  [!] Incorrect CIDR detected. Bypassing SQL Constraints via Rebuild...")
+    if needs_rebuild and old_block_index != -1:
+        print("\n  [!] Incorrect CIDR detected. Bypassing size and SQL constraints via the '3-Step Shuffle'...")
         
-        # Step A: Delete the old block
-        print("  [1/2] Purging old /28 block from database...")
-        target_space["internalScopeCidrBlocks"] = [b for b in target_space.get("internalScopeCidrBlocks", []) if b.get("cidr") == "10.1.0.0/26"]
-        r_del = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r_del.status_code not in [200, 201, 202, 204]:
-            print(f"  [-] Failed to delete old block: {r_del.text}")
+        # Step A: Rename the old block to avoid the SQL Unique Name constraint
+        print("  [1/3] Renaming old block to avoid naming collisions...")
+        target_space["internalScopeCidrBlocks"][old_block_index]["name"] = "VPC-External-Block-OLD"
+        r1 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        if r1.status_code not in [200, 201, 202, 204]:
+            print(f"  [-] Failed to rename old block: {r1.text}")
             sys.exit(1)
 
-        # Step B: Inject the new block
-        print("  [2/2] Injecting new 10.1.0.0/26 block...")
+        # Step B: Inject the new correct block (Now size = 2)
+        print("  [2/3] Injecting the new 10.1.0.0/26 block...")
         target_space["internalScopeCidrBlocks"].append({"name": "VPC-External-Block", "cidr": "10.1.0.0/26"})
-        r_add = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r_add.status_code in [200, 201, 202, 204]:
+        r2 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        if r2.status_code not in [200, 201, 202, 204]:
+            print(f"  [-] Failed to inject new block: {r2.text}")
+            sys.exit(1)
+
+        # Step C: Delete the old renamed block (Now size = 1)
+        print("  [3/3] Purging the old block...")
+        target_space["internalScopeCidrBlocks"] = [b for b in target_space["internalScopeCidrBlocks"] if b.get("name") != "VPC-External-Block-OLD"]
+        r3 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        if r3.status_code in [200, 201, 202, 204]:
             print("  [+] SUCCESS! Block resized safely.")
         else:
-            print(f"  [-] Failed to add new block: {r_add.text}")
+            print(f"  [-] Failed to delete old block: {r3.text}")
             sys.exit(1)
             
     else:
