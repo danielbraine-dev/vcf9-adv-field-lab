@@ -73,9 +73,9 @@ def deploy_supervisor(token, morefs):
         "name": "wld01-supervisor",
         "control_plane": {
             "network": {
-                "network": morefs["network"],
                 "backing": {
-                    "backing": "VSPHERE"
+                    "backing": "VSPHERE",
+                    "network": morefs["network"]
                 },
                 "services": {
                     "dns": {
