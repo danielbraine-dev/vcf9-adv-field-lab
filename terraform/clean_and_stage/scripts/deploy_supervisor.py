@@ -129,7 +129,7 @@ def deploy_supervisor(token, morefs):
                         "count": 32
                     }
                 ],
-                "nsx_advanced": {
+                "nsx_advanced_lb": {
                     "server": {
                         "host": "10.1.1.200",
                         "port": 443
