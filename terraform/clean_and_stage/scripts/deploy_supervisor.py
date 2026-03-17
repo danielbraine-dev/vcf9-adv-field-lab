@@ -76,7 +76,10 @@ def deploy_supervisor(token, morefs):
                 "network": morefs["network"],
                 "backing": {
                     "backing": "NETWORK",
-                    "network": morefs["network"]
+                    "network": morefs["network"],
+                    "network_segment": {
+                        "networks": [morefs["network"]]
+                    }
                 },
                 "services": {
                     "dns": {
@@ -96,7 +99,7 @@ def deploy_supervisor(token, morefs):
                             "ranges": [
                                 {
                                     "address": "10.1.1.85",
-                                    "count": 5
+                                    "count": 10
                                 }
                             ]
                         }
