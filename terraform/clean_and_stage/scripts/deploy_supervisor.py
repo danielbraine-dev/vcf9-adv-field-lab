@@ -133,7 +133,10 @@ avi_cert = get_avi_cert("10.1.1.200")
                     "certificate_authority_chain": avi-cert,
                     "cloud_name": "nsx_cloud",
                     "password": "VMware123!VMware123!",
-                    "server": "10.1.1.200",
+                    "server": {
+                        "host": "10.1.1.200",
+                        "port": 443
+                    }
                     "username": "admin"
                 }
             }
