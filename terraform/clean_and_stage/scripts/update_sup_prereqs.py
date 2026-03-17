@@ -59,16 +59,17 @@ def update_vcfa_prereqs(token):
         print("[-] Could not find target IP Space or Provider Gateway summaries!")
         return
 
-    # THE FIX: Fetch the FULL objects using their direct IDs
+    # Fetch the FULL objects using their direct IDs
     print(f"Fetching full objects for Space ({space_summary['id']}) and PG ({pg_summary['id']})...")
     target_space = requests.get(f"{ip_spaces_url}/{space_summary['id']}", headers=headers, verify=False).json()
     target_pg = requests.get(f"{pg_url}/{pg_summary['id']}", headers=headers, verify=False).json()
 
-    # Standardize top-level names 
+    # THE FIX: Standardize top-level names AND purge display_name if it exists
     target_space["name"] = "us-east-region-IP Space"
-    target_space["display_name"] = "us-east-region-IP Space"
+    target_space.pop("display_name", None)
+    
     target_pg["name"] = "us-east-region-PG"
-    target_pg["display_name"] = "us-east-region-PG"
+    target_pg.pop("display_name", None)
 
     if "ipBlocks" not in target_space: target_space["ipBlocks"] = []
     if "ipBlocks" not in target_pg: target_pg["ipBlocks"] = []
@@ -128,6 +129,7 @@ def update_vcfa_prereqs(token):
         requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
         requests.put(f"{pg_url}/{target_pg['id']}", headers=headers, json=target_pg, verify=False)
         print("[+] Names enforced successfully.")
+
 
 def update_nsx_profile():
     print("\nWaiting 20 seconds for VCFA to push changes down to NSX-T...")
