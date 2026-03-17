@@ -65,12 +65,13 @@ def lookup_morefs(token):
 
     return morefs
 
+
 def deploy_supervisor(token, morefs):
     print(f"\nTriggering V9 Enable on {CLUSTER_NAME}...")
-
+    
+    # Dynamically fetch the cert again just to be safe
     avi_cert = get_avi_cert("10.1.1.200")
     
-    # The "Lean" VCF 9 Payload (Trusting NSX to handle Avi)
     payload = {
         "name": "wld01-supervisor",
         "control_plane": {
@@ -122,42 +123,27 @@ def deploy_supervisor(token, morefs):
                         }
                     ]
                 },
-                # THE FIX: Explicitly disable DHCP at the workload level
                 "ip_management": {
                     "dhcp_enabled": False
                 }
             },
             "edge": {
-                "provider": "NSX_ADVANCED",
-                "nsx_advanced": {
-                    "certificate_authority_chain": avi-cert,
+                # THE FIX: 9.0 enum and dictionary structure
+                "provider": "NSX_ADVANCED_LB",
+                "nsx_advanced_lb": {
+                    "certificate_authority_chain": avi_cert,
                     "cloud_name": "nsx_cloud",
                     "password": "VMware123!VMware123!",
                     "server": {
                         "host": "10.1.1.200",
                         "port": 443
-                    }
+                    },
                     "username": "admin"
                 }
             }
         }
     }
 
-    url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
-    headers = {
-        "vmware-api-session-id": token,
-        "Content-Type": "application/json"
-    }
-    
-    res = requests.post(url, headers=headers, json=payload, verify=False)
-    
-    if res.status_code in [200, 201, 202, 204]:
-        print("[+] SUCCESS! VCF 9 Supervisor deployment triggered!")
-    else:
-        print(f"[-] FAILED. HTTP {res.status_code}")
-        print(json.dumps(res.json(), indent=2))
-        sys.exit(1)
-    
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {
         "vmware-api-session-id": token,
