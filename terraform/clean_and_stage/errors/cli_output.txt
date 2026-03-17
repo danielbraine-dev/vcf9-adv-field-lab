@@ -1,4 +1,43 @@
-[ 93dd1d16-85d9-472d-a79a-51a07a4fa308 ] Internal Server Error
- - Could not execute JDBC batch update; SQL [/* Method: unknown */ /* insert com.vmware.vcloud.common.model.vcf.net.VcfIpSpaceIpBlockModel */ insert into vcf_ip_space_ip_block (backing_id, cidr, ip_space_id, name, id) values (?, ?, ?, ?, ?)]; constraint [uq_vc_ip_sp_ip_b_ip_spa_id_nam]; nested exception is org.hibernate.exception.ConstraintViolationException: Could not execute JDBC batch update
- - Batch entry 0 /* Method: unknown */ /* Method: unknown */ /* insert com.vmware.vcloud.common.model.vcf.net.VcfIpSpaceIpBlockModel */ insert into vcf_ip_space_ip_block (backing_id, cidr, ip_space_id, name, id) values (('vpc-external-block'), ('10.1.0.0/26'), ('0d13669f-06a6-4546-94b1-eb8e7adff2ff'::uuid), ('VPC-External-Block'), ('49e244fc-3b6c-457a-92ed-5fb58a41e91c'::uuid)) was aborted: ERROR: duplicate key value violates unique constraint "uq_vc_ip_sp_ip_b_ip_spa_id_nam"
-  Detail: Key (ip_space_id, name)=(0d13669f-06a6-4546-94b1-eb8e7adff2ff, VPC-External-Block) already exists.  Call getNextException to see other errors in the batch.
+Initiating Supervisor Deployment via vCenter API...
+Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
+Dynamically looking up vCenter MoRefs...
+
+Triggering V9 Enable on cluster-wld01-01a...
+[-] FAILED. HTTP 400
+{
+  "error_type": "INVALID_ARGUMENT",
+  "messages": [
+    {
+      "args": [
+        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network_backing",
+        "network"
+      ],
+      "default_message": "Structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network_backing' has a union with a field 'network' not required for this case",
+      "id": "vapi.data.structure.union.extra"
+    },
+    {
+      "args": [
+        "backing",
+        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network"
+      ],
+      "default_message": "Invalid field 'backing' in structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+    },
+    {
+      "args": [
+        "network",
+        "com.vmware.vcenter.namespace_management.supervisors.control_plane"
+      ],
+      "default_message": "Invalid field 'network' in structure 'com.vmware.vcenter.namespace_management.supervisors.control_plane'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+    },
+    {
+      "args": [
+        "control_plane",
+        "com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec"
+      ],
+      "default_message": "Invalid field 'control_plane' in structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+    }
+  ]
+}
