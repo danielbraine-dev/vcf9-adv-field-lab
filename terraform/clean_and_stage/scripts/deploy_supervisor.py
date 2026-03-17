@@ -57,27 +57,24 @@ def deploy_supervisor(token, morefs):
         "name": "wld01-supervisor",
         "control_plane": {
             "network": {
-                # Provide the Portgroup MoRef at the root
                 "network": morefs["network"],
                 "backing": {
-                    # Provide ONLY the enum discriminator here to satisfy the union
                     "backing": "VSPHERE_DVS"
                 },
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
-                        "searchdomains": ["site-a.vcf.lab"]
+                        "search_domains": ["site-a.vcf.lab"] 
                     },
                     "ntp": {
                         "servers": ["10.1.1.1"]
                     }
                 },
-                "ipmanagement": {
-                    "dhcpenabled": False,
-                    "gatewayaddress": "10.1.1.1",
-                    "ipassignments": [
+                "ip_management": { 
+                    "dhcp_enabled": False,
+                    "gateway_address": "10.1.1.1",
+                    "ip_assignments": [
                         {
-                            # Correct VCF 9 Enum
                             "assignee": "CONTROL_PLANE",
                             "ranges": [
                                 {
@@ -90,15 +87,15 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "size": "SMALL",
-            "storagepolicy": morefs["policy"]
+            "storage_policy": morefs["policy"] 
         },
         "workloads": {
             "network": {
-                "networktype": "NSX_VPC",
-                "nsxvpc": {
-                    "nsxproject": "Default",
-                    "vpcconnectivityprofile": "Default VPC Connectivity Profile",
-                    "defaultprivatecidrs": [
+                "network_type": "NSX_VPC",
+                "nsx_vpc": {
+                    "nsx_project": "Default",
+                    "vpc_connectivity_profile": "Default VPC Connectivity Profile",
+                    "default_private_cidrs": [
                         {
                             "address": "172.16.201.0",
                             "prefix": 24
@@ -107,7 +104,6 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                # Correct VCF 9 Enum for Avi
                 "provider": "NSX_ADVANCED_LB",
                 "load_balancer_address_ranges": [
                     {
@@ -126,7 +122,7 @@ def deploy_supervisor(token, morefs):
                 }
             }
         }
-    }     
+    }   
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {
         "vmware-api-session-id": token,
