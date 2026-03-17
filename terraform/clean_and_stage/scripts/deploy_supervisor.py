@@ -55,7 +55,7 @@ def deploy_supervisor(token, morefs):
     # Matching the Broadcom Developer Example exactly
     payload = {
         "name": "wld01-supervisor",
-        "controlplane": {
+        "control_plane": {
             "network": {
                 "network": morefs["network"],
                 "services": {
