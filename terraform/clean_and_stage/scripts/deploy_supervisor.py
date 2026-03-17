@@ -59,8 +59,8 @@ def deploy_supervisor(token, morefs):
             "network": {
                 "network": morefs["network"],
                 "backing": {
-                    "network": morefs["network"],
-                    "backing": "VSPHERE_DVS"
+                    "backing": "VSPHERE_DVS",
+                    "network": morefs["network"]
                 },
                 "services": {
                     "dns": {
@@ -76,7 +76,7 @@ def deploy_supervisor(token, morefs):
                     "gatewayaddress": "10.1.1.1",
                     "ipassignments": [
                         {
-                            "assignee": "KUBERNETES_CONTROL_PLANE",
+                            "assignee": "CONTROL_PLANE",
                             "ranges": [
                                 {
                                     "address": "10.1.1.85",
@@ -105,7 +105,7 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "NSX_VPC" # The example shows 'NSX_VPC' as the provider here
+                "provider": "nsx_advanced"
             }
         }
     }
