@@ -1,43 +1,12 @@
-Initiating Supervisor Deployment via vCenter API...
-Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
-Dynamically looking up vCenter MoRefs...
-
 Triggering V9 Enable on cluster-wld01-01a...
 [-] FAILED. HTTP 400
 {
-  "error_type": "INVALID_ARGUMENT",
   "messages": [
     {
-      "args": [
-        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network_backing",
-        "network"
-      ],
-      "default_message": "Structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network_backing' has a union with a field 'network' not required for this case",
-      "id": "vapi.data.structure.union.extra"
-    },
-    {
-      "args": [
-        "backing",
-        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network"
-      ],
-      "default_message": "Invalid field 'backing' in structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
-    },
-    {
-      "args": [
-        "network",
-        "com.vmware.vcenter.namespace_management.supervisors.control_plane"
-      ],
-      "default_message": "Invalid field 'network' in structure 'com.vmware.vcenter.namespace_management.supervisors.control_plane'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
-    },
-    {
-      "args": [
-        "control_plane",
-        "com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec"
-      ],
-      "default_message": "Invalid field 'control_plane' in structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
-      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+      "args": [],
+      "default_message": "Only one management network node IP range is currently allowed.",
+      "localized": "Only one management network node IP range is currently allowed.",
+      "id": "vcenter.wcp.enable.network.ip.node.range.support"
     }
   ]
 }
