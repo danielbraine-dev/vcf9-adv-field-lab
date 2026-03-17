@@ -83,42 +83,43 @@ def update_vcfa_prereqs(token):
     target_space["name"] = "us-east-region-IP Space"
     
     needs_rebuild = False
-    old_block_index = -1
-    
     if "internalScopeCidrBlocks" in target_space:
-        for i, block in enumerate(target_space["internalScopeCidrBlocks"]):
+        for block in target_space["internalScopeCidrBlocks"]:
             if block.get("cidr") != "10.1.0.0/26":
                 needs_rebuild = True
-                old_block_index = i
 
-    if needs_rebuild and old_block_index != -1:
-        print("\n  [!] Incorrect CIDR detected. Bypassing size and SQL constraints via the '3-Step Shuffle'...")
+    if needs_rebuild:
+        print("\n  [!] Incorrect CIDR detected. Executing 'Dummy Block Shuffle' to bypass constraints...")
         
-        # Step A: Rename the old block to avoid the SQL Unique Name constraint
-        print("  [1/3] Renaming old block to avoid naming collisions...")
-        target_space["internalScopeCidrBlocks"][old_block_index]["name"] = "VPC-External-Block-OLD"
+        # Step 1: Inject Non-Overlapping Dummy Block
+        print("  [1/4] Injecting temporary non-overlapping Dummy Block...")
+        target_space["internalScopeCidrBlocks"].append({"name": "Dummy-Block", "cidr": "192.168.255.0/29"})
         r1 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
         if r1.status_code not in [200, 201, 202, 204]:
-            print(f"  [-] Failed to rename old block: {r1.text}")
-            sys.exit(1)
+            print(f"  [-] Failed to add dummy block: {r1.text}"); sys.exit(1)
 
-        # Step B: Inject the new correct block (Now size = 2)
-        print("  [2/3] Injecting the new 10.1.0.0/26 block...")
-        target_space["internalScopeCidrBlocks"].append({"name": "VPC-External-Block", "cidr": "10.1.0.0/26"})
+        # Step 2: Delete the old /28 block
+        print("  [2/4] Purging the old /28 block...")
+        target_space["internalScopeCidrBlocks"] = [b for b in target_space["internalScopeCidrBlocks"] if b.get("name") == "Dummy-Block"]
         r2 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
         if r2.status_code not in [200, 201, 202, 204]:
-            print(f"  [-] Failed to inject new block: {r2.text}")
-            sys.exit(1)
+            print(f"  [-] Failed to delete old block: {r2.text}"); sys.exit(1)
 
-        # Step C: Delete the old renamed block (Now size = 1)
-        print("  [3/3] Purging the old block...")
-        target_space["internalScopeCidrBlocks"] = [b for b in target_space["internalScopeCidrBlocks"] if b.get("name") != "VPC-External-Block-OLD"]
+        # Step 3: Inject the real /26 block
+        print("  [3/4] Injecting the correct 10.1.0.0/26 block...")
+        target_space["internalScopeCidrBlocks"].append({"name": "VPC-External-Block", "cidr": "10.1.0.0/26"})
         r3 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-        if r3.status_code in [200, 201, 202, 204]:
-            print("  [+] SUCCESS! Block resized safely.")
+        if r3.status_code not in [200, 201, 202, 204]:
+            print(f"  [-] Failed to inject new block: {r3.text}"); sys.exit(1)
+
+        # Step 4: Purge the Dummy Block
+        print("  [4/4] Removing temporary Dummy Block...")
+        target_space["internalScopeCidrBlocks"] = [b for b in target_space["internalScopeCidrBlocks"] if b.get("name") != "Dummy-Block"]
+        r4 = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        if r4.status_code in [200, 201, 202, 204]:
+            print("  [+] SUCCESS! IP Space CIDR perfectly resized to /26.")
         else:
-            print(f"  [-] Failed to delete old block: {r3.text}")
-            sys.exit(1)
+            print(f"  [-] Failed to remove dummy block: {r4.text}"); sys.exit(1)
             
     else:
         print("\n  [+] CIDR is already correct. Enforcing top-level names...")
