@@ -1,12 +1,43 @@
-2026-03-17T18:48:55.194Z info wcp [auth/session.go:144] [opID=69b9a0d3] Scheduling session cleanup in 3h46m38.806000042s
-2026-03-17T18:48:55.194Z debug wcp [wcp/session.go:83] [opID=69b9a0d3] Created session, returning session id
-2026-03-17T18:48:55.214Z info wcp [auth/session.go:225] Got session for Administrator@WLD.SSO
-2026-03-17T18:48:55.215Z debug wcp [auth/handlers.go:149] Successfully validated session token.
-2026-03-17T18:48:55.215Z debug wcp [vapiauth/permission_validator.go:56] [opID=wcp-AuthzFilter] Validating permissions; operation: com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster, requested: map[{isOperation:false id:com.vmware.vcenter.namespace_management resourceType:}:[] {isOperation:true id:com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster resourceType:}:[]]
-2026-03-17T18:48:55.302Z error wcp [handlers/panic.go:27] panic: Unsupported network backing VSPHERE_DVS
+Initiating Supervisor Deployment via vCenter API...
+Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
+Dynamically looking up vCenter MoRefs...
 
-goroutine 696 [running]:
-server/pkg/http/handlers.(*ExitOnPanicHandler).ServeHTTP.func1()
-	/build/mts/release/bora-24933634/bora/vpx/wcp/wcpsvc/src/server/pkg/http/handlers/panic.go:26 +0x6c
-panic({0x617dec0?, 0xc0020ddc30?})
-	/build/mts/release/bora-24933634/compcache/cayman_go/ob-24430958/linux64/src/runtime/panic.go:785 +0x132
+Triggering V9 Enable on cluster-wld01-01a...
+[-] FAILED. HTTP 400
+{
+  "error_type": "INVALID_ARGUMENT",
+  "messages": [
+    {
+      "args": [
+        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network_backing",
+        "network"
+      ],
+      "default_message": "Structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network_backing' has a union with a field 'network' not required for this case",
+      "id": "vapi.data.structure.union.extra"
+    },
+    {
+      "args": [
+        "backing",
+        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network"
+      ],
+      "default_message": "Invalid field 'backing' in structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+    },
+    {
+      "args": [
+        "network",
+        "com.vmware.vcenter.namespace_management.supervisors.control_plane"
+      ],
+      "default_message": "Invalid field 'network' in structure 'com.vmware.vcenter.namespace_management.supervisors.control_plane'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+    },
+    {
+      "args": [
+        "control_plane",
+        "com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec"
+      ],
+      "default_message": "Invalid field 'control_plane' in structure 'com.vmware.vcenter.namespace_management.supervisors.enable_on_compute_cluster_spec'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+    }
+  ]
+}
