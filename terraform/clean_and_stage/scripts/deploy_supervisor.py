@@ -57,11 +57,8 @@ def deploy_supervisor(token, morefs):
         "name": "wld01-supervisor",
         "control_plane": {
             "network": {
+                # Just the MoRef. No 'backing' dictionary needed!
                 "network": morefs["network"],
-                "backing": {
-                    "backing": "VSPHERE_DVS",
-                    "network": morefs["network"]
-                },
                 "services": {
                     "dns": {
                         "servers": ["10.1.1.1"],
@@ -124,7 +121,6 @@ def deploy_supervisor(token, morefs):
             }
         }
     }
-
     url = f"https://{VC_HOST}/api/vcenter/namespace-management/supervisors/{morefs['cluster']}?action=enable_on_compute_cluster"
     headers = {
         "vmware-api-session-id": token,
