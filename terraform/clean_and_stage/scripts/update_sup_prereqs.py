@@ -64,12 +64,9 @@ def update_vcfa_prereqs(token):
     target_space = requests.get(f"{ip_spaces_url}/{space_summary['id']}", headers=headers, verify=False).json()
     target_pg = requests.get(f"{pg_url}/{pg_summary['id']}", headers=headers, verify=False).json()
 
-    # ---------------------------------------------------------
     # CLEANUP: Scrub bad keys we might have injected previously
-    # ---------------------------------------------------------
     target_space.pop("display_name", None)
     target_space.pop("ipBlocks", None) 
-    
     target_pg.pop("display_name", None)
     target_pg.pop("ipBlocks", None)
 
@@ -82,28 +79,39 @@ def update_vcfa_prereqs(token):
     else:
         print(f"  [-] PG Update Error: {r_pg.text}")
 
-    # 2. Update IP Space Name & Internal CIDR Blocks
-    print("\nEnforcing IP Space and sizing CIDR...")
+    # 2. IP Space CIDR Logic
     target_space["name"] = "us-east-region-IP Space"
     
-    # THE FIX: Target the real VCF 9 array
-    cidr_updated = False
+    needs_rebuild = False
     if "internalScopeCidrBlocks" in target_space:
         for block in target_space["internalScopeCidrBlocks"]:
-            print(f"  Found Block -> Name: '{block.get('name')}', CIDR: '{block.get('cidr')}'")
             if block.get("cidr") != "10.1.0.0/26":
-                print("  [!] Incorrect CIDR detected. Resizing to 10.1.0.0/26...")
-                block["cidr"] = "10.1.0.0/26"
-                cidr_updated = True
+                needs_rebuild = True
 
-    r_space = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
-    if r_space.status_code in [200, 201, 202, 204]:
-        print("  [+] IP Space updated successfully.")
-        if cidr_updated:
-            print("  [+] Block CIDR successfully resized to /26.")
+    if needs_rebuild:
+        print("\n  [!] Incorrect CIDR detected. Bypassing SQL Constraints via Rebuild...")
+        
+        # Step A: Delete the old block
+        print("  [1/2] Purging old /28 block from database...")
+        target_space["internalScopeCidrBlocks"] = [b for b in target_space.get("internalScopeCidrBlocks", []) if b.get("cidr") == "10.1.0.0/26"]
+        r_del = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        if r_del.status_code not in [200, 201, 202, 204]:
+            print(f"  [-] Failed to delete old block: {r_del.text}")
+            sys.exit(1)
+
+        # Step B: Inject the new block
+        print("  [2/2] Injecting new 10.1.0.0/26 block...")
+        target_space["internalScopeCidrBlocks"].append({"name": "VPC-External-Block", "cidr": "10.1.0.0/26"})
+        r_add = requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
+        if r_add.status_code in [200, 201, 202, 204]:
+            print("  [+] SUCCESS! Block resized safely.")
+        else:
+            print(f"  [-] Failed to add new block: {r_add.text}")
+            sys.exit(1)
+            
     else:
-        print(f"  [-] IP Space Update Error: {r_space.text}")
-        sys.exit(1)
+        print("\n  [+] CIDR is already correct. Enforcing top-level names...")
+        requests.put(f"{ip_spaces_url}/{target_space['id']}", headers=headers, json=target_space, verify=False)
 
 def update_nsx_profile():
     print("\nWaiting 20 seconds for VCFA to push changes down to NSX-T...")
