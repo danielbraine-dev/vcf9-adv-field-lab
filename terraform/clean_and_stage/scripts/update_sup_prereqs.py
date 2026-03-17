@@ -49,30 +49,37 @@ def update_vcfa_prereqs(token):
     if res.status_code == 200:
         spaces = res.json().get("values", res.json().get("content", []))
         for space in spaces:
-            name = space.get("name", space.get("display_name", ""))
-            # Target both potential names for safety
-            if name in ["us-west-region-Default IP Space", "us-east-region-IP Space"]:
-                print(f"Found IP Space: {name}. Updating...")
+            # We target the space by its ID or Name (since Name might have already changed)
+            if "us-east-region" in space.get("name", "") or "us-west" in space.get("name", ""):
+                print(f"Targeting IP Space: {space['name']} (ID: {space['id']})")
                 
+                # Force top-level rename
                 space["name"] = "us-east-region-IP Space"
-                if "display_name" in space: space["display_name"] = "us-east-region-IP Space"
                 
                 if "ipBlocks" in space:
+                    # We iterate over every block. If we find a block that isn't /26, we force it.
                     for block in space["ipBlocks"]:
-                        # TARGET BY NAME: If the block is our external block, force the CIDR
-                        block_name = block.get("name", "")
-                        if "External-Block" in block_name or "us-west" in block_name:
-                            print(f"  [>] Updating Block: {block_name} to 10.1.0.0/26")
+                        current_cidr = block.get("cidr", "")
+                        print(f"  [-] Checking Block: {block.get('name')} | Current CIDR: {current_cidr}")
+                        
+                        # LOGIC CHANGE: We force it if it's NOT /26, regardless of what it is.
+                        if current_cidr != "10.1.0.0/26":
+                            print(f"  [!] FORCING UPDATE: {current_cidr} -> 10.1.0.0/26")
                             block["cidr"] = "10.1.0.0/26"
-                            block["name"] = block_name.replace("us-west", "us-east")
-                
+                            # Ensure name is also corrected
+                            if "us-west" in block.get("name", ""):
+                                block["name"] = block["name"].replace("us-west", "us-east")
+
+                # DEBUG: Verify the local object is actually changed before sending
+                # print(f"DEBUG PAYLOAD: {json.dumps(space['ipBlocks'])}")
+
                 put_url = f"{VCFA_URL}/cloudapi/v1/ipSpaces/{space['id']}"
                 put_res = requests.put(put_url, headers=headers, json=space, verify=False)
                 
                 if put_res.status_code in [200, 201, 202, 204]:
-                    print("[+] VCFA IP Space enforced safely!")
+                    print("[+] VCFA IP Space PUT request accepted by API.")
                 else:
-                    print(f"[-] Failed to update IP Space: {put_res.text}")
+                    print(f"[-] API Rejected the update: {put_res.text}")
 
     # 2. Update Provider Gateway
     print("\nEnforcing VCFA Provider Gateway state via /cloudapi/v1/providerGateways...")
