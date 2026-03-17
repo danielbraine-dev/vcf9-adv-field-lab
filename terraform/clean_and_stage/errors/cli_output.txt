@@ -1,12 +1,194 @@
-Triggering V9 Enable on cluster-wld01-01a...
-[-] FAILED. HTTP 400
 {
-  "messages": [
-    {
-      "args": [],
-      "default_message": "Only one management network node IP range is currently allowed.",
-      "localized": "Only one management network node IP range is currently allowed.",
-      "id": "vcenter.wcp.enable.network.ip.node.range.support"
-    }
-  ]
+    "control_plane": {
+        "count": 0,
+        "login_banner": "",
+        "network": {
+            "backing": {
+                "backing": "NETWORK",
+                "network": "",
+                "network_segment": {
+                    "networks": [ "" ]
+                }
+            },
+            "floating_IP_address": "",
+            "ip_management": {
+                "dhcp_enabled": false,
+                "gateway_address": "",
+                "ip_assignments": [ {
+                    "assignee": "POD",
+                    "ranges": [ {
+                        "address": "",
+                        "count": 0
+                    } ]
+                } ]
+            },
+            "network": "",
+            "proxy": {
+                "http_proxy_config": "",
+                "https_proxy_config": "",
+                "no_proxy_config": [ "" ],
+                "proxy_settings_source": "VC_INHERITED",
+                "tls_root_ca_bundle": ""
+            },
+            "services": {
+                "dns": {
+                    "search_domains": [ "" ],
+                    "servers": [ "" ]
+                },
+                "ntp": {
+                    "servers": [ "" ]
+                }
+            }
+        },
+        "size": "TINY",
+        "storage_policy": ""
+    },
+    "name": "",
+    "workloads": {
+        "edge": {
+            "foundation": {
+                "deployment_target": {
+                    "availability": "ACTIVE_PASSIVE",
+                    "deployment_size": "SMALL",
+                    "storage_policy": "",
+                    "zones": [ "" ]
+                },
+                "interfaces": [ {
+                    "network": {
+                        "dvpg_network": {
+                            "ip_config": {
+                                "gateway": "",
+                                "ip_ranges": [ {
+                                    "address": "",
+                                    "count": 0
+                                } ]
+                            },
+                            "ipam": "STATIC",
+                            "name": "",
+                            "network": ""
+                        },
+                        "network_type": "SUPERVISOR_MANAGEMENT"
+                    },
+                    "personas": [ "MANAGEMENT" ]
+                } ],
+                "network_services": {
+                    "dns": {
+                        "search_domains": [ "" ],
+                        "servers": [ "" ]
+                    },
+                    "ntp": {
+                        "servers": [ "" ]
+                    },
+                    "syslog": {
+                        "certificate_authority_pem": "",
+                        "endpoint": ""
+                    }
+                }
+            },
+            "haproxy": {
+                "certificate_authority_chain": "",
+                "password": "",
+                "servers": [ {
+                    "host": "",
+                    "port": 0
+                } ],
+                "username": ""
+            },
+            "id": "",
+            "load_balancer_address_ranges": [ {
+                "address": "",
+                "count": 0
+            } ],
+            "nsx": {
+                "default_ingress_TLS_certificate": "",
+                "edge_cluster_ID": "",
+                "egress_IP_ranges": [ {
+                    "address": "",
+                    "count": 0
+                } ],
+                "load_balancer_size": "SMALL",
+                "routing_mode": "ROUTED",
+                "t0_gateway": ""
+            },
+            "nsx_advanced": {
+                "certificate_authority_chain": "",
+                "cloud_name": "",
+                "password": "",
+                "server": {
+                    "host": "",
+                    "port": 0
+                },
+                "username": ""
+            },
+            "provider": "HAPROXY"
+        },
+        "images": {
+            "content_libraries": [ {
+                "content_library": "",
+                "resource_naming_strategy": "FROM_ITEM_ID",
+                "supervisor_services": [ "" ]
+            } ],
+            "kubernetes_content_library": "",
+            "registry": {
+                "certificate_chain": "",
+                "hostname": "",
+                "password": "",
+                "port": 0,
+                "username": ""
+            },
+            "repository": ""
+        },
+        "kube_API_server_options": {
+            "security": {
+                "certificate_dns_names": [ "" ]
+            }
+        },
+        "network": {
+            "ip_management": {
+                "dhcp_enabled": false,
+                "gateway_address": "",
+                "ip_assignments": [ {
+                    "assignee": "POD",
+                    "ranges": [ {
+                        "address": "",
+                        "count": 0
+                    } ]
+                } ]
+            },
+            "network": "",
+            "network_type": "NSXT",
+            "nsx": {
+                "dvs": "",
+                "namespace_subnet_prefix": 0
+            },
+            "nsx_vpc": {
+                "default_private_cidrs": [ {
+                    "address": "",
+                    "prefix": 0
+                } ],
+                "nsx_project": "",
+                "vpc_connectivity_profile": ""
+            },
+            "services": {
+                "dns": {
+                    "search_domains": [ "" ],
+                    "servers": [ "" ]
+                },
+                "ntp": {
+                    "servers": [ "" ]
+                }
+            },
+            "vsphere": {
+                "dvpg": ""
+            }
+        },
+        "storage": {
+            "cloud_native_file_volume": {
+                "vsan_clusters": [ "" ]
+            },
+            "ephemeral_storage_policy": "",
+            "image_storage_policy": ""
+        }
+    },
+    "zone": ""
 }
