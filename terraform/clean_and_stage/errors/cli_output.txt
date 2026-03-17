@@ -9,16 +9,32 @@ Triggering V9 Enable on cluster-wld01-01a...
   "messages": [
     {
       "args": [
-        "backing",
-        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network"
+        "search_domains",
+        "com.vmware.vcenter.namespace_management.networks.service.DNS"
       ],
-      "default_message": "Field 'backing' missing from structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
+      "default_message": "Field 'search_domains' missing from structure 'com.vmware.vcenter.namespace_management.networks.service.DNS'",
       "id": "vapi.bindings.typeconverter.struct.field.missing"
     },
     {
       "args": [
-        "network",
-        "com.vmware.vcenter.namespace_management.supervisors.control_plane"
+        "dns",
+        "com.vmware.vcenter.namespace_management.networks.services"
+      ],
+      "default_message": "Invalid field 'dns' in structure 'com.vmware.vcenter.namespace_management.networks.services'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+    },
+    {
+      "args": [
+        "services",
+        "com.vmware.vcenter.namespace_management.supervisors.networks.management.network"
+      ],
+      "default_message": "Invalid field 'services' in structure 'com.vmware.vcenter.namespace_management.supervisors.networks.management.network'",
+      "id": "vapi.bindings.typeconverter.struct.field.invalid"
+    },
+    {
+      "args": [
+        "com.vmware.vcenter.namespace_management.supervisors.control_plane",
+        "network"
       ],
       "default_message": "Invalid field 'network' in structure 'com.vmware.vcenter.namespace_management.supervisors.control_plane'",
       "id": "vapi.bindings.typeconverter.struct.field.invalid"
