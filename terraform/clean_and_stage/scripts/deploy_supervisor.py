@@ -108,6 +108,9 @@ def deploy_supervisor(token, morefs):
             "storage_policy": morefs["policy"]
         },
         "workloads": {
+            "ip_management":{
+                "dhcp_enabled": False
+            },
             "network": {
                 "network_type": "NSX_VPC",
                 "nsx_vpc": {
