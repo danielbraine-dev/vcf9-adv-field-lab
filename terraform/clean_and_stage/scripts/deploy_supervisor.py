@@ -123,6 +123,15 @@ def deploy_supervisor(token, morefs):
                         }
                     ]
                 },
+                "services": {
+                    "dns": {
+                        "servers": ["10.1.1.1"],
+                        "search_domains": ["site-a.vcf.lab"]
+                    },
+                    "ntp": {
+                        "servers": ["10.1.1.1"]
+                    }
+                },
                 "ip_management": {
                     "dhcp_enabled": False,
                 "ip_assignments": [
