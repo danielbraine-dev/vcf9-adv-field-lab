@@ -134,7 +134,7 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "NSX_LB"
+                "provider": "nsx"
             }
         }
     }
