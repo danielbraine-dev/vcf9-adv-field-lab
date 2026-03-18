@@ -133,17 +133,7 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "NSX_ADVANCED",
-                "nsx_advanced": {
-                    "certificate_authority_chain": avi_cert,
-                    "cloud_name": "nsx_cloud",
-                    "password": "VMware123!VMware123!",
-                    "server": {
-                        "host": "10.1.1.200",
-                        "port": 443
-                    },
-                    "username": "admin"
-                }
+                "provider": "NSX_REGISTERED_AVI",
             }
         }
     }
