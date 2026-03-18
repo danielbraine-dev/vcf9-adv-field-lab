@@ -1,20 +1,283 @@
-Initiating Supervisor Deployment via vCenter API...
-Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
-Dynamically looking up vCenter MoRefs...
+body	
+VcenterNamespaceManagementSupervisorsEnableOnComputeCluster {
 
-Triggering V9 Enable on cluster-wld01-01a...
-Dynamically fetching SSL certificate from Avi Controller (10.1.1.200)...
-[-] FAILED. HTTP 500
-{
-  "messages": [
-    {
-      "args": [
-        "",
-        "0"
-      ],
-      "default_message": "CIDR address  and prefix 0 are not valid.",
-      "localized": "CIDR address  and prefix 0 are not valid.",
-      "id": "vcenter.wcp.netspec.cidr.invalid"
+    control_plane:  (Object, required)
+    VcenterNamespaceManagementSupervisorsControlPlane {
+        count:  (integer)
+        Number of control plane VMs requested during Supervisor enablement. The allowed values are either 1 or 3.
+        If unset, defaults to 3.
+        login_banner:  (string)
+        ControlPlane.login-banner is a disclaimer displayed prior to login via the Kubectl plugin.
+
+        If this banner is unset, no message will be displayed to users.
+        network:  (Object, required)
+        VcenterNamespaceManagementSupervisorsNetworksManagementNetwork {
+            backing:  (Object, required)
+            VcenterNamespaceManagementSupervisorsNetworksManagementNetworkBacking {
+                backing:  (string, required)
+                NetworkBackingEnum enumerates types of network backings supported by the Supervisor for the management network.
+                VcenterNamespaceManagementSupervisorsNetworksManagementNetworkBackingEnum {
+                    NETWORK
+                    NETWORK_SEGMENT 
+                }
+                network:  (string)
+                The Managed Object ID of the Network object.
+                This field is optional and it is only relevant when the value of NetworkBacking.backing is NETWORK.
+                When clients pass a value of this structure as a parameter, the field must be an identifier for the resource type: Network. When operations return a value of this structure as a result, the field will be an identifier for the resource type: Network.
+                network_segment:  (Object)
+                VcenterNamespaceManagementSupervisorsNetworksNetworkSegment {
+                    networks:  (Array<string>, required)
+                    List of Standard Port Groups or Distributed Virtual Port Groups or Opaque Network identifiers that are part of the same layer 2 broadcast domain.
+                    When clients pass a value of this structure as a parameter, the field must contain identifiers for the resource type: Network. When operations return a value of this structure as a result, the field will contain identifiers for the resource type: Network.
+                } 
+            }
+            floating_IP_address:  (string)
+            Network.floating-ip-address is an IP address that provides a stable endpoint to the control plane. This address if specified must be an unused statically allocated IP address on the management network.
+
+            If unset and the management network is a static network, this address should be allocated in a static IP configuration which occurs when IPManagement.dhcp-enabled is set to false. If unset and the management network is a DHCP network, The Supervisor will attempt to use the DHCP server to allocate this address. You should ensure the DHCP server is configured to persist IP addresses indefinitely using client identifiers if this configuration is used.
+            ip_management:  (Object)
+            VcenterNamespaceManagementNetworksIPManagement {
+                dhcp_enabled:  (boolean)
+                IPManagement.dhcp-enabled If set true, configures IP address using the DHCP server on the broadcast domain unless the corresponding IPManagement.ip-assignments are set.
+                If unset this field defaults to true.
+                gateway_address:  (string)
+                IPManagement.gateway-address is the IP address combined with the subnet prefix length (e.g. 192.168.1.1/24) of the default gateway of this network.
+                If IPManagement.dhcp-enabled is not set, or this is an NSX network, this address must be set.
+                ip_assignments:  (Array<VcenterNamespaceManagementNetworksIPAssignment>)
+                IPManagement.ip-assignments are a list of roles that can be allocated to IP addresses. If IPManagement.gateway-address is specified, these assignments must be on the same subnet.
+                These assignments are optional when using DHCP.
+                [
+                VcenterNamespaceManagementNetworksIPAssignment {
+                    assignee:  (string)
+                    IPAssignment.Assignment lists the different entities that require IP ranges. These assignments fulfill different needs in the Kubernetes environment.
+                    VcenterNamespaceManagementNetworksIPAssignmentAssignment {
+                        POD
+                        NODE
+                        SERVICE 
+                    }
+                    ranges:  (Array<VcenterNamespaceManagementNetworksIPRange>, required)
+                    IPAssignment.ranges lists the available IP addresses that can be consumed by Supervisor to run the cluster.
+                    [
+                    VcenterNamespaceManagementNetworksIPRange {
+                        address:  (string, required)
+                        IPRange.address is the starting IP address of the IPRange.
+                        count:  (integer, required)
+                        IPRange.count is number of IP addresses in the range.
+
+                        For example:
+
+                        A /24 subnet will have a count of 256.
+
+                        A /24 subnet with a gateway address and a broadcast address will have a count of 254.
+                    }
+                    ]
+                }
+                ]
+            }
+            network:  (string)
+            Network.network is a unique identifier for this network which can be referenced later for updates or queries.
+
+            If unset, an ID will be generated.
+            When clients pass a value of this structure as a parameter, the field must be an identifier for the resource type: vcenter.namespace_management.Network. When operations return a value of this structure as a result, the field will be an identifier for the resource type: vcenter.namespace_management.Network.
+            proxy:  (Object)
+            VcenterNamespaceManagementSupervisorsNetworksManagementProxyConfiguration {
+                http_proxy_config:  (string)
+                HTTP proxy configuration. Examples:
+
+                - http://username:password@proxy.vmware.com:8080
+                - https://proxy.vmware.com:4443
+
+                This will be used if CLUSTER_CONFIGURED is used for the source, otherwise this will be ignored.
+
+                If unset no HTTP proxy will be used.
+                https_proxy_config:  (string)
+                HTTPS proxy configuration. Examples:
+
+                - http://username:password@proxy.vmware.com:8080
+                - https://proxy.vmware.com:4443
+
+                This will be used if CLUSTER_CONFIGURED is used for the source, otherwise this will be ignored.
+
+                If unset no HTTPS proxy will be used.
+                no_proxy_config:  (Array<string>)
+                List of addresses that should be accessed directly.
+
+                This will be used if CLUSTER_CONFIGURED is used for the source, otherwise this will be ignored.
+
+                If unset there won't be any excluded addresses.
+                proxy_settings_source:  (string, required)
+                The settings can be inherited from the vCenter settings, so the Supervisor settings will be synced. The settings can be applied directly on the Supervisor level, or the Supervisor can be configured not to use a proxy.
+                VcenterNamespaceManagementSupervisorsNetworksManagementProxySettingsSource {
+                    VC_INHERITED
+                    CLUSTER_CONFIGURED
+                    NONE 
+                }
+                tls_root_ca_bundle:  (string)
+                Proxy TLS root CA bundle which will be used to verify the proxy's certificates. Every certificate in the bundle is expected to be in PEM format.
+
+                This will be used if CLUSTER_CONFIGURED is used for the source, otherwise this will be ignored.
+
+                If unset only the vCenter certificates applied in VECS (VMware Endpoint Certificate Store) will be used.
+            }
+            services:  (Object)
+            VcenterNamespaceManagementNetworksServices {
+                dns:  (Object)
+                VcenterNamespaceManagementNetworksServiceDNS {
+                    search_domains:  (Array<string>, required)
+                    DNS.search-domains is a list of DNS search domains to be used on this network.
+
+                    This field is useful for corporate networks or local domains that are not publicly resolvable.
+
+                    If empty, no search domains will be configured.
+                    servers:  (Array<string>, required)
+                    DNS.servers is a list of IP addresses that clients may use for DNS resolution on a given network in priority order.
+
+                    If empty, no DNS servers will be configured.
+                }
+                ntp:  (Object)
+                VcenterNamespaceManagementNetworksServiceNTP {
+                    servers:  (Array<string>, required)
+                    NTP.servers contains a list of servers in priority order that clients can use for network time protocol.
+                    If unset, no NTP servers will be configured.
+                } 
+            } 
+        }
+        size:  (string)
+        The SizingHint enumerated type determines the configuration of Kubernetes API server and the worker nodes. It also determines the default values associated with the maximum number of pods and services. Use ClusterSizeInfo.get to get information associated with a SizingHint.
+        VcenterNamespaceManagementSupervisorsSizingHint {
+            TINY
+            SMALL
+            MEDIUM
+            LARGE 
+        }
+        storage_policy:  (string)
+        ControlPlane.storage-policy identifies the storage policy backing the Supervisor Kubernetes API server.
+
+        This resource is required.
+        When clients pass a value of this structure as a parameter, the field must be an identifier for the resource type: SpsStorageProfile. When operations return a value of this structure as a result, the field will be an identifier for the resource type: SpsStorageProfile.
     }
-  ]
-}
+    name:  (string, required)
+    A Supervisors.EnableSpec.name is a user-friendly identifier for this Supervisor.
+    workloads:  (Object, required)
+    VcenterNamespaceManagementSupervisorsWorkloads {
+        edge:  (Object, required)
+        VcenterNamespaceManagementNetworksEdgesEdge {
+            foundation:  (Object)
+            VcenterNamespaceManagementNetworksEdgesVsphereFoundationConfig { ... }
+            haproxy:  (Object)
+            VcenterNamespaceManagementNetworksEdgesHAProxyConfig { ... }
+            id:  (string)
+            Edge.id is a unique identifier that can be referenced for updates.
+            If unset, an ID will be automatically generated.
+            When clients pass a value of this structure as a parameter, the field must be an identifier for the resource type: vcenter.namespace_management.network.edge.Edge. When operations return a value of this structure as a result, the field will be an identifier for the resource type: vcenter.namespace_management.network.edge.Edge.
+            load_balancer_address_ranges:  (Array<VcenterNamespaceManagementNetworksIPRange>)
+            Edge.load-balancer-address-ranges defines the list of addresses that a load balancer can consume to publish Kubernetes services. This range must contain at least one IP address unless the NSX Advanced provider is selected. It is recommended to supply a large enough range to support load balancers requested for pods in the control plane and Kubernetes Clusters.
+
+            This field must be set if Edge.provider is not an NSX Advanced Load Balancer.
+            [
+            VcenterNamespaceManagementNetworksIPRange { ... }
+            ]
+            nsx:  (Object)
+            VcenterNamespaceManagementNetworksEdgesNSXConfig { ... }
+            nsx_advanced:  (Object)
+            VcenterNamespaceManagementNetworksEdgesNSXAdvancedLBConfig { ... }
+            provider:  (string)
+            EdgeProvider describes the supported available edge services.
+            VcenterNamespaceManagementNetworksEdgesEdgeProvider { ... } 
+        }
+        images:  (Object)
+        VcenterNamespaceManagementSupervisorsImageSyncConfig { ... }
+        kube_API_server_options:  (Object)
+        VcenterNamespaceManagementSupervisorsKubeAPIServerOptions { ... }
+        network:  (Object, required)
+        VcenterNamespaceManagementSupervisorsNetworksWorkloadNetwork {
+            ip_management:  (Object)
+            VcenterNamespaceManagementNetworksIPManagement {
+                dhcp_enabled:  (boolean)
+                IPManagement.dhcp-enabled If set true, configures IP address using the DHCP server on the broadcast domain unless the corresponding IPManagement.ip-assignments are set.
+                If unset this field defaults to true.
+                gateway_address:  (string)
+                IPManagement.gateway-address is the IP address combined with the subnet prefix length (e.g. 192.168.1.1/24) of the default gateway of this network.
+                If IPManagement.dhcp-enabled is not set, or this is an NSX network, this address must be set.
+                ip_assignments:  (Array<VcenterNamespaceManagementNetworksIPAssignment>)
+                IPManagement.ip-assignments are a list of roles that can be allocated to IP addresses. If IPManagement.gateway-address is specified, these assignments must be on the same subnet.
+                These assignments are optional when using DHCP.
+                [
+                VcenterNamespaceManagementNetworksIPAssignment {
+                    assignee:  (string)
+                    IPAssignment.Assignment lists the different entities that require IP ranges. These assignments fulfill different needs in the Kubernetes environment.
+                    VcenterNamespaceManagementNetworksIPAssignmentAssignment {
+                        POD
+                        NODE
+                        SERVICE 
+                    }
+                    ranges:  (Array<VcenterNamespaceManagementNetworksIPRange>, required)
+                    IPAssignment.ranges lists the available IP addresses that can be consumed by Supervisor to run the cluster.
+                    [
+                    VcenterNamespaceManagementNetworksIPRange {
+                        address:  (string, required)
+                        IPRange.address is the starting IP address of the IPRange.
+                        count:  (integer, required)
+                        IPRange.count is number of IP addresses in the range.
+
+                        For example:
+
+                        A /24 subnet will have a count of 256.
+
+                        A /24 subnet with a gateway address and a broadcast address will have a count of 254.
+                    }
+                    ]
+                }
+                ]
+            }
+            network:  (string)
+            Network.network is a unique identifier for this network which can be referenced later for updates or queries.
+
+            If unset, an ID will be generated.
+            When clients pass a value of this structure as a parameter, the field must be an identifier for the resource type: vcenter.namespace_management.Network. When operations return a value of this structure as a result, the field will be an identifier for the resource type: vcenter.namespace_management.Network.
+            network_type:  (string, required)
+            NetworkType enumerates types of networks supported by the Supervisor for workloads.
+            VcenterNamespaceManagementSupervisorsNetworksWorkloadNetworkType {
+                NSXT
+                VSPHERE
+                NSX_VPC 
+            }
+            nsx:  (Object)
+            VcenterNamespaceManagementSupervisorsNetworksWorkloadNsxNetwork { ... }
+            nsx_vpc:  (Object)
+            VcenterNamespaceManagementSupervisorsNetworksWorkloadVpcNetwork {
+                default_private_cidrs:  (Array<VcenterNamespaceManagementNetworksIpv4Cidr>, required)
+                VpcNetwork.default-private-cidrs specifies CIDR blocks from which private subnets are allocated. This range must not overlap with those in VpcNetwork.vpc-connectivity-profile, Clusters.EnableSpec.service-cidr, or other services running in the datacenter. You must set at least one CIDR of size 16 or larger to enable a Supervisor with VPC networking. If Avi is used, another CIDR of size 64 is needed.
+                [
+                VcenterNamespaceManagementNetworksIpv4Cidr {
+                    address:  (string, required)
+                    The IPv4 address.
+                    prefix:  (integer, required)
+                    The CIDR prefix.
+                }
+                ]
+                nsx_project:  (string)
+                VpcNetwork.nsx-project is the default Project for VPCs in the Supervisor, including the System VPC, and Supervisor Services VPC. It needs to be NSX path of Project.
+                Projects.list can be used to list projects.
+
+                If unset, use the default Project on NSX.
+                vpc_connectivity_profile:  (string)
+                VpcNetwork.vpc-connectivity-profile describes the configuration for how a VPC is constructed, including it's Transit Gateway Attachments, IP blocks, and other settings on NSX. It needs to be NSX path of VPC Connectivity Profile.
+                VpcConnectivityProfiles.list can be used to list VPCConnectivityProfiles for a Project.
+
+                If unset, use the default VPC Connectivity Profile as defined in VpcNetwork.nsx-project.
+            }
+            services:  (Object)
+            VcenterNamespaceManagementNetworksServices { ... }
+            vsphere:  (Object)
+            VcenterNamespaceManagementSupervisorsNetworksWorkloadVSphereNetwork { ... } 
+        }
+        storage:  (Object)
+        VcenterNamespaceManagementSupervisorsWorkloadsStorageConfig { ... } 
+    }
+    zone:  (string)
+    Supervisors.EnableOnComputeClusterSpec.zone describes consumption fault domain zone available to the Supervisor and its workloads.
+    Zone will be created and associated with the cluster. If unset, the zone name will be generated based on the cluster managed object ID. The zone can be managed with the consumption fault domain zone api.
+    When clients pass a value of this structure as a parameter, the field must be an identifier for the resource type: vcenter.consumption_domains.Zone. When operations return a value of this structure as a result, the field will be an identifier for the resource type: vcenter.consumption_domains.Zone.
+
+} 
