@@ -115,6 +115,7 @@ def deploy_supervisor(token, morefs):
             "network": {
                 "network_type": "NSX_VPC",
                 "nsx_vpc": {
+                    "nsx_project": "/orgs/default/projects/default",
                     "default_private_cidrs": [
                         {
                             "address": "172.16.201.0",
@@ -133,7 +134,7 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "NSXREGISTEREDAVI",
+                "provider": "NSX_REGISTERED_AVI",
             }
         }
     }
