@@ -125,7 +125,8 @@ def deploy_supervisor(token, morefs):
                     ]
                 },
                 "ip_management": {
-                    "dhcp_enabled": False
+                    "dhcp_enabled": False,
+                    "gateway_address": 10.96.0.1/23"
                 }
             },
             "edge": {
