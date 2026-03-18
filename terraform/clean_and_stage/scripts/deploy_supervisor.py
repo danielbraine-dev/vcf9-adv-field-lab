@@ -133,7 +133,7 @@ def deploy_supervisor(token, morefs):
                 }
             },
             "edge": {
-                "provider": "NSX_REGISTERED_AVI",
+                "provider": "NSXREGISTEREDAVI",
             }
         }
     }
