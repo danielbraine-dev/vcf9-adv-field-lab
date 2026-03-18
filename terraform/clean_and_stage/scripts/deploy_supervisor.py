@@ -115,8 +115,6 @@ def deploy_supervisor(token, morefs):
             "network": {
                 "network_type": "NSX_VPC",
                 "nsx_vpc": {
-                    "nsx_project": "Default",
-                    "vpc_connectivity_profile": "Default VPC Connectivity Profile",
                     "default_private_cidrs": [
                         {
                             "address": "172.16.201.0",
