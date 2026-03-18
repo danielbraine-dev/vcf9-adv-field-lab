@@ -126,7 +126,12 @@ def deploy_supervisor(token, morefs):
                 },
                 "ip_management": {
                     "dhcp_enabled": False,
-                    "gateway_address": "10.96.0.1/23"
+                "ip_assignments": [
+                        {
+                            "assignee": "SERVICE",
+                            "ranges": [{"address": "10.96.0.0", "count": 512}]
+                        }
+                    ]
                 }
             },
             "edge": {
