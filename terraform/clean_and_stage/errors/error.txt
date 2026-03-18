@@ -1,39 +1,20 @@
-	
-specVersion	"1.0"
-supervisorSpec	
-supervisorName	"wld01-supervisor"
-envSpec	
-vcenterDetails	
-vcenterAddress	"vc-wld01-a.site-a.vcf.lab"
-vcenterDatacenter	"dc-a"
-vSphereZones	
-0	"z-wld-a"
-tkgsComponentSpec	
-tkgsMgmtNetworkSpec	
-tkgsMgmtIpAssignmentMode	"STATICRANGE"
-tkgsMgmtNetworkName	"mgmt-vds01-wld01-01a"
-tkgsMgmtNetworkGatewayCidr	"10.1.1.1/24"
-tkgsMgmtNetworkStartingIp	"10.1.1.85 - 10.1.1.95"
-tkgsMgmtNetworkDnsServers	
-0	"10.1.1.1"
-tkgsMgmtNetworkSearchDomains	
-0	"site-a.vcf.lab"
-tkgsMgmtNetworkNtpServers	
-0	"10.1.1.1"
-tkgsStoragePolicySpec	
-masterStoragePolicy	"vSAN Default Storage Policy"
-ephemeralStoragePolicy	"vSAN Default Storage Policy"
-imageStoragePolicy	"vSAN Default Storage Policy"
-nsxVpcNetworkInfo	
-nsxVpcProject	"Default"
-nsxVpcConnectivityProfile	"Default VPC Connectivity Profile"
-tkgsWorkloadServiceCidr	"10.96.0.0/23"
-nsxVpcPrivateCidrs	
-0	"172.16.201.0/24"
-nsxVpcDnsServers	
-0	"10.1.1.1"
-nsxNtpDnsServers	
-0	"10.1.1.1"
-controlPlaneSize	"SMALL"
-apiServerDnsNames	[]
-cpvmCount	1
+Initiating Supervisor Deployment via vCenter API...
+Authenticating to vCenter (vc-wld01-a.site-a.vcf.lab)...
+Dynamically looking up vCenter MoRefs...
+
+Triggering V9 Enable on cluster-wld01-01a...
+Dynamically fetching SSL certificate from Avi Controller (10.1.1.200)...
+[-] FAILED. HTTP 500
+{
+  "messages": [
+    {
+      "args": [
+        "",
+        "0"
+      ],
+      "default_message": "CIDR address  and prefix 0 are not valid.",
+      "localized": "CIDR address  and prefix 0 are not valid.",
+      "id": "vcenter.wcp.netspec.cidr.invalid"
+    }
+  ]
+}
