@@ -364,9 +364,15 @@ step9_install_sup(){
   pause
 }
 
-step10_provision_vcfa_objects(){
-  log "[10] Provisioning VCFA Objects…"
-  # Add your final terraform apply commands here
+step10_prime_vcfa_objects(){
+  log "[10] Priming VCFA Region and Tenant Org…"
+  if [[ -f "${ROOT_DIR}/scripts/prime_vcfa.py" ]]; then
+    log "Executing Python VCFA Prime script..."
+    python3 "${ROOT_DIR}/scripts/prime_vcfa.py" || { error "Prime VCFA script failed!"; exit 1; }
+  else
+    error "prime_vcfa.py not found in ${ROOT_DIR}/scripts!"
+    exit 1
+  fi
   pause
 }
 
@@ -381,7 +387,7 @@ do_step() {
     7) step7_avi_base_config;;
     8) step8_nsx_cloud;;
     9) step9_install_sup;;
-   10) step10_provision_vcfa_objects;;
+   10) step10_prime_vcfa_objects;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
