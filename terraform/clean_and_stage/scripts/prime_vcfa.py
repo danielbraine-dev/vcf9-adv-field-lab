@@ -152,7 +152,7 @@ def get_region_id(token, region_name):
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json"
+        "Accept": "application/json;version=9.0.0"
     }
     
     res = requests.get(url, headers=headers, verify=False)
@@ -177,7 +177,7 @@ def get_provider_gateway_id(token, gateway_name):
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json"
+        "Accept": "application/json;version=9.0.0"
     }
     
     res = requests.get(url, headers=headers, verify=False)
