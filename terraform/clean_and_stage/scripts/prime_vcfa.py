@@ -107,10 +107,8 @@ def get_nsx_manager_id(token, nsx_hostname):
 def get_supervisor_id(token, supervisor_name):
     print(f"\n[*] Fetching URN for Supervisor via VCF CloudAPI...")
     
-    # Pointing to the strict VCF namespace for Supervisors
     url = f"{VCFA_URL}/cloudapi/vcf/supervisors"
     
-    # Passing the required pagination parameters
     params = {
         "page": 1,
         "pageSize": 25
@@ -128,13 +126,14 @@ def get_supervisor_id(token, supervisor_name):
         
         for s in supervisors:
             if s.get("name") == supervisor_name:
-                urn = s.get("id")
+                # THE FIX: Targeting the specific 'supervisorId' key from the schema
+                urn = s.get("supervisorId")
                 print(f"[+] Found explicit Supervisor URN: {urn}")
                 return urn
                 
-        # Lab Fallback just in case naming is slightly off
+        # Lab Fallback
         if len(supervisors) == 1:
-            urn = supervisors[0].get("id")
+            urn = supervisors[0].get("supervisorId")
             print(f"[+] Defaulting to the only registered Supervisor URN: {urn}")
             return urn
             
