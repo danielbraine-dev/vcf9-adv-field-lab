@@ -63,33 +63,42 @@ def get_org_id(token, org_name):
         return None
         
 def get_nsx_manager_id(token, nsx_hostname):
-    print(f"\n[*] Fetching URN for NSX Manager...")
+    print(f"\n[*] Fetching URN for NSX Manager via VCF CloudAPI...")
     
-    url = f"{VCFA_URL}/cloudapi/1.0.0/nsxTManagers"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json;version=9.0.0"
+    # THE FIX: Pointing to the strict VCF namespace
+    url = f"{VCFA_URL}/cloudapi/vcf/nsxManagers"
+    
+    # THE FIX: Explicitly passing the required pagination parameters
+    params = {
+        "page": 1,
+        "pageSize": 25
     }
     
-    res = requests.get(url, headers=headers, verify=False)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        # Adding the version header just in case VCFA gets picky
+        "Accept": "application/json;version=40.0" 
+    }
+    
+    res = requests.get(url, headers=headers, params=params, verify=False)
     
     if res.status_code == 200:
         managers = res.json().get("values", [])
         
-        # In a VCF lab, there is usually only one NSX manager registered to the VCFA instance.
-        # We will try to match by name, but safely fallback to the first one available if needed.
         for m in managers:
+            # Checking both name and URL based on your provided schema
             if m.get("name") == nsx_hostname or nsx_hostname in m.get("url", ""):
                 urn = m.get("id")
                 print(f"[+] Found explicit NSX Manager URN: {urn}")
                 return urn
                 
+        # Lab Fallback: If naming doesn't perfectly match but there's only one manager registered
         if len(managers) == 1:
             urn = managers[0].get("id")
             print(f"[+] Defaulting to the only registered NSX Manager URN: {urn}")
             return urn
             
-        print(f"[-] NSX Manager not found in API response. Is it registered in VCFA?")
+        print(f"[-] NSX Manager '{nsx_hostname}' not found in API response.")
         return None
     else:
         print(f"[-] Failed to fetch NSX Managers: {res.status_code} {res.text}")
