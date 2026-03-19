@@ -41,7 +41,7 @@ def get_org_id(token, org_name):
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json"
+        "Accept": "application/json;version=9.0.0"
     }
     
     res = requests.get(url, headers=headers, verify=False)
@@ -68,7 +68,7 @@ def get_nsx_manager_id(token, nsx_hostname):
     url = f"{VCFA_URL}/cloudapi/1.0.0/nsxTManagers"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json"
+        "Accept": "application/json;version=9.0.0"
     }
     
     res = requests.get(url, headers=headers, verify=False)
