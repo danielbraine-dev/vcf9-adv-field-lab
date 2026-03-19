@@ -449,7 +449,7 @@ if __name__ == "__main__":
             sys.exit(1)
             
         # Step 1: Define Region
-        create_vcf_region(token, nsx_urn, supervisor_urn)
+        #create_vcf_region(token, nsx_urn, supervisor_urn)
         
         # --- REGION & TENANT LOOKUPS ---
         region_urn = get_region_id(token, REGION_NAME)
