@@ -449,12 +449,12 @@ if __name__ == "__main__":
             sys.exit(1)
             
         # Step 1: Define Region
-        #create_vcf_region(token, nsx_urn, supervisor_urn)
+        # TEMP create_vcf_region(token, nsx_urn, supervisor_urn)
         
         # --- REGION & TENANT LOOKUPS ---
         region_urn = get_region_id(token, REGION_NAME)
         
-        create_tenant_org_base(token)
+        # TEMP create_tenant_org_base(token)
         org_urn = get_org_id(token, ORG_NAME)
         
         # In a VCF lab, the Tier-0 is usually named based on the workload domain
