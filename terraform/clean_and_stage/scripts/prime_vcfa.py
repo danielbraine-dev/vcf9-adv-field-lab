@@ -9,7 +9,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 NSX_MANAGER = "nsx-wld01-a.site-a.vcf.lab"
 SUPERVISOR_NAME = "wld01-supervisor"
 REGION_NAME = "us-east"
-ORG_NAME = "Cloud Org A"
+ORG_NAME = "Cloud-Org-A"
 PROVIDER_GATEWAY_NAME = "us-east-region-PG"
 
 # VCFA Provider Credentials
@@ -247,7 +247,7 @@ def create_tenant_org_base(token):
 
     # Strict adherence to the provided Org schema
     payload = {
-        "name": "Cloud Org A",
+        "name": ORG_NAME,
         "displayName": "Cloud Org A",
         "description": "Sovereign Tenant Organization",
         "isEnabled": True,
