@@ -67,10 +67,8 @@ def get_org_id(token, org_name):
 def get_nsx_manager_id(token, nsx_hostname):
     print(f"\n[*] Fetching URN for NSX Manager via VCF CloudAPI...")
     
-    # THE FIX: Pointing to the strict VCF namespace
     url = f"{VCFA_URL}/cloudapi/vcf/nsxManagers"
     
-    # THE FIX: Explicitly passing the required pagination parameters
     params = {
         "page": 1,
         "pageSize": 25
@@ -79,7 +77,7 @@ def get_nsx_manager_id(token, nsx_hostname):
     headers = {
         "Authorization": f"Bearer {token}",
         # Adding the version header just in case VCFA gets picky
-        "Accept": "application/json;version=40.0" 
+        "Accept": "application/json;version=9.0.0" 
     }
     
     res = requests.get(url, headers=headers, params=params, verify=False)
@@ -120,7 +118,7 @@ def get_supervisor_id(token, supervisor_name):
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json;version=40.0" 
+        "Accept": "application/json;version=9.0.0" 
     }
     
     res = requests.get(url, headers=headers, params=params, verify=False)
@@ -145,6 +143,7 @@ def get_supervisor_id(token, supervisor_name):
     else:
         print(f"[-] Failed to fetch Supervisors: {res.status_code} {res.text}")
         return None
+        
 ######################
 # GP Functions#
 ######################
