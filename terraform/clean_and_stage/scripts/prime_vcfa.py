@@ -64,57 +64,49 @@ def create_vcf_region(token):
         print(f"[-] Failed to create region: {res.status_code} {res.text}")
         sys.exit(1)
 
-def create_tenant_org(token):
-    print(f"\n[2] Creating Tenant Organization: Cloud Org A...")
+def create_tenant_org_base(token):
+    print(f"\n[2] Creating Base Tenant Organization: Cloud Org A...")
     
-    # THE FIX: Pointing to VCFA OpenAPI endpoint
     url = f"{VCFA_URL}/cloudapi/1.0.0/orgs"
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json;version=40.0",
-        "Content-Type": "application/json"
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0"
     }
 
-    # Creating an "All Apps" Organization Native to VCF 9
+    # Strict adherence to the provided Org schema
     payload = {
         "name": "Cloud Org A",
         "displayName": "Cloud Org A",
-        "description": "Tenant Organization for Cloud Org A",
-        # Ensures this creates an "All Apps" Org (VPC/Supervisor), not a legacy "VM Apps" Org
-        "isClassicTenant": False, 
-        "networkLogName": "cldorg-A",
-        "regionConfiguration": [
-            {
-                "region": "us-east",
-                "zones": ["z-wld-a"],
-                "supervisor": "wld01-supervisor",
-                # VCFA 9 allows passing 'ALL' so we don't need a separate API call to vCenter to list classes
-                "vmClasses": ["ALL"], 
-                "storagePolicies": ["vSAN Default Storage Policy"],
-                "quotas": [] # Empty array defines "No Limits"
-            }
-        ],
-        "initialAdmin": {
-            "username": "cloud-org-a_admin",
-            "password": "VMware123!VMware123!",
-            "role": "ORGANIZATION_ADMIN"
-        }
+        "description": "Sovereign Tenant Organization",
+        "isEnabled": True,
+        "isClassicTenant": False 
     }
     
     res = requests.post(url, headers=headers, json=payload, verify=False)
     
     if res.status_code in [200, 201, 202, 204]:
-        print("[+] Tenant 'Cloud Org A' is now active in VCFA.")
-        print(f"[!] Admin User: cloud-org-a_admin")
+        print("[+] Base Tenant 'Cloud Org A' created successfully.")
+        
+        # VCFA usually returns the ID in the body or a Location header
+        try:
+            org_data = res.json()
+            org_id = org_data.get("id")
+            print(f"[!] Captured Org ID: {org_id}")
+            return org_id
+        except json.JSONDecodeError:
+            print("[!] Check VCFA UI. Org created but couldn't parse ID from response.")
+            return None
     else:
-        print(f"[-] Failed to create tenant: {res.text}")
+        print(f"[-] Failed to create base tenant: {res.status_code} {res.text}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     try:
         token = get_vcfa_token()
         create_vcf_region(token)
-        create_tenant_org(token)
+        create_tenant_org_base(token)
     except Exception as e:
         print(f"[-] Python Script Error: {e}")
         sys.exit(1)
