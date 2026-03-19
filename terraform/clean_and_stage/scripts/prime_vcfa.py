@@ -193,29 +193,138 @@ def configure_regional_networking(token, org_id):
     else:
         print(f"[-] Failed to bind regional networking: {res.status_code} {res.text}")
         sys.exit(1)
+        
+def configure_org_quota(token, org_id):
+    print(f"\n[5] Defining and Assigning Unlimited Quota Policy...")
+    
+    # Part A: Create the Quota Policy
+    create_url = f"{VCFA_URL}/cloudapi/1.0.0/quotaPolicies"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    # An empty quotaPoolDefinitions array generally translates to "No Limits" in VCFA
+    quota_payload = {
+        "name": "Unlimited-Quota-Cloud-Org-A",
+        "description": "Unlimited regional quota for sovereign tenant",
+        "orgId": org_id,
+        "quotaPoolDefinitions": []
+    }
+    
+    res = requests.post(create_url, headers=headers, json=quota_payload, verify=False)
+    
+    if res.status_code in [200, 201]:
+        # Extract the new Policy URN
+        policy_urn = res.json().get("id")
+        print(f"[+] Quota Policy created with URN: {policy_urn}")
+    else:
+        print(f"[-] Failed to create quota policy: {res.status_code} {res.text}")
+        sys.exit(1)
 
+    # Part B: Bind the Quota Policy to the Org
+    assign_url = f"{VCFA_URL}/cloudapi/1.0.0/orgs/{org_id}/quotaPolicy"
+    
+    assign_payload = {
+        "quotaPolicyReference": {
+            "id": policy_urn
+        }
+    }
+    
+    assign_res = requests.put(assign_url, headers=headers, json=assign_payload, verify=False)
+    
+    if assign_res.status_code in [200, 201, 202, 204]:
+        print("[+] Quota Policy successfully bound to Cloud Org A.")
+    else:
+        print(f"[-] Failed to bind quota policy: {assign_res.status_code} {assign_res.text}")
+        sys.exit(1)
+
+def create_org_admin(token, org_id):
+    print(f"\n[6] Creating First User and Assigning Roles...")
+    
+    # Part A: Create the User
+    user_url = f"{VCFA_URL}/cloudapi/1.0.0/users"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    user_payload = {
+        "username": "cloud-org-a_admin",
+        "password": "VMware123!VMware123!", # Meets the >=15 char, upper, lower, special, digit requirement
+        "fullName": "Cloud Org A Administrator",
+        "orgEntityRef": {
+            "id": org_id
+        },
+        "enabled": True,
+        "providerType": "LOCAL"
+    }
+    
+    user_res = requests.post(user_url, headers=headers, json=user_payload, verify=False)
+    
+    if user_res.status_code in [200, 201]:
+        user_urn = user_res.json().get("id")
+        print(f"[+] User 'cloud-org-a_admin' created with URN: {user_urn}")
+    else:
+        print(f"[-] Failed to create user: {user_res.status_code} {user_res.text}")
+        sys.exit(1)
+
+    # Part B: Assign the Organization Administrator Role
+    # CloudAPI paths usually expect the UUID portion or URL-encoded URNs. 
+    # We will strip the "urn:vcloud:user:" prefix to get the raw UUID to be safe in the URL path.
+    raw_user_id = user_urn.split(":")[-1]
+    raw_org_id = org_id.split(":")[-1]
+    
+    role_url = f"{VCFA_URL}/cloudapi/1.0.0/users/{raw_user_id}/orgs/{raw_org_id}/roles"
+    
+    role_payload = {
+        "roleNamesToAdd": [
+            "Organization Administrator"
+        ],
+        "roleNamesToRemove": []
+    }
+    
+    # Your schema explicitly states this is a PATCH method
+    role_res = requests.patch(role_url, headers=headers, json=role_payload, verify=False)
+    
+    if role_res.status_code in [200, 201, 202, 204]:
+        print("[+] Role 'Organization Administrator' successfully granted!")
+    else:
+        print(f"[-] Failed to assign role: {role_res.status_code} {role_res.text}")
+        sys.exit(1)
+        
 if __name__ == "__main__":
     try:
         token = get_vcfa_token()
-        # Step 1: Define Region
+        
+        # Step 1: Define Region (VCF 9 EntityReference Schema)
         create_vcf_region(token)
-
+        
         # Step 2: Create Base Org
         create_tenant_org_base(token)
-
-        # Step 3: Fetch the verified Org URN
+        
+        # Step 3: Fetch the explicit Org URN
         ORG_NAME = "Cloud Org A"
-        org_id = get_org_id(token, ORG_NAME)
+        org_urn = get_org_id(token, ORG_NAME)
+        
         if org_urn:
-            # Step 4: Enable Tenancy on the Org
-            configure_org_networking_tenancy(token, org_id)
-
-            # Step 5: Map the Org to the Regional Networking
-            configure_regional_networking(token, org_id)
-
-            # Step 6: Create and map regional quota
-    
-            # Step 7: Create First User
+            # Step 4: Network Tenancy & T0 Binding
+            configure_org_networking_tenancy(token, org_urn)
+            configure_regional_networking(token, org_urn)
+            
+            # Step 5: Quota Orchestration
+            configure_org_quota(token, org_urn)
+            
+            # Step 6: User & Role Orchestration
+            create_org_admin(token, org_urn)
+            
+            print(f"\n[✔] SUCCESS: Step 10 VCFA Priming is 100% Complete.")
+            print(f"    Tenant: {ORG_NAME}")
+            print(f"    Admin:  cloud-org-a_admin")
+            print(f"    Pass:   VMware123!VMware123!")
+            
         else:
             print(f"[-] Automation halted. Could not retrieve URN for {ORG_NAME}.")
             sys.exit(1)
