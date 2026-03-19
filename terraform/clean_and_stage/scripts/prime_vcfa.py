@@ -13,6 +13,10 @@ VCFA_URL = "https://auto-a.site-a.vcf.lab"
 PROVIDER_USER = "admin"
 PROVIDER_PASS = "VMware123!VMware123!"
 
+###################
+# Helper Functions#
+###################
+
 def get_vcfa_token():
     print(f"Authenticating to VCFA ({VCFA_URL}) via legacy provider endpoint...")
     auth_url = f"{VCFA_URL}/cloudapi/1.0.0/sessions/provider"
@@ -57,8 +61,44 @@ def get_org_id(token, org_name):
     else:
         print(f"[-] Failed to fetch Orgs: {res.status_code} {res.text}")
         return None
-
-def create_vcf_region(token):
+        
+def get_nsx_manager_id(token, nsx_hostname):
+    print(f"\n[*] Fetching URN for NSX Manager...")
+    
+    url = f"{VCFA_URL}/cloudapi/1.0.0/nsxTManagers"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json"
+    }
+    
+    res = requests.get(url, headers=headers, verify=False)
+    
+    if res.status_code == 200:
+        managers = res.json().get("values", [])
+        
+        # In a VCF lab, there is usually only one NSX manager registered to the VCFA instance.
+        # We will try to match by name, but safely fallback to the first one available if needed.
+        for m in managers:
+            if m.get("name") == nsx_hostname or nsx_hostname in m.get("url", ""):
+                urn = m.get("id")
+                print(f"[+] Found explicit NSX Manager URN: {urn}")
+                return urn
+                
+        if len(managers) == 1:
+            urn = managers[0].get("id")
+            print(f"[+] Defaulting to the only registered NSX Manager URN: {urn}")
+            return urn
+            
+        print(f"[-] NSX Manager not found in API response. Is it registered in VCFA?")
+        return None
+    else:
+        print(f"[-] Failed to fetch NSX Managers: {res.status_code} {res.text}")
+        return None
+        
+######################
+# GP Functions#
+######################
+def create_vcf_region(token, nsx_urn):
     print(f"\n[1] Defining Region: us-east...")
     
     url = f"{VCFA_URL}/cloudapi/vcf/regions"
@@ -72,7 +112,8 @@ def create_vcf_region(token):
     payload = {
         "name": "us-east",
         "nsxManager": {
-            "name": NSX_MANAGER
+            "name": NSX_MANAGER,
+            "id": nsx_urn
         },
         "supervisors": [
             {
@@ -298,9 +339,13 @@ def create_org_admin(token, org_id):
 if __name__ == "__main__":
     try:
         token = get_vcfa_token()
-        
+        nsx_urn = get_nsx_manager_id(token, NSX_MANAGER)
+        if not nsx_urn:
+            print("[-] Automation halted. Could not retrieve NSX Manager URN.")
+            sys.exit(1)
+            
         # Step 1: Define Region (VCF 9 EntityReference Schema)
-        create_vcf_region(token)
+        create_vcf_region(token, nsx_urn)
         
         # Step 2: Create Base Org
         create_tenant_org_base(token)
