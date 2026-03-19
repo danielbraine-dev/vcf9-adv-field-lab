@@ -8,7 +8,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 NSX_MANAGER = "nsx-wld01-a.site-a.vcf.lab"
 SUPERVISOR_NAME = "wld01-supervisor"
+REGION_NAME = "us-east"
 ORG_NAME = "Cloud Org A"
+PROVIDER_GATEWAY_NAME = "us-east-region-PG"
 
 # VCFA Provider Credentials
 VCFA_URL = "https://auto-a.site-a.vcf.lab"
@@ -143,6 +145,54 @@ def get_supervisor_id(token, supervisor_name):
         print(f"[-] Failed to fetch Supervisors: {res.status_code} {res.text}")
         return None
         
+  def get_region_id(token, region_name):
+    print(f"\n[*] Fetching URN for Region: {region_name}...")
+    url = f"{VCFA_URL}/cloudapi/vcf/regions"
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json"
+    }
+    
+    res = requests.get(url, headers=headers, verify=False)
+    
+    if res.status_code == 200:
+        regions = res.json().get("values", [])
+        for r in regions:
+            if r.get("name") == region_name:
+                urn = r.get("id")
+                print(f"[+] Found Region URN: {urn}")
+                return urn
+        print(f"[-] Region '{region_name}' not found.")
+        return None
+    else:
+        print(f"[-] Failed to fetch Regions: {res.status_code} {res.text}")
+        return None
+
+def get_provider_gateway_id(token, gateway_name):
+    print(f"\n[*] Fetching URN for Provider Gateway (Tier-0): {gateway_name}...")
+    # Standard CloudAPI endpoint for Provider Gateways
+    url = f"{VCFA_URL}/cloudapi/1.0.0/providerGateways"
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json"
+    }
+    
+    res = requests.get(url, headers=headers, verify=False)
+    
+    if res.status_code == 200:
+        gateways = res.json().get("values", [])
+        for gw in gateways:
+            if gw.get("name") == gateway_name:
+                urn = gw.get("id")
+                print(f"[+] Found Provider Gateway URN: {urn}")
+                return urn
+        print(f"[-] Provider Gateway '{gateway_name}' not found.")
+        return None
+    else:
+        print(f"[-] Failed to fetch Provider Gateways: {res.status_code} {res.text}")
+        return None      
 ######################
 # GP Functions#
 ######################
@@ -246,7 +296,7 @@ def configure_org_networking_tenancy(token, org_id):
         print(f"[-] Failed to enable Org networking: {res.status_code} {res.text}")
         sys.exit(1)
 
-def configure_regional_networking(token, org_id):
+def configure_regional_networking(token, org_id, region_urn, gw_urn):
     print(f"\n[4] Binding Regional Networking (VPC Setup)...")
     
     url = f"{VCFA_URL}/cloudapi/vcf/regionalNetworkingSettings"
@@ -262,13 +312,16 @@ def configure_regional_networking(token, org_id):
     payload = {
         # Leaving 'name' unset per doc to let VCFA auto-generate it
         "regionRef": {
-            "name": "us-east"
+            "name": "us-east",
+            "id": region_urn
         },
         "orgRef": {
+            "name": ORG_NAME
             "id": org_id
         },
         "providerGatewayRef": {
-            "name": PROVIDER_GATEWAY_NAME
+            "name": PROVIDER_GATEWAY_NAME,
+            "id": gw_urn
         }
     }
     
@@ -384,43 +437,42 @@ def create_org_admin(token, org_id):
 if __name__ == "__main__":
     try:
         token = get_vcfa_token()
+        
+        # --- INFRASTRUCTURE URN LOOKUPS ---
         nsx_urn = get_nsx_manager_id(token, NSX_MANAGER)
-        if not nsx_urn:
-            print("[-] Automation halted. Could not retrieve NSX Manager URN.")
-            sys.exit(1)
-
-        supervisor_urn = get_supervisor_id(token, SUPERVISOR_NAME)
-        if not supervisor_urn:
-            print("[-] Automation halted. Could not retrieve Supervisor URN.")
+        supervisor_urn = get_supervisor_id(token, "wld01-supervisor")
+        
+        if not nsx_urn or not supervisor_urn:
+            print("[-] Missing core infrastructure URNs. Halting.")
             sys.exit(1)
             
-        # Step 1: Define Region (VCF 9 EntityReference Schema)
+        # Step 1: Define Region
         create_vcf_region(token, nsx_urn, supervisor_urn)
         
-        # Step 2: Create Base Org
-        create_tenant_org_base(token)
+        # --- REGION & TENANT LOOKUPS ---
+        region_urn = get_region_id(token, REGION_NAME)
         
-        # Step 3: Fetch the explicit Org URN
+        create_tenant_org_base(token)
         org_urn = get_org_id(token, ORG_NAME)
         
-        if org_urn:
-            # Step 4: Network Tenancy & T0 Binding
+        # In a VCF lab, the Tier-0 is usually named based on the workload domain
+        gw_urn = get_provider_gateway_id(token, PROVIDER_GATEWAY_NAME)
+        
+        if org_urn and region_urn and gw_urn:
+            # Step 2: Network Tenancy & Binding
             configure_org_networking_tenancy(token, org_urn)
-            configure_regional_networking(token, org_urn)
+            configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
-            # Step 5: Quota Orchestration
+            # Step 3: Quota Orchestration
             configure_org_quota(token, org_urn)
             
-            # Step 6: User & Role Orchestration
+            # Step 4: User & Role Orchestration
             create_org_admin(token, org_urn)
             
             print(f"\n[✔] SUCCESS: Step 10 VCFA Priming is 100% Complete.")
-            print(f"    Tenant: {ORG_NAME}")
-            print(f"    Admin:  cloud-org-a_admin")
-            print(f"    Pass:   VMware123!VMware123!")
             
         else:
-            print(f"[-] Automation halted. Could not retrieve URN for {ORG_NAME}.")
+            print(f"[-] Automation halted. Missing URNs for Org, Region, or Gateway.")
             sys.exit(1)
             
     except Exception as e:
