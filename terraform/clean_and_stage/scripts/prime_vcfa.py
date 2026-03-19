@@ -7,6 +7,8 @@ import sys
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 NSX_MANAGER = "nsx-wld01-a.site-a.vcf.lab"
+SUPERVISOR_NAME = "wld01-supervisor"
+ORG_NAME = "Cloud Org A"
 
 # VCFA Provider Credentials
 VCFA_URL = "https://auto-a.site-a.vcf.lab"
@@ -103,11 +105,50 @@ def get_nsx_manager_id(token, nsx_hostname):
     else:
         print(f"[-] Failed to fetch NSX Managers: {res.status_code} {res.text}")
         return None
+
+def get_supervisor_id(token, supervisor_name):
+    print(f"\n[*] Fetching URN for Supervisor via VCF CloudAPI...")
+    
+    # Pointing to the strict VCF namespace for Supervisors
+    url = f"{VCFA_URL}/cloudapi/vcf/supervisors"
+    
+    # Passing the required pagination parameters
+    params = {
+        "page": 1,
+        "pageSize": 25
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=40.0" 
+    }
+    
+    res = requests.get(url, headers=headers, params=params, verify=False)
+    
+    if res.status_code == 200:
+        supervisors = res.json().get("values", [])
         
+        for s in supervisors:
+            if s.get("name") == supervisor_name:
+                urn = s.get("id")
+                print(f"[+] Found explicit Supervisor URN: {urn}")
+                return urn
+                
+        # Lab Fallback just in case naming is slightly off
+        if len(supervisors) == 1:
+            urn = supervisors[0].get("id")
+            print(f"[+] Defaulting to the only registered Supervisor URN: {urn}")
+            return urn
+            
+        print(f"[-] Supervisor '{supervisor_name}' not found in API response.")
+        return None
+    else:
+        print(f"[-] Failed to fetch Supervisors: {res.status_code} {res.text}")
+        return None
 ######################
 # GP Functions#
 ######################
-def create_vcf_region(token, nsx_urn):
+def create_vcf_region(token, nsx_urn, supervisor_urn):
     print(f"\n[1] Defining Region: us-east...")
     
     url = f"{VCFA_URL}/cloudapi/vcf/regions"
@@ -126,7 +167,8 @@ def create_vcf_region(token, nsx_urn):
         },
         "supervisors": [
             {
-                "name": "wld01-supervisor"
+                "name": "wld01-supervisor",
+                "id": supervisor_urn
             }
         ],
         "storagePolicies": [
@@ -352,6 +394,11 @@ if __name__ == "__main__":
         if not nsx_urn:
             print("[-] Automation halted. Could not retrieve NSX Manager URN.")
             sys.exit(1)
+
+        supervisor_urn = get_supervisor_id(token, SUPERVISOR_NAME)
+        if not supervisor_urn:
+            print("[-] Automation halted. Could not retrieve Supervisor URN.")
+            sys.exit(1)
             
         # Step 1: Define Region (VCF 9 EntityReference Schema)
         create_vcf_region(token, nsx_urn)
@@ -360,7 +407,6 @@ if __name__ == "__main__":
         create_tenant_org_base(token)
         
         # Step 3: Fetch the explicit Org URN
-        ORG_NAME = "Cloud Org A"
         org_urn = get_org_id(token, ORG_NAME)
         
         if org_urn:
