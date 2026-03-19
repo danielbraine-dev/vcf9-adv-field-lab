@@ -145,7 +145,8 @@ def get_supervisor_id(token, supervisor_name):
         print(f"[-] Failed to fetch Supervisors: {res.status_code} {res.text}")
         return None
         
-  def get_region_id(token, region_name):
+        
+def get_region_id(token, region_name):
     print(f"\n[*] Fetching URN for Region: {region_name}...")
     url = f"{VCFA_URL}/cloudapi/vcf/regions"
     
