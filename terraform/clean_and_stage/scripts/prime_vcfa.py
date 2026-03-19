@@ -210,6 +210,7 @@ def create_vcf_region(token, nsx_urn, supervisor_urn):
     
     payload = {
         "name": "us-east",
+        "description": "VCF 9 Region for us-east",
         "nsxManager": {
             "name": NSX_MANAGER,
             "id": nsx_urn
