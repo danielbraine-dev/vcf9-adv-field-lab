@@ -8,10 +8,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 VC_HOST = "vc-wld01-a.site-a.vcf.lab"
 NSX_MANAGER = "nsx-wld01-a.site-a.vcf.lab"
 
-# Variables passed from bash
-VCFA_URL = sys.argv[1]
-
 # Hardcoded VCFA Provider Credentials
+VCFA_URL = "https://auto-a.site-a.vcf.lab"
 PROVIDER_USER = "admin"
 PROVIDER_PASS = "VMware123!VMware123!"
 
