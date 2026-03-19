@@ -30,6 +30,34 @@ def get_vcfa_token():
         raise ValueError("Failed to extract access token!")
     return token
 
+def get_org_id(token, org_name):
+    print(f"\n[*] Fetching URN for Tenant: {org_name}...")
+    
+    url = f"{VCFA_URL}/cloudapi/1.0.0/orgs"
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json"
+    }
+    
+    res = requests.get(url, headers=headers, verify=False)
+    
+    if res.status_code == 200:
+        # VCFA CloudAPI usually wraps collection results in a 'values' array
+        orgs = res.json().get("values", [])
+        
+        for org in orgs:
+            if org.get("name") == org_name:
+                org_urn = org.get("id")
+                print(f"[+] Found Org URN: {org_urn}")
+                return org_urn
+                
+        print(f"[-] Org '{org_name}' not found in the API response.")
+        return None
+    else:
+        print(f"[-] Failed to fetch Orgs: {res.status_code} {res.text}")
+        return None
+
 def create_vcf_region(token):
     print(f"\n[1] Defining Region: us-east...")
     
@@ -177,7 +205,7 @@ if __name__ == "__main__":
 
         # Step 3: Fetch the verified Org URN
         ORG_NAME = "Cloud Org A"
-        org_urn = get_org_id(token, ORG_NAME)
+        org_id = get_org_id(token, ORG_NAME)
         if org_urn:
             # Step 4: Enable Tenancy on the Org
             configure_org_networking_tenancy(token, org_id)
