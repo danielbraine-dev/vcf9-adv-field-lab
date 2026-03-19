@@ -45,8 +45,6 @@ def create_vcf_region(token):
         "name": "us-east",
         "nsxManager": {
             "name": NSX_MANAGER
-            # Note: If the API strictly demands the ID alongside the name, 
-            # we will need to add a quick GET call to fetch the NSX Manager URN first.
         },
         "supervisors": [
             {
