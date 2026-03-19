@@ -138,8 +138,8 @@ def configure_org_networking_tenancy(token, org_id):
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0"
     }
 
     payload = {
@@ -164,8 +164,8 @@ def configure_regional_networking(token, org_id):
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0"
     }
 
     # Note: VCFA requires mapping the tenant to the underlying Provider Gateway (Tier-0).
@@ -201,8 +201,8 @@ def configure_org_quota(token, org_id):
     create_url = f"{VCFA_URL}/cloudapi/1.0.0/quotaPolicies"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0"
     }
     
     # An empty quotaPoolDefinitions array generally translates to "No Limits" in VCFA
@@ -247,8 +247,8 @@ def create_org_admin(token, org_id):
     user_url = f"{VCFA_URL}/cloudapi/1.0.0/users"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0"
     }
     
     user_payload = {
