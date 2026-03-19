@@ -317,7 +317,7 @@ def configure_regional_networking(token, org_id, region_urn, gw_urn):
             "id": region_urn
         },
         "orgRef": {
-            "name": ORG_NAME
+            "name": ORG_NAME,
             "id": org_id
         },
         "providerGatewayRef": {
