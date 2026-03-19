@@ -234,7 +234,6 @@ def configure_org_networking_tenancy(token, org_id):
 
     payload = {
         "networkingTenancyEnabled": True,
-        # Fits the exact 8-character constraint for NSX log tagging
         "orgNameForLogs": "cldorg-A" 
     }
     
@@ -258,8 +257,6 @@ def configure_regional_networking(token, org_id):
         "Content-Type": "application/json;version=9.0.0"
     }
 
-    # Note: VCFA requires mapping the tenant to the underlying Provider Gateway (Tier-0).
-    # Assuming standard VCF lab naming for the T0 gateway here.
     PROVIDER_GATEWAY_NAME = "wld01-t0-gw" 
     
     payload = {
@@ -273,7 +270,6 @@ def configure_regional_networking(token, org_id):
         "providerGatewayRef": {
             "name": PROVIDER_GATEWAY_NAME
         }
-        # Omitting serviceEdgeClusterRef to allow the system default
     }
     
     res = requests.post(url, headers=headers, json=payload, verify=False)
@@ -399,7 +395,7 @@ if __name__ == "__main__":
             sys.exit(1)
             
         # Step 1: Define Region (VCF 9 EntityReference Schema)
-        create_vcf_region(token, nsx_urn)
+        create_vcf_region(token, nsx_urn, supervisor_urn)
         
         # Step 2: Create Base Org
         create_tenant_org_base(token)
