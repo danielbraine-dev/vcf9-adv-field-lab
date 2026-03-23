@@ -22,10 +22,10 @@ PROVIDER_PASS = "VMware123!VMware123!"
 ###################
 
 def get_vcfa_token():
-    print(f"Authenticating to VCFA ({VCFA_URL}) via legacy provider endpoint...")
+    print(f"Authenticating to VCFA ({VCFA_URL})")
     auth_url = f"{VCFA_URL}/cloudapi/1.0.0/sessions/provider"
     
-    headers = {"Accept": "application/json;version=40.0"} 
+    headers = {"Accept": "application/json;version=9.0.0"} 
     auth = (f"{PROVIDER_USER}@system", PROVIDER_PASS) 
     
     response = requests.post(auth_url, headers=headers, auth=auth, verify=False)
