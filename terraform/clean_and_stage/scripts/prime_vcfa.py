@@ -2,6 +2,7 @@ import requests
 import json
 import urllib3
 import sys
+import time
 
 # Suppress self-signed cert warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -208,6 +209,29 @@ def get_provider_gateway_id(token, gateway_name):
         print(f"[-] Failed to fetch Provider Gateways: {res.status_code} {res.text}")
         return None
 
+def get_vdc_id(token, vdc_name):
+    print(f"[*] Waiting for VDC '{vdc_name}' to initialize...")
+    url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenters"
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0"
+    }
+    
+    # Poll up to 5 times to wait for the 202 Accepted task to generate the object
+    for _ in range(5):
+        time.sleep(3)
+        res = requests.get(url, headers=headers, verify=False)
+        if res.status_code == 200:
+            vdcs = res.json().get("values", [])
+            for vdc in vdcs:
+                if vdc.get("name") == vdc_name:
+                    urn = vdc.get("id")
+                    print(f"[+] Found Virtual Datacenter URN: {urn}")
+                    return urn
+    print(f"[-] VDC '{vdc_name}' did not appear in time. Task may have failed in VCFA.")
+    return None
+    
 def get_org_admin_role_id(token, org_id):
     print(f"\n[*] Fetching URN for 'Organization Administrator' Role...")
     
@@ -382,65 +406,91 @@ def configure_regional_networking(token, org_id, region_urn, gw_urn):
         print(f"[-] Failed to bind regional networking: {res.status_code} {res.text}")
         sys.exit(1)
         
-def configure_org_quota(token, org_id):
-    print(f"\n[5] Defining and Assigning Unlimited Quota Policy...")
+def create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn):
+    print(f"\n[5A] Slicing Supervisor Resources (Creating Virtual Datacenter)...")
     
-    # Part A: Create the Quota Policy
-    create_url = f"{VCFA_URL}/cloudapi/1.0.0/quotaPolicies"
+    url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenters"
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
-        "Content-Type": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0"
     }
     
-    # An empty quotaPoolDefinitions array generally translates to "No Limits" in VCFA
-    quota_payload = {
-        "name": "Quota-Cloud-Org-A",
-        "description": "Cluster-available regional quota for sovereign tenant",
-        "quotaPoolDefinitions": [
+    VDC_NAME = "Cloud-Org-A-VDC"
+    
+    payload = {
+        "name": VDC_NAME,
+        "description": "VDC Resource boundary for Cloud Org A",
+        "org": {
+            "id": org_urn
+        },
+        "region": {
+            "id": region_urn
+        },
+        "supervisors": [
             {
-            "resourceType": "cpu",
-            "quota": 30000,
-            "quotaResourceUnit": "MHz"
-            },
+                "id": supervisor_urn
+            }
+        ],
+        "zoneResourceAllocation": [
             {
-            "resourceType": "memory",
-            "quota": 88064,
-            "quotaResourceUnit": "MB"
-            },
-            {
-            "resourceType": "storage",
-            "quota": 2306048,
-            "quotaResourceUnit": "MB"
+                "zone": {
+                    "name": "z-wld-a"
+                    # Note: If VCFA throws an EntityReference error for the Zone, 
+                    # we will need a quick get_zone_id() helper, but names usually work for zones.
+                },
+                "resourceAllocation": {
+                    "cpuLimitMHz": 30000,         # 30 GHz
+                    "memoryLimitMiB": 88064,      # 86 GB
+                    "cpuReservationMHz": 0,       # 0 = Thin provisioned
+                    "memoryReservationMiB": 0
+                }
             }
         ]
     }
     
-    res = requests.post(create_url, headers=headers, json=quota_payload, verify=False)
+    res = requests.post(url, headers=headers, json=payload, verify=False)
     
-    if res.status_code in [200, 201]:
-        # Extract the new Policy URN
-        policy_urn = res.json().get("id")
-        print(f"[+] Quota Policy created with URN: {policy_urn}")
+    if res.status_code in [200, 201, 202, 204]:
+        print(f"[+] VDC Creation Task Accepted (HTTP {res.status_code}).")
+        return VDC_NAME
     else:
-        print(f"[-] Failed to create quota policy: {res.status_code} {res.text}")
+        print(f"[-] Failed to create Virtual Datacenter: {res.status_code} {res.text}")
         sys.exit(1)
 
-    # Part B: Bind the Quota Policy to the Org
-    assign_url = f"{VCFA_URL}/cloudapi/1.0.0/orgs/{org_id}/quotaPolicy"
+def create_vdc_storage_policy(token, vdc_urn):
+    print(f"\n[5B] Binding vSAN Storage Policy to VDC...")
     
-    assign_payload = {
-        "quotaPolicyReference": {
-            "id": policy_urn
-        }
+    url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenterStoragePolicies"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0"
     }
     
-    assign_res = requests.put(assign_url, headers=headers, json=assign_payload, verify=False)
+    # Your schema explicitly requires the "values" array wrapper for this endpoint
+    payload = {
+        "values": [
+            {
+                "name": "Cloud-Org-A-vSAN-Policy",
+                "virtualDatacenter": {
+                    "id": vdc_urn
+                },
+                "regionStoragePolicy": {
+                    # Matching the policy we mapped during Region creation
+                    "name": "vSAN Default Storage Policy" 
+                },
+                "storageLimitMiB": 2306048 # 2252 GB
+            }
+        ]
+    }
     
-    if assign_res.status_code in [200, 201, 202, 204]:
-        print("[+] Quota Policy successfully bound to Cloud Org A.")
+    res = requests.post(url, headers=headers, json=payload, verify=False)
+    
+    if res.status_code in [200, 201, 202, 204]:
+        print("[+] Storage Policy successfully bound to VDC!")
     else:
-        print(f"[-] Failed to bind quota policy: {assign_res.status_code} {assign_res.text}")
+        print(f"[-] Failed to bind VDC Storage Policy: {res.status_code} {res.text}")
         sys.exit(1)
 
 def create_org_admin(token, org_id, role_urn):
@@ -511,8 +561,15 @@ if __name__ == "__main__":
             # TEMP configure_org_networking_tenancy(token, org_urn)
             # TEMP configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
-            # Step 3: Quota Orchestration
-            configure_org_quota(token, org_urn)
+            # Step 3: Regional Quota - VDC Creation
+            vdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn)
+            vdc_urn = get_vdc_id(token, vdc_name)
+            
+            if vdc_urn:
+                create_vdc_storage_policy(token, vdc_urn)
+            else:
+                print("[-] Could not retrieve VDC URN. Storage mapping aborted.")
+                sys.exit(1)
             
             # Step 4: User & Role Orchestration
             role_urn = get_org_admin_role_id(token, org_urn)
