@@ -691,12 +691,12 @@ if __name__ == "__main__":
             sys.exit(1)
             
         # Step 1: Define Region
-        # TEMP create_vcf_region(token, nsx_urn, supervisor_urn)
+        create_vcf_region(token, nsx_urn, supervisor_urn)
         
         # --- REGION & TENANT LOOKUPS ---
         region_urn = get_region_id(token, REGION_NAME)
         
-        # TEMP create_tenant_org_base(token)
+        create_tenant_org_base(token)
         org_urn = get_org_id(token, ORG_NAME)
         
         # In a VCF lab, the Tier-0 is usually named based on the workload domain
@@ -704,8 +704,8 @@ if __name__ == "__main__":
         
         if org_urn and region_urn and gw_urn:
             # Step 2: Network Tenancy & Binding
-            # TEMP configure_org_networking_tenancy(token, org_urn)
-            # TEMP configure_regional_networking(token, org_urn, region_urn, gw_urn)
+            configure_org_networking_tenancy(token, org_urn)
+            configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
             # Step 3: Regional Quota - VDC Creation
             zone_urn = get_zone_id(token, ZONE_NAME)
@@ -740,7 +740,7 @@ if __name__ == "__main__":
             # Step 4: User & Role Orchestration
             role_urn = get_org_admin_role_id(token, org_urn)
             if role_urn:
-                # TEMP create_org_admin(token, org_urn, role_urn)
+                create_org_admin(token, org_urn, role_urn)
                 pass
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
