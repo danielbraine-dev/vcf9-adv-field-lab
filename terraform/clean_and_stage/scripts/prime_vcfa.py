@@ -420,7 +420,6 @@ def create_org_admin(token, org_id):
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
-        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
     
     user_payload = {
