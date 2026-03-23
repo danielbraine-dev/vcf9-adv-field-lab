@@ -9,6 +9,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 NSX_MANAGER = "nsx-wld01-a.site-a.vcf.lab"
 SUPERVISOR_NAME = "wld01-supervisor"
+ZONE_NAME ="z-wld-a"
 REGION_NAME = "us-east"
 ORG_NAME = "Cloud-Org-A"
 PROVIDER_GATEWAY_NAME = "us-east-region-PG"
@@ -146,6 +147,43 @@ def get_supervisor_id(token, supervisor_name):
         print(f"[-] Failed to fetch Supervisors: {res.status_code} {res.text}")
         return None
         
+def get_zone_id(token, zone_name):
+    print(f"\n[*] Fetching URN for Zone: {zone_name}...")
+    
+    # Using the strict VCF namespace for Zones
+    url = f"{VCFA_URL}/cloudapi/vcf/zones"
+    
+    params = {
+        "page": 1,
+        "pageSize": 25
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0"
+    }
+    
+    res = requests.get(url, headers=headers, params=params, verify=False)
+    
+    if res.status_code == 200:
+        zones = res.json().get("values", [])
+        for z in zones:
+            if z.get("name") == zone_name:
+                urn = z.get("id")
+                print(f"[+] Found Zone URN: {urn}")
+                return urn
+                
+        # Lab Fallback
+        if len(zones) == 1:
+            urn = zones[0].get("id")
+            print(f"[+] Defaulting to the only registered Zone URN: {urn}")
+            return urn
+            
+        print(f"[-] Zone '{zone_name}' not found.")
+        return None
+    else:
+        print(f"[-] Failed to fetch Zones: {res.status_code} {res.text}")
+        return None
         
 def get_region_id(token, region_name):
     print(f"\n[*] Fetching URN for Region: {region_name}...")
@@ -406,7 +444,7 @@ def configure_regional_networking(token, org_id, region_urn, gw_urn):
         print(f"[-] Failed to bind regional networking: {res.status_code} {res.text}")
         sys.exit(1)
         
-def create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn):
+def create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn):
     print(f"\n[5A] Slicing Supervisor Resources (Creating Virtual Datacenter)...")
     
     url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenters"
@@ -435,9 +473,7 @@ def create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn):
         "zoneResourceAllocation": [
             {
                 "zone": {
-                    "name": "z-wld-a"
-                    # Note: If VCFA throws an EntityReference error for the Zone, 
-                    # we will need a quick get_zone_id() helper, but names usually work for zones.
+                    "id": zone_urn
                 },
                 "resourceAllocation": {
                     "cpuLimitMHz": 30000,         # 30 GHz
@@ -562,7 +598,13 @@ if __name__ == "__main__":
             # TEMP configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
             # Step 3: Regional Quota - VDC Creation
-            vdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn)
+            zone_urn = get_zone_id(token, ZONE_NAME)
+            
+            if not zone_urn:
+                print("[-] Could not retrieve Zone URN. Halting VDC Creation.")
+                sys.exit(1)
+                
+            vdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn)
             vdc_urn = get_vdc_id(token, vdc_name)
             
             if vdc_urn:
