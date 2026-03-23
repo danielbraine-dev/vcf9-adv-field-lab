@@ -324,6 +324,30 @@ def get_region_storage_policy_id(token, policy_name):
         print(f"[-] Failed to fetch Region Storage Policies: {res.status_code} {res.text}")
         return None    
 
+def get_all_vm_classes(token):
+    print(f"\n[*] Fetching all available VM Classes from Provider...")
+    
+    url = f"{VCFA_URL}/cloudapi/1.0.0/virtualMachineClasses"
+    
+    params = {
+        "page": 1,
+        "pageSize": 128 # Large page size to grab them all at once
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0"
+    }
+    
+    res = requests.get(url, headers=headers, params=params, verify=False)
+    
+    if res.status_code == 200:
+        classes = res.json().get("values", [])
+        print(f"[+] Found {len(classes)} VM Classes available for binding.")
+        return classes
+    else:
+        print(f"[-] Failed to fetch VM Classes: {res.status_code} {res.text}")
+        return []
 
 def get_org_admin_role_id(token, org_id):
     print(f"\n[*] Fetching URN for 'Organization Administrator' Role...")
@@ -583,6 +607,36 @@ def create_vdc_storage_policy(token, vdc_urn, policy_urn):
         print(f"[-] Failed to bind VDC Storage Policy: {res.status_code} {res.text}")
         sys.exit(1)
 
+
+def enable_all_vdc_vm_classes(token, vdc_urn, available_classes):
+    print(f"\n[5C] Binding all VM Classes to Virtual Datacenter...")
+    
+    # Using the exact v1 endpoint from your DevTools screenshot
+    url = f"{VCFA_URL}/cloudapi/v1/virtualDatacenters/{vdc_urn}/virtualMachineClasses"
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0"
+    }
+    
+    # CloudAPI PUT requests to collection endpoints universally expect the "values" array
+    payload = {
+        "values": [{"id": c.get("id")} for c in available_classes]
+    }
+    
+    res = requests.put(url, headers=headers, json=payload, verify=False)
+    
+    if res.status_code in [200, 201, 202, 204]:
+        print("[+] Successfully enabled all VM Classes on the VDC!")
+    else:
+        print(f"[-] Failed to bind VM Classes: {res.status_code} {res.text}")
+        
+        # Fallback debug tip just in case the payload schema differs slightly
+        print("[!] Tip: Check the 'Payload' or 'Request' tab in DevTools to see if it wants a flat array instead of a 'values' wrapper.")
+        sys.exit(1)
+
+
 def create_org_admin(token, org_id, role_urn):
     print(f"\n[6] Creating First User with Org Admin Role...")
     
@@ -669,8 +723,16 @@ if __name__ == "__main__":
                     sys.exit(1)
                     
                 create_vdc_storage_policy(token, vdc_urn, policy_urn)
+
+                all_classes = get_all_vm_classes(token)
+                if all_classes:
+                    enable_all_vdc_vm_classes(token, vdc_urn, all_classes)
+                else:
+                    print("[-] No VM classes found to bind, or fetch failed.")
+                    sys.exit(1)
+                    
             else:
-                print("[-] Could not retrieve VDC URN. Storage mapping aborted.")
+                print("[-] Could not retrieve VDC URN. Storage and Compute mapping aborted.")
                 sys.exit(1)
             
             # Step 4: User & Role Orchestration
