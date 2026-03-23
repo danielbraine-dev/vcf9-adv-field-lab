@@ -391,6 +391,7 @@ def configure_org_quota(token, org_id):
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
     
     # An empty quotaPoolDefinitions array generally translates to "No Limits" in VCFA
