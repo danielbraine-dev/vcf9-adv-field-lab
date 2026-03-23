@@ -357,7 +357,8 @@ def configure_org_quota(token, org_id):
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
-        "Content-Type": "application/json;version=9.0.0"
+        "Content-Type": "application/json;version=9.0.0",
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
     
     # An empty quotaPoolDefinitions array generally translates to "No Limits" in VCFA
@@ -403,7 +404,8 @@ def create_org_admin(token, org_id):
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
-        "Content-Type": "application/json;version=9.0.0"
+        "Content-Type": "application/json;version=9.0.0",
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
     
     user_payload = {
@@ -476,8 +478,8 @@ if __name__ == "__main__":
         
         if org_urn and region_urn and gw_urn:
             # Step 2: Network Tenancy & Binding
-            configure_org_networking_tenancy(token, org_urn)
-            configure_regional_networking(token, org_urn, region_urn, gw_urn)
+            # TEMP configure_org_networking_tenancy(token, org_urn)
+            # TEMP configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
             # Step 3: Quota Orchestration
             configure_org_quota(token, org_urn)
