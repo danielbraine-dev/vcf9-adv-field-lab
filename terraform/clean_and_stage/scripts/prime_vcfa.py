@@ -520,6 +520,7 @@ if __name__ == "__main__":
             role_urn = get_org_admin_role_id(token, org_urn)
             if role_urn:
                 # TEMP create_org_admin(token, org_urn, role_urn)
+                pass
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
                 sys.exit(1)
