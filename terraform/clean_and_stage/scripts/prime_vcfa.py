@@ -365,7 +365,6 @@ def configure_org_quota(token, org_id):
     quota_payload = {
         "name": "Unlimited-Quota-Cloud-Org-A",
         "description": "Unlimited regional quota for sovereign tenant",
-        "orgId": org_id,
         "quotaPoolDefinitions": []
     }
     
