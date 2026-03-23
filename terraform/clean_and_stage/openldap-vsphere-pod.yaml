@@ -1,0 +1,73 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openldap
+  namespace: shared-infrastructure 
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: vsan-default-storage-policy 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shared-openldap
+  namespace: shared-infrastructure-vdc
+  labels:
+    app: openldap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openldap
+  template:
+    metadata:
+      labels:
+        app: openldap
+    spec:
+      containers:
+      - name: openldap
+        image: osixia/openldap:1.5.0
+        ports:
+        - containerPort: 389
+        - containerPort: 636
+        env:
+        - name: LDAP_ORGANISATION
+          value: "VCF Tenant LDAP"
+        - name: LDAP_DOMAIN
+          value: "vcf.lab"
+        - name: LDAP_ADMIN_PASSWORD
+          value: "VMware123!"
+        volumeMounts:
+        - name: ldap-data
+          mountPath: /var/lib/ldap
+        - name: ldap-config
+          mountPath: /etc/ldap/slapd.d
+      volumes:
+      - name: ldap-data
+        persistentVolumeClaim:
+          claimName: openldap-data
+      - name: ldap-config
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openldap-lb
+  namespace: shared-infrastructure-vdc
+spec:
+  # Avi will intercept this and spin up an NSX-T VIP for your LDAP server!
+  type: LoadBalancer 
+  ports:
+  - name: ldap
+    port: 389
+    targetPort: 389
+  - name: ldaps
+    port: 636
+    targetPort: 636
+  selector:
+    app: openldap
