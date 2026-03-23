@@ -389,8 +389,8 @@ def configure_org_quota(token, org_id):
     create_url = f"{VCFA_URL}/cloudapi/1.0.0/quotaPolicies"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json;version=40.0.0",
-        "Content-Type": "application/json;version=40.0.0",
+        "Accept": "application/json;version=40.0",
+        "Content-Type": "application/json;version=40.0",
     }
     
     # An empty quotaPoolDefinitions array generally translates to "No Limits" in VCFA
