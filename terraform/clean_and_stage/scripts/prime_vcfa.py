@@ -249,8 +249,10 @@ def get_provider_gateway_id(token, gateway_name):
         print(f"[-] Failed to fetch Provider Gateways: {res.status_code} {res.text}")
         return None
 
+import time
+
 def get_vdc_id(token, vdc_name):
-    print(f"[*] Waiting for VDC '{vdc_name}' to initialize...")
+    print(f"[*] Waiting for VDC '{vdc_name}' to become READY (This may take a minute)...", end="", flush=True)
     url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenters"
     
     headers = {
@@ -258,18 +260,30 @@ def get_vdc_id(token, vdc_name):
         "Accept": "application/json;version=9.0.0"
     }
     
-    # Poll up to 5 times to wait for the 202 Accepted task to generate the object
-    for _ in range(5):
-        time.sleep(3)
+    # Increased polling to 2 minutes max (24 retries * 5 seconds) 
+    # to account for backend vCenter/NSX Namespace provisioning.
+    max_retries = 24
+    for attempt in range(max_retries):
         res = requests.get(url, headers=headers, verify=False)
         if res.status_code == 200:
             vdcs = res.json().get("values", [])
             for vdc in vdcs:
                 if vdc.get("name") == vdc_name:
-                    urn = vdc.get("id")
-                    print(f"[+] Found Virtual Datacenter URN: {urn}")
-                    return urn
-    print(f"[-] VDC '{vdc_name}' did not appear in time. Task may have failed in VCFA.")
+                    # Check the actual provisioning status of the VDC
+                    status = vdc.get("status", "UNKNOWN")
+                    
+                    if status in ["READY", "NORMAL"]:
+                        urn = vdc.get("id")
+                        print(f"\n[+] VDC is {status}! URN: {urn}")
+                        return urn
+                    else:
+                        # VDC exists but is still locked/provisioning
+                        print(".", end="", flush=True)
+                        break # Break the inner loop, wait, and hit the API again
+        
+        time.sleep(5)
+        
+    print(f"\n[-] VDC '{vdc_name}' did not reach READY state in time. Check VCFA UI for failed tasks.")
     return None
 
 
