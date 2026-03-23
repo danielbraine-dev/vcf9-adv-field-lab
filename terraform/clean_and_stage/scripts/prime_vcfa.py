@@ -325,18 +325,20 @@ def get_region_storage_policy_id(token, policy_name):
         return None    
 
 def get_all_vm_classes(token):
-    print(f"\n[*] Fetching all available VM Classes from Provider...")
+    print(f"\n[*] Fetching all available VM Classes via VCF CloudAPI...")
     
-    url = f"{VCFA_URL}/cloudapi/1.0.0/virtualMachineClasses"
+    # Matching the exact namespace from your documentation
+    url = f"{VCFA_URL}/cloudapi/vcf/virtualMachineClasses"
     
+    # Pagination is Required per the spec
     params = {
         "page": 1,
-        "pageSize": 128 # Large page size to grab them all at once
+        "pageSize": 128 
     }
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json;version=9.0.0"
+        "Accept": "application/json;version=9.0.0" 
     }
     
     res = requests.get(url, headers=headers, params=params, verify=False)
