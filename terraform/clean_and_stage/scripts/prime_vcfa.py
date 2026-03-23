@@ -398,7 +398,7 @@ def configure_org_quota(token, org_id):
     quota_payload = {
         "name": "Quota-Cloud-Org-A",
         "description": "Cluster-available regional quota for sovereign tenant",
-        "orgID": org_id,
+        "orgId": org_id,
         "quotaPoolDefinitions": [
             {
             "resourceType": "cpu",
