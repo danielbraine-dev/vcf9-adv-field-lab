@@ -207,6 +207,39 @@ def get_provider_gateway_id(token, gateway_name):
     else:
         print(f"[-] Failed to fetch Provider Gateways: {res.status_code} {res.text}")
         return None
+
+def get_org_admin_role_id(token, org_id):
+    print(f"\n[*] Fetching URN for 'Organization Administrator' Role...")
+    
+    # We must query the roles specific to this tenant
+    url = f"{VCFA_URL}/cloudapi/1.0.0/roles"
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0",
+        # We must set the context to the tenant to see the tenant's roles
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id 
+    }
+    
+    # We can use FIQL to filter directly for the role name to save processing
+    params = {
+        "filter": "name==Organization Administrator"
+    }
+    
+    res = requests.get(url, headers=headers, params=params, verify=False)
+    
+    if res.status_code == 200:
+        roles = res.json().get("values", [])
+        if roles:
+            role_urn = roles[0].get("id")
+            print(f"[+] Found Role URN: {role_urn}")
+            return role_urn
+            
+        print("[-] Role 'Organization Administrator' not found in tenant.")
+        return None
+    else:
+        print(f"[-] Failed to fetch Roles: {res.status_code} {res.text}")
+        return None
         
 ######################
 # GP Functions#
@@ -411,59 +444,43 @@ def configure_org_quota(token, org_id):
         print(f"[-] Failed to bind quota policy: {assign_res.status_code} {assign_res.text}")
         sys.exit(1)
 
-def create_org_admin(token, org_id):
-    print(f"\n[6] Creating First User and Assigning Roles...")
+def create_org_admin(token, org_id, role_urn):
+    print(f"\n[6] Creating First User with Org Admin Role...")
     
-    # Part A: Create the User
     user_url = f"{VCFA_URL}/cloudapi/1.0.0/users"
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
+        # Ensure we are creating the user INSIDE the tenant context
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
     
     user_payload = {
         "username": "cloud-org-a_admin",
-        "password": "VMware123!VMware123!", # Meets the >=15 char, upper, lower, special, digit requirement
+        "password": "VMware123!VMware123!", 
         "fullName": "Cloud Org A Administrator",
         "orgEntityRef": {
             "id": org_id
         },
         "enabled": True,
-        "providerType": "LOCAL"
+        "providerType": "LOCAL",
+        # THE FIX: Assigning the role at the exact moment of creation
+        "roleEntityRefs": [
+            {
+                "name": "Organization Administrator",
+                "id": role_urn
+            }
+        ]
     }
     
     user_res = requests.post(user_url, headers=headers, json=user_payload, verify=False)
     
     if user_res.status_code in [200, 201]:
         user_urn = user_res.json().get("id")
-        print(f"[+] User 'cloud-org-a_admin' created with URN: {user_urn}")
+        print(f"[+] User 'cloud-org-a_admin' successfully created and elevated!")
     else:
         print(f"[-] Failed to create user: {user_res.status_code} {user_res.text}")
-        sys.exit(1)
-
-    # Part B: Assign the Organization Administrator Role
-    # CloudAPI paths usually expect the UUID portion or URL-encoded URNs. 
-    # We will strip the "urn:vcloud:user:" prefix to get the raw UUID to be safe in the URL path.
-    raw_user_id = user_urn.split(":")[-1]
-    raw_org_id = org_id.split(":")[-1]
-    
-    role_url = f"{VCFA_URL}/cloudapi/1.0.0/users/{raw_user_id}/orgs/{raw_org_id}/roles"
-    
-    role_payload = {
-        "roleNamesToAdd": [
-            "Organization Administrator"
-        ],
-        "roleNamesToRemove": []
-    }
-    
-    # Your schema explicitly states this is a PATCH method
-    role_res = requests.patch(role_url, headers=headers, json=role_payload, verify=False)
-    
-    if role_res.status_code in [200, 201, 202, 204]:
-        print("[+] Role 'Organization Administrator' successfully granted!")
-    else:
-        print(f"[-] Failed to assign role: {role_res.status_code} {role_res.text}")
         sys.exit(1)
         
 if __name__ == "__main__":
@@ -499,7 +516,12 @@ if __name__ == "__main__":
             # TEMP configure_org_quota(token, org_urn)
             
             # Step 4: User & Role Orchestration
-            create_org_admin(token, org_urn)
+            role_urn = get_org_admin_role_id(token, org_urn)
+            if role_urn:
+                create_org_admin(token, org_urn, role_urn)
+            else:
+                print("[-] Could not find Org Admin role. Halting User Creation.")
+                sys.exit(1)
             
             print(f"\n[✔] SUCCESS: Step 10 VCFA Priming is 100% Complete.")
             
