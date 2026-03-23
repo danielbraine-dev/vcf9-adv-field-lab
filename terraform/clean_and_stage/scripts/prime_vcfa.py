@@ -497,7 +497,7 @@ if __name__ == "__main__":
             # TEMP configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
             # Step 3: Quota Orchestration
-            configure_org_quota(token, org_urn)
+            # TEMP configure_org_quota(token, org_urn)
             
             # Step 4: User & Role Orchestration
             create_org_admin(token, org_urn)
