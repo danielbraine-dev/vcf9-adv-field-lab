@@ -358,14 +358,29 @@ def configure_org_quota(token, org_id):
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
-        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
     
     # An empty quotaPoolDefinitions array generally translates to "No Limits" in VCFA
     quota_payload = {
-        "name": "Unlimited-Quota-Cloud-Org-A",
-        "description": "Unlimited regional quota for sovereign tenant",
-        "quotaPoolDefinitions": []
+        "name": "Quota-Cloud-Org-A",
+        "description": "Cluster-available regional quota for sovereign tenant",
+        "quotaPoolDefinitions": [
+            {
+            "resourceType": "cpu",
+            "quota": 30,
+            "quotaResourceUnit": "GHz"
+            },
+            {
+            "resourceType": "memory",
+            "quota": 86,
+            "quotaResourceUnit": "GB"
+            },
+            {
+            "resourceType": "storage",
+            "quota": 2252,
+            "quotaResourceUnit": "GB"
+            }
+        ]
     }
     
     res = requests.post(create_url, headers=headers, json=quota_payload, verify=False)
