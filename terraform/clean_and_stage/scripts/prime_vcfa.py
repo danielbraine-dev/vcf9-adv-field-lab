@@ -513,12 +513,12 @@ if __name__ == "__main__":
             # TEMP configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
             # Step 3: Quota Orchestration
-            # TEMP configure_org_quota(token, org_urn)
+            configure_org_quota(token, org_urn)
             
             # Step 4: User & Role Orchestration
             role_urn = get_org_admin_role_id(token, org_urn)
             if role_urn:
-                create_org_admin(token, org_urn, role_urn)
+                # TEMP create_org_admin(token, org_urn, role_urn)
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
                 sys.exit(1)
