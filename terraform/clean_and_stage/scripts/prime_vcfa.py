@@ -364,21 +364,22 @@ def configure_org_quota(token, org_id):
     quota_payload = {
         "name": "Quota-Cloud-Org-A",
         "description": "Cluster-available regional quota for sovereign tenant",
+        "orgID": org_id,
         "quotaPoolDefinitions": [
             {
             "resourceType": "cpu",
-            "quota": 30,
-            "quotaResourceUnit": "GHz"
+            "quota": 30000,
+            "quotaResourceUnit": "MHz"
             },
             {
             "resourceType": "memory",
-            "quota": 86,
-            "quotaResourceUnit": "GB"
+            "quota": 88064,
+            "quotaResourceUnit": "MB"
             },
             {
             "resourceType": "storage",
-            "quota": 2252,
-            "quotaResourceUnit": "GB"
+            "quota": 2306048,
+            "quotaResourceUnit": "MB"
             }
         ]
     }
