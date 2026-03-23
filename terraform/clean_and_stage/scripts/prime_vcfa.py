@@ -13,6 +13,8 @@ ZONE_NAME ="z-wld-a"
 REGION_NAME = "us-east"
 ORG_NAME = "Cloud-Org-A"
 PROVIDER_GATEWAY_NAME = "us-east-region-PG"
+POLICY_NAME = "vSAN Default Storage Policy"
+
 
 # VCFA Provider Credentials
 VCFA_URL = "https://auto-a.site-a.vcf.lab"
@@ -269,7 +271,46 @@ def get_vdc_id(token, vdc_name):
                     return urn
     print(f"[-] VDC '{vdc_name}' did not appear in time. Task may have failed in VCFA.")
     return None
+
+
+def get_region_storage_policy_id(token, policy_name):
+    print(f"\n[*] Fetching URN for Region Storage Policy: {policy_name}...")
     
+    url = f"{VCFA_URL}/cloudapi/vcf/regionStoragePolicies"
+    
+    params = {
+        "page": 1,
+        "pageSize": 25
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0"
+    }
+    
+    res = requests.get(url, headers=headers, params=params, verify=False)
+    
+    if res.status_code == 200:
+        policies = res.json().get("values", [])
+        for p in policies:
+            if p.get("name") == policy_name:
+                urn = p.get("id")
+                print(f"[+] Found Region Storage Policy URN: {urn}")
+                return urn
+                
+        # Lab Fallback
+        if len(policies) == 1:
+            urn = policies[0].get("id")
+            print(f"[+] Defaulting to the only registered Storage Policy URN: {urn}")
+            return urn
+            
+        print(f"[-] Storage Policy '{policy_name}' not found.")
+        return None
+    else:
+        print(f"[-] Failed to fetch Region Storage Policies: {res.status_code} {res.text}")
+        return None    
+
+
 def get_org_admin_role_id(token, org_id):
     print(f"\n[*] Fetching URN for 'Organization Administrator' Role...")
     
@@ -494,7 +535,7 @@ def create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_u
         print(f"[-] Failed to create Virtual Datacenter: {res.status_code} {res.text}")
         sys.exit(1)
 
-def create_vdc_storage_policy(token, vdc_urn):
+def create_vdc_storage_policy(token, vdc_urn, policy_urn):
     print(f"\n[5B] Binding vSAN Storage Policy to VDC...")
     
     url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenterStoragePolicies"
@@ -504,7 +545,6 @@ def create_vdc_storage_policy(token, vdc_urn):
         "Content-Type": "application/json;version=9.0.0"
     }
     
-    # Your schema explicitly requires the "values" array wrapper for this endpoint
     payload = {
         "values": [
             {
@@ -513,8 +553,8 @@ def create_vdc_storage_policy(token, vdc_urn):
                     "id": vdc_urn
                 },
                 "regionStoragePolicy": {
-                    # Matching the policy we mapped during Region creation
-                    "name": "vSAN Default Storage Policy" 
+                    # THE FIX: Explicitly providing the ID so BaseObjectId doesn't throw an NPE
+                    "id": policy_urn
                 },
                 "storageLimitMiB": 2306048 # 2252 GB
             }
@@ -608,7 +648,13 @@ if __name__ == "__main__":
             vdc_urn = get_vdc_id(token, vdc_name)
             
             if vdc_urn:
-                create_vdc_storage_policy(token, vdc_urn)
+                policy_urn = get_region_storage_policy_id(token, POLICY_NAME)
+                
+                if not policy_urn:
+                    print("[-] Could not retrieve Storage Policy URN. Halting.")
+                    sys.exit(1)
+                    
+                create_vdc_storage_policy(token, vdc_urn, policy_urn)
             else:
                 print("[-] Could not retrieve VDC URN. Storage mapping aborted.")
                 sys.exit(1)
