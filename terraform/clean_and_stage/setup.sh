@@ -407,6 +407,54 @@ step10_prime_vcfa_objects(){
   pause
 }
 
+step11_deploy_openldap(){
+  log "[11] Deploying OpenLDAP as a vSphere Native Pod…"
+
+  SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
+  VC_USER="$(read_tfvar vsphere_user)"
+  
+  # The VCF CLI automatically reads this env var for non-interactive basic auth
+  export KUBECTL_VSPHERE_PASSWORD="$(read_tfvar vsphere_password)"
+
+  log "Authenticating to Supervisor Control Plane at ${SUP_IP} using VCF CLI..."
+  
+  # Create the VCF CLI context (replaces the deprecated kubectl-vsphere plugin)
+  vcf context create lab-supervisor \
+    --endpoint "${SUP_IP}" \
+    --auth-type basic \
+    --username "${VC_USER}" \
+    --insecure-skip-tls-verify
+
+  log "Setting default Kubernetes context..."
+  vcf context use lab-supervisor
+
+  log "Applying OpenLDAP Manifest to the Shared Infrastructure Namespace..."
+  kubectl apply -f "${ROOT_DIR}/openldap-vsphere-pod.yaml"
+
+  log "Waiting for Avi to assign a Load Balancer VIP to the LDAP Service..."
+  log "(This may take 1-2 minutes as Avi spins up the NSX-T Virtual Service)"
+  
+  for ((i=1; i<=20; i++)); do
+    # Suppressing stderr just in case the resource isn't instantly available
+    LDAP_VIP=$(kubectl get svc openldap-lb -n shared-infrastructure-vdc -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+    
+    if [[ -n "$LDAP_VIP" ]]; then
+      printf "\n"
+      log "[+] OpenLDAP successfully provisioned!"
+      log "    LDAP Endpoint: ldap://${LDAP_VIP}:389"
+      log "    Admin DN:      cn=admin,dc=vcf,dc=lab"
+      log "    Password:      VMware123!"
+      break
+    else
+      printf "."
+      sleep 10
+    fi
+  done
+
+  log "[+] Step 11 Complete! Global Identity Provider is online."
+  pause
+}
+
 do_step() {
   case "$1" in
     1) step1_install_tools;;
@@ -419,6 +467,7 @@ do_step() {
     8) step8_nsx_cloud;;
     9) step9_install_sup;;
    10) step10_prime_vcfa_objects;;
+   11) step11_deploy_openldap;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
@@ -426,7 +475,7 @@ do_step() {
 run() {
   local spec="${1:-all}"
   if [[ "$spec" == "all" ]]; then
-    for n in {1..10}; do do_step "$n"; done
+    for n in {1..11}; do do_step "$n"; done
     echo "All steps complete. ✅"
     return
   fi
