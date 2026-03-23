@@ -389,6 +389,7 @@ def configure_org_quota(token, org_id):
     create_url = f"{VCFA_URL}/cloudapi/1.0.0/quotaPolicies"
     headers = {
         "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
     }
     
