@@ -171,29 +171,43 @@ def get_region_id(token, region_name):
         return None
 
 def get_provider_gateway_id(token, gateway_name):
-    print(f"\n[*] Fetching URN for Provider Gateway (Tier-0): {gateway_name}...")
-    # Standard CloudAPI endpoint for Provider Gateways
-    url = f"{VCFA_URL}/cloudapi/1.0.0/providerGateways"
+    print(f"\n[*] Fetching URN for Provider Gateway (Tier-0) via VCF CloudAPI...")
+    
+    url = f"{VCFA_URL}/cloudapi/vcf/providerGateways"
+    
+    params = {
+        "page": 1,
+        "pageSize": 25
+    }
     
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0"
     }
     
-    res = requests.get(url, headers=headers, verify=False)
+    res = requests.get(url, headers=headers, params=params, verify=False)
     
     if res.status_code == 200:
         gateways = res.json().get("values", [])
+        
         for gw in gateways:
             if gw.get("name") == gateway_name:
                 urn = gw.get("id")
-                print(f"[+] Found Provider Gateway URN: {urn}")
+                print(f"[+] Found explicit Provider Gateway URN: {urn}")
                 return urn
-        print(f"[-] Provider Gateway '{gateway_name}' not found.")
+                
+        # Lab Fallback: If naming is slightly off but there is only one T0 registered
+        if len(gateways) == 1:
+            urn = gateways[0].get("id")
+            print(f"[+] Defaulting to the only registered Provider Gateway URN: {urn}")
+            return urn
+            
+        print(f"[-] Provider Gateway '{gateway_name}' not found in API response.")
         return None
     else:
         print(f"[-] Failed to fetch Provider Gateways: {res.status_code} {res.text}")
-        return None      
+        return None
+        
 ######################
 # GP Functions#
 ######################
