@@ -339,6 +339,37 @@ step8_nsx_cloud(){
     -var="dns_vs_uuid=${DNS_VS_UUID}" \
     -target=avi_systemconfiguration.this
 
+  # Wait for SE Image Upload to Content Library 
+  CL_NAME=$(terraform -chdir="${ROOT_DIR}" state show vsphere_content_library.avi_se_cl | grep '^ *name ' | awk -F'=' '{print $2}' | tr -d ' "')
+  
+  export GOVC_URL="$(read_tfvar vsphere_server)"
+  export GOVC_USERNAME="$(read_tfvar vsphere_user)"
+  export GOVC_PASSWORD="$(read_tfvar vsphere_password)"
+  export GOVC_INSECURE=1
+
+  log "Waiting for Avi to generate and upload the Service Engine OVA to the vCenter Content Library ('$CL_NAME')..."
+  log "(This typically takes 5-10 minutes depending on storage performance)"
+
+  # 40 attempts * 23 seconds ~ 15 minutes max wait
+  for ((i=1; i<=40; i++)); do
+    # 'grep -c .' counts non-empty lines. '|| true' prevents the script from crashing if it's 0.
+    ITEM_COUNT=$(govc library.item.ls "$CL_NAME" 2>/dev/null | grep -c . || true)
+    
+    if [[ "$ITEM_COUNT" -gt 0 ]]; then
+      printf "\n"
+      log "[+] Service Engine OVA successfully uploaded to Content Library!"
+      break
+    else
+      printf "."
+      sleep 23
+    fi
+
+    if [[ $i -eq 40 ]]; then
+      printf "\n"
+      error "[-] Timeout waiting for Avi to upload the SE image. Check vCenter Tasks or Avi UI."
+      exit 1
+    fi
+  done
   log "[+] Step 8 Complete! NSX Cloud Built and System DNS Delegated."
   pause
 }
