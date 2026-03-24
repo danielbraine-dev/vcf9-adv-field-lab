@@ -434,6 +434,12 @@ step11_install_supervisor_services(){
   CTX_NAME="lab-supervisor"
   export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
   export VSPHERE_PASSWORD="${VC_PASS}"
+  export KUBECTL_VSPHERE_PASSWORD="${VC_PASS}"
+  
+  log "Authenticating to Supervisor Control Plane using VCF CLI..."
+  # Silently delete existing context to prevent hanging
+  echo "y" | vcf context delete "${CTX_NAME}" >/dev/null 2>&1 || true
+  
   vcf context create "${CTX_NAME}" --endpoint "${SUP_IP}" --auth-type basic --username "${VC_USER}" --insecure-skip-tls-verify
   vcf context use "${CTX_NAME}"
 
@@ -497,25 +503,25 @@ persistence:
         existingClaim: ""
         storageClass: "vsan-default-storage-policy"
         subPath: ""
-        accessMode:ReadWriteOnce
+        accessMode: ReadWriteOnce
         size: 1Gi
     database:
       existingClaim: ""
       storageClass: "vsan-default-storage-policy"
       subPath: ""
-      accessMode:ReadWriteOnce
+      accessMode: ReadWriteOnce
       size: 1Gi
     redis:
       existingClaim: ""
       storageClass: "vsan-default-storage-policy"
       subPath: ""
-      accessMode:ReadWriteOnce
+      accessMode: ReadWriteOnce
       size: 1Gi
     trivy:
       existingClaim: ""
       storageClass: "vsan-default-storage-policy"
       subPath: ""
-      accessMode:ReadWriteOnce
+      accessMode: ReadWriteOnce
       size: 1Gi
 metrics:
   enabled: true
@@ -575,7 +581,8 @@ EOF
   docker tag osixia/openldap:1.5.0 "${TARGET_IMAGE}"
 
   log "Logging into Supervisor Harbor (${HARBOR_FQDN})..."
-  docker login "${HARBOR_FQDN}" -u "admin" -p "Harbor12345"
+  # MATCHED PASSWORD to Harbor YAML
+  docker login "${HARBOR_FQDN}" -u "admin" -p "VMware123!VMware123!"
 
   log "Pushing OpenLDAP image into the Supervisor..."
   docker push "${TARGET_IMAGE}"
@@ -588,7 +595,7 @@ EOF
 }
 
 step12_deploy_openldap(){
-  log "[11] Creating Shared Namespace & Deploying OpenLDAP…"
+  log "[12] Creating Shared Namespace & Deploying OpenLDAP…"
 
   SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
   VC_HOST="$(read_tfvar vsphere_server)"
@@ -610,12 +617,14 @@ step12_deploy_openldap(){
 
   log "Authenticating to Supervisor Control Plane at ${SUP_IP} using VCF CLI..."
   
-  vcf context delete lab-supervisor >/dev/null 2>&1 || true
+  # Silently delete existing context first
+  echo "y" | vcf context delete lab-supervisor >/dev/null 2>&1 || true
   
   export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
+  export VSPHERE_PASSWORD="${VC_PASS}"
   export KUBECTL_VSPHERE_PASSWORD="${VC_PASS}"
   
-  echo "${VC_PASS}" | vcf context create lab-supervisor \
+  vcf context create lab-supervisor \
     --endpoint "${SUP_IP}" \
     --auth-type basic \
     --username "${VC_USER}" \
@@ -647,7 +656,7 @@ step12_deploy_openldap(){
     fi
   done
 
-  log "[+] Step 11 Complete! Global Identity Provider is online."
+  log "[+] Step 12 Complete! Global Identity Provider is online."
   pause
 }
 
