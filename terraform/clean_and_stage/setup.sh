@@ -485,7 +485,7 @@ step11_install_supervisor_services(){
   CERT_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.crt")
   KEY_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.key")
 
-  # --- 3. DYNAMICALLY BUILD HARBOR CONFIG ---
+# --- 3. DYNAMICALLY BUILD HARBOR CONFIG ---
   log "Injecting TLS Certs into Harbor Data Values YAML..."
   HARBOR_YAML="${SERVICE_DIR}/harbor-dynamic-values.yaml"
   cat <<EOF > "${HARBOR_YAML}"
@@ -508,7 +508,7 @@ registry:
   replicas: 1
   secret: VMware123!VMware123!
 persistence:
-  persistenceVolumeClaim:
+  persistentVolumeClaim:
     registry:
       storageClass: "vsan-default-storage-policy"
       subPath: ""
