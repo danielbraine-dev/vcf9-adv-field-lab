@@ -6,15 +6,19 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def robust_post(session, url, payload):
     """
     Dynamically handles vCenter API wrapper inconsistencies.
-    VAPI often requires the payload to be wrapped in a specific parameter name.
+    Checks for both 'AlreadyExists' and 'unique_violation' to handle idempotency safely.
     """
-    # 1. Try wrapping in 'create_spec' (Standard for VAPI Create operations)
+    def is_success_or_exists(r):
+        text = r.text.lower()
+        return r.status_code < 400 or "already exist" in text or "unique_violation" in text
+
+    # 1. Try wrapping in 'create_spec'
     r = session.post(url, json={"create_spec": payload})
-    if r.status_code < 400 or "AlreadyExists" in r.text: return r
+    if is_success_or_exists(r): return r
 
     # 2. Try wrapping in 'spec'
     r = session.post(url, json={"spec": payload})
-    if r.status_code < 400 or "AlreadyExists" in r.text: return r
+    if is_success_or_exists(r): return r
 
     # 3. Try flat JSON payload
     r = session.post(url, json=payload)
@@ -64,72 +68,76 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
         sys.exit(1)
 
 def register_and_activate_service(session, host, definition_path, service_name):
-    """Automates Phase 1: Uploading the Service Definition using the Native Schema"""
+    """Automates Phase 1: Uploading the Service Definition using the Native Schema idempotently"""
     with open(definition_path, 'r') as f:
         content_raw = f.read()
     
     b64_content = base64.b64encode(content_raw.encode('utf-8')).decode('utf-8')
     
-    # Best-effort parsing just so we know what ID to poll for status
+    # Extract Service ID and Version natively from the Carvel YAML
     ref_match = re.search(r'refName:\s*([^\s]+)', content_raw)
     ver_match = re.search(r'version:\s*([^\s]+)', content_raw)
     svc_id_guess = ref_match.group(1).strip("'\"") if ref_match else service_name
     svc_ver_guess = ver_match.group(1).strip("'\"") if ver_match else "unknown"
 
-    print(f"[*] Registering Supervisor Service via inline YAML payload...")
-    
-    payload_vsphere = {
-        "vsphere_spec": {
-            "version_spec": {
-                "content": b64_content,
-                "accept_eula": True
-            }
-        }
-    }
-    
-    r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload_vsphere)
-    
-    if r.status_code >= 400 and "AlreadyExists" not in r.text:
-        print("[-] vsphere_spec format rejected. Falling back to carvel_spec format...")
-        payload_carvel = {
-            "carvel_spec": {
-                "version_spec": {
-                    "content": b64_content
-                }
-            }
-        }
-        r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload_carvel)
-
-    if r.status_code >= 400 and "AlreadyExists" not in r.text:
-        print(f"[-] API POST failed! HTTP {r.status_code}")
-        try:
-            print(json.dumps(r.json(), indent=2))
-        except:
-            print(r.text)
-        sys.exit(1)
-
-    print("[+] Service and Version registered successfully (or already exists)!")
-
+    # --- 1. Query the Catalog First (Idempotency Check) ---
     res = session.get(f"https://{host}/api/vcenter/namespace-management/supervisor-services")
     res.raise_for_status()
     existing_svcs = res.json()
+    svc_list = existing_svcs.get("value", []) if isinstance(existing_svcs, dict) else existing_svcs
     
-    target_svc = next((s for s in existing_svcs if svc_id_guess in s["supervisor_service"]), None)
-    if not target_svc:
-        target_svc = next((s for s in existing_svcs if service_name.lower() in s.get("name", "").lower() or service_name.lower() in s.get("display_name", "").lower()), None)
-    
-    if not target_svc:
-        print("[-] Service was registered, but could not be found in the catalog to query status!")
-        sys.exit(1)
-        
-    svc_id = target_svc["supervisor_service"]
+    installed_svc_ids = [s.get("supervisor_service", "") if isinstance(s, dict) else s for s in svc_list]
 
+    if svc_id_guess not in installed_svc_ids:
+        print(f"[*] Registering new Supervisor Service via inline YAML payload...")
+        payload_vsphere = {"vsphere_spec": {"version_spec": {"content": b64_content, "accept_eula": True}}}
+        
+        r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload_vsphere)
+        
+        if r.status_code >= 400 and "unique_violation" not in r.text:
+            print("[-] vsphere_spec format rejected. Falling back to carvel_spec format...")
+            payload_carvel = {"carvel_spec": {"version_spec": {"content": b64_content}}}
+            r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload_carvel)
+
+        if r.status_code >= 400 and "unique_violation" not in r.text:
+            print(f"[-] API POST failed! HTTP {r.status_code}")
+            try: print(json.dumps(r.json(), indent=2))
+            except: print(r.text)
+            sys.exit(1)
+        print("[+] Service registered successfully!")
+    else:
+        print(f"[*] Supervisor Service '{svc_id_guess}' already registered. Checking versions...")
+
+    svc_id = svc_id_guess
+
+    # --- 2. Check if Version is uploaded ---
+    res = session.get(f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions")
+    res.raise_for_status()
+    versions_data = res.json()
+    ver_list = versions_data.get("value", []) if isinstance(versions_data, dict) else versions_data
+    
+    installed_versions = [v.get("version") for v in ver_list if isinstance(v, dict)]
+
+    if svc_ver_guess not in installed_versions and svc_ver_guess != "unknown":
+        print(f"[*] Uploading Version {svc_ver_guess} to existing Service...")
+        payload_ver = {
+            "version": svc_ver_guess,
+            "content": b64_content,
+            "accept_eula": True
+        }
+        r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions", payload_ver)
+        if r.status_code >= 400 and "unique_violation" not in r.text:
+            print(f"[-] Failed to upload version! HTTP {r.status_code}")
+            sys.exit(1)
+
+    # --- 3. Poll for ACTIVATED status ---
     print(f"[*] Waiting for version to reach ACTIVATED state (can take 1-2 minutes)...")
     for _ in range(40):
         r = session.get(f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions")
-        versions_data = r.json()
+        v_data = r.json()
+        v_list = v_data.get("value", []) if isinstance(v_data, dict) else v_data
         
-        activated_version = next((v["version"] for v in versions_data if v["state"] == "ACTIVATED" and (svc_ver_guess == "unknown" or v["version"] == svc_ver_guess)), None)
+        activated_version = next((v["version"] for v in v_list if v.get("state") == "ACTIVATED" and (svc_ver_guess == "unknown" or v.get("version") == svc_ver_guess)), None)
         
         if activated_version:
             print(f"[+] Version {activated_version} is ACTIVATED and ready for deployment!")
@@ -179,37 +187,27 @@ def main():
 
         install_url = f"https://{args.host}/api/vcenter/namespace-management/supervisors/{supervisor_id}/supervisor-services"
         
-        # --- THE FIX: Bulletproof Idempotency Check ---
         try:
             r_exist = session.get(install_url)
             if r_exist.status_code == 200:
                 existing_data = r_exist.json()
-                
-                # Handle vCenter wrapper {"value": [...]} or raw list [...]
                 svc_list = existing_data.get("value", []) if isinstance(existing_data, dict) else existing_data
                 
-                installed_ids = []
-                for item in svc_list:
-                    if isinstance(item, str):
-                        installed_ids.append(item)
-                    elif isinstance(item, dict):
-                        installed_ids.append(item.get("supervisor_service", ""))
+                installed_ids = [item if isinstance(item, str) else item.get("supervisor_service", "") for item in svc_list]
                 
                 if svc_id in installed_ids:
                     print(f"[+] Service {svc_id} is already deployed on the Supervisor. Skipping installation.")
                     sys.exit(0)
-        except Exception as e:
-            print(f"[*] Note: Could not verify existing services natively, proceeding with installation attempt...")
+        except Exception:
+            pass # Failsafe, attempt install anyway
 
         print(f"[*] Deploying {args.service_name} onto Supervisor {supervisor_id}...")
         r = robust_post(session, install_url, payload)
         
         if r.status_code >= 400:
             print(f"[-] API POST failed! HTTP {r.status_code}")
-            try:
-                print(json.dumps(r.json(), indent=2))
-            except:
-                print(r.text)
+            try: print(json.dumps(r.json(), indent=2))
+            except: print(r.text)
             sys.exit(1)
             
         print(f"[+] Successfully initiated installation of {args.service_name}!")
