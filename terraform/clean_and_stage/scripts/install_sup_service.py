@@ -3,25 +3,21 @@ import sys, requests, urllib3, argparse, json, base64, re, time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def vapi_post(session, url, payload, wrap_create_spec=False):
+def robust_post(session, url, payload):
     """
-    Executes a POST request to the vCenter REST API.
-    If wrap_create_spec is True, it wraps the payload exactly as vCenter 8 expects for creation tasks.
+    Dynamically handles vCenter API wrapper inconsistencies.
+    VAPI often requires the payload to be wrapped in a specific parameter name.
     """
-    req_data = {"create_spec": payload} if wrap_create_spec else payload
-    r = session.post(url, json=req_data)
-    
-    # If the API rejects it, print the EXACT error from vCenter so we aren't guessing in the dark.
-    if r.status_code >= 400:
-        print(f"[-] API POST failed! HTTP {r.status_code}")
-        print(f"[-] URL: {url}")
-        print("\n--- vCenter API Error Response ---")
-        try:
-            print(json.dumps(r.json(), indent=2))
-        except Exception:
-            print(r.text)
-        print("----------------------------------\n")
-        sys.exit(1)
+    # 1. Try wrapping in 'create_spec' (Standard for VAPI Create operations)
+    r = session.post(url, json={"create_spec": payload})
+    if r.status_code < 400 or "AlreadyExists" in r.text: return r
+
+    # 2. Try wrapping in 'spec'
+    r = session.post(url, json={"spec": payload})
+    if r.status_code < 400 or "AlreadyExists" in r.text: return r
+
+    # 3. Try flat JSON payload
+    r = session.post(url, json=payload)
     return r
 
 def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
@@ -52,11 +48,8 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
         
         if "record_table" not in dns_domain: dns_domain["record_table"] = []
 
-        # Idempotency check: Remove old entries
         original_count = len(dns_domain["record_table"])
         dns_domain["record_table"] = [rec for rec in dns_domain["record_table"] if fqdn not in rec.get("fqdn", [])]
-
-        # Add the new record
         dns_domain["record_table"].append({"fqdn": [fqdn], "type": "DNS_RECORD_A", "ip_address": {"addr": target_ip, "type": "V4"}})
 
         update_res = session.put(f"https://{avi_ip}/api/ipamdnsproviderprofile/{profile_uuid}", headers=headers, json=dns_profile)
@@ -71,52 +64,82 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
         sys.exit(1)
 
 def register_and_activate_service(session, host, definition_path, service_name):
-    """Automates Phase 1: Uploading the Service Definition to vCenter's Catalog"""
+    """Automates Phase 1: Uploading the Service Definition using the Native Schema"""
     with open(definition_path, 'r') as f:
         content_raw = f.read()
     
-    # Extract Service ID and Version natively from the Carvel YAML
+    b64_content = base64.b64encode(content_raw.encode('utf-8')).decode('utf-8')
+    
+    # Best-effort parsing just so we know what ID to poll for status
     ref_match = re.search(r'refName:\s*([^\s]+)', content_raw)
     ver_match = re.search(r'version:\s*([^\s]+)', content_raw)
+    svc_id_guess = ref_match.group(1).strip("'\"") if ref_match else service_name
+    svc_ver_guess = ver_match.group(1).strip("'\"") if ver_match else "unknown"
+
+    print(f"[*] Registering Supervisor Service via inline YAML payload...")
     
-    if not ref_match or not ver_match:
-        print(f"[-] Could not parse 'refName' or 'version' from {definition_path}")
+    # Using the exact schema from the vCenter documentation you found
+    payload_vsphere = {
+        "vsphere_spec": {
+            "version_spec": {
+                "content": b64_content,
+                "accept_eula": True
+            }
+        }
+    }
+    
+    # Attempt to post. If it returns AlreadyExists, we safely move on.
+    r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload_vsphere)
+    
+    # If vsphere_spec fails, fallback to carvel_spec
+    if r.status_code >= 400 and "AlreadyExists" not in r.text:
+        print("[-] vsphere_spec format rejected. Falling back to carvel_spec format...")
+        payload_carvel = {
+            "carvel_spec": {
+                "version_spec": {
+                    "content": b64_content
+                }
+            }
+        }
+        r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload_carvel)
+
+    # If it still fails, bubble the error up
+    if r.status_code >= 400 and "AlreadyExists" not in r.text:
+        print(f"[-] API POST failed! HTTP {r.status_code}")
+        try:
+            print(json.dumps(r.json(), indent=2))
+        except:
+            print(r.text)
         sys.exit(1)
-        
-    svc_id = ref_match.group(1).strip("'\"")
-    svc_ver = ver_match.group(1).strip("'\"")
-    
-    # 1. Register the Service Name (Requires create_spec wrapper)
+
+    print("[+] Service and Version registered successfully (or already exists)!")
+
+    # Now we need the actual ID generated by vCenter to install it
     res = session.get(f"https://{host}/api/vcenter/namespace-management/supervisor-services")
     res.raise_for_status()
-    if svc_id not in [s["supervisor_service"] for s in res.json()]:
-        print(f"[*] Registering new Supervisor Service in Catalog: {svc_id}")
-        payload = {
-            "supervisor_service": svc_id,
-            "name": service_name.capitalize(),  # The API strictly expects "name", not "display_name"
-            "description": f"{service_name} deployed via automation"
-        }
-        vapi_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload, wrap_create_spec=True)
+    existing_svcs = res.json()
+    
+    target_svc = next((s for s in existing_svcs if svc_id_guess in s["supervisor_service"]), None)
+    if not target_svc:
+        target_svc = next((s for s in existing_svcs if service_name.lower() in s.get("name", "").lower() or service_name.lower() in s.get("display_name", "").lower()), None)
+    
+    if not target_svc:
+        print("[-] Service was registered, but could not be found in the catalog to query status!")
+        sys.exit(1)
+        
+    svc_id = target_svc["supervisor_service"]
 
-    # 2. Upload the Version YAML (Requires create_spec wrapper)
-    res = session.get(f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions")
-    res.raise_for_status()
-    if svc_ver not in [v["version"] for v in res.json()]:
-        print(f"[*] Uploading Version {svc_ver} to vCenter...")
-        payload = {
-            "version": svc_ver,
-            "content": base64.b64encode(content_raw.encode('utf-8')).decode('utf-8'),
-            "accept_eula": True
-        }
-        vapi_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions", payload, wrap_create_spec=True)
-
-    # 3. Wait for vCenter to unpack and ACTIVATE the version
-    print(f"[*] Waiting for version {svc_ver} to reach ACTIVATED state (can take a minute)...")
+    # Poll for ACTIVATED status
+    print(f"[*] Waiting for version to reach ACTIVATED state (can take 1-2 minutes)...")
     for _ in range(40):
         r = session.get(f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions")
-        if next((v["state"] for v in r.json() if v["version"] == svc_ver), None) == "ACTIVATED":
-            print(f"[+] Version {svc_ver} is ACTIVATED and ready for deployment!")
-            return svc_id, svc_ver
+        versions_data = r.json()
+        
+        activated_version = next((v["version"] for v in versions_data if v["state"] == "ACTIVATED" and (svc_ver_guess == "unknown" or v["version"] == svc_ver_guess)), None)
+        
+        if activated_version:
+            print(f"[+] Version {activated_version} is ACTIVATED and ready for deployment!")
+            return svc_id, activated_version
         time.sleep(3)
         
     print("[-] Timeout waiting for Service Version to activate.")
@@ -170,12 +193,20 @@ def main():
             sys.exit(0)
             
         print(f"[*] Deploying {args.service_name} onto Supervisor {supervisor_id}...")
-        # The Installation endpoint expects FLAT JSON (wrap_create_spec=False)
-        vapi_post(session, install_url, payload, wrap_create_spec=False)
+        r = robust_post(session, install_url, payload)
+        
+        if r.status_code >= 400:
+            print(f"[-] API POST failed! HTTP {r.status_code}")
+            try:
+                print(json.dumps(r.json(), indent=2))
+            except:
+                print(r.text)
+            sys.exit(1)
+            
         print(f"[+] Successfully initiated installation of {args.service_name}!")
 
     except requests.exceptions.RequestException as e:
-        print(f"[-] API call failed! HTTP {e.response.status_code if e.response is not None else 'Unknown'}")
+        print(f"[-] API connection failed: {e}")
         if e.response is not None:
             print(e.response.text)
         sys.exit(1)
