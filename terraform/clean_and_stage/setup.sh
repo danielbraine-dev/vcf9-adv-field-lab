@@ -454,15 +454,22 @@ step11_install_supervisor_services(){
 
   log "Waiting for Contour Envoy to receive an Avi Load Balancer IP..."
   for ((i=1; i<=30; i++)); do
-    CONTOUR_IP=$(kubectl get svc -n svc-contour envoy -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
-    if [[ -n "$CONTOUR_IP" ]]; then
-      printf "\n"
-      log "[+] Contour Ingress active at IP: ${CONTOUR_IP}"
-      break
-    else
-      printf "."
-      sleep 10
+    # Dynamically locate the namespace vCenter created (e.g., svc-contour-domain-c10)
+    CONTOUR_NS=$(kubectl get ns -o name 2>/dev/null | grep 'svc-contour' | cut -d'/' -f2 | head -n1 || true)
+    
+    if [[ -n "$CONTOUR_NS" ]]; then
+      # Query the service using the discovered namespace
+      CONTOUR_IP=$(kubectl get svc envoy -n "${CONTOUR_NS}" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+      
+      if [[ -n "$CONTOUR_IP" ]]; then
+        printf "\n"
+        log "[+] Contour Ingress active at IP: ${CONTOUR_IP} (Namespace: ${CONTOUR_NS})"
+        break
+      fi
     fi
+    
+    printf "."
+    sleep 10
     [[ $i -eq 30 ]] && { error "[-] Timeout waiting for Contour IP."; exit 1; }
   done
 
