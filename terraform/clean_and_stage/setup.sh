@@ -415,58 +415,23 @@ step11_deploy_openldap(){
   VC_USER="$(read_tfvar vsphere_user)"
   VC_PASS="$(read_tfvar vsphere_password)"
   
-  # --- FIX 1: The new VCF 9 CLI Environment Variable ---
+  # The new VCF 9 CLI Environment Variable
   export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
 
-  # --- FIX 2: Create the Namespace Natively via vCenter API ---
-  log "Creating 'shared-infrastructure' Supervisor Namespace and binding Storage..."
-  export VC_HOST VC_USER VC_PASS
-  python3 -c '
-import os, sys, requests, urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-vc_host = os.environ["VC_HOST"]
-vc_user = os.environ["VC_USER"]
-vc_pass = os.environ["VC_PASS"]
-ns_name = "shared-infrastructure"
-
-session = requests.Session()
-session.auth = (vc_user, vc_pass)
-session.verify = False
-
-try:
-    # 1. Authenticate to vCenter
-    res = session.post(f"https://{vc_host}/api/session")
-    res.raise_for_status()
-    session.headers.update({"vmware-api-session-id": res.json()})
-
-    # 2. Check if Namespace already exists (Idempotency)
-    res = session.get(f"https://{vc_host}/api/vcenter/namespaces/instances")
-    if ns_name in [ns["namespace"] for ns in res.json()]:
-        print(f"[+] Namespace \"{ns_name}\" already exists.")
-    else:
-        # 3. Fetch Cluster and Storage Policy IDs
-        cluster_id = session.get(f"https://{vc_host}/api/vcenter/topology/clusters").json()[0]["cluster"]
-        policies = session.get(f"https://{vc_host}/api/vcenter/storage/policies").json()
-        policy_id = next((p["policy"] for p in policies if p["name"] == "vSAN Default Storage Policy"), policies[0]["policy"])
-        
-        # 4. Create the Namespace
-        payload = {
-            "namespace": ns_name,
-            "cluster": cluster_id,
-            "storage_specs": [{"policy": policy_id}]
-        }
-        res = session.post(f"https://{vc_host}/api/vcenter/namespaces/instances", json=payload)
-        res.raise_for_status()
-        print(f"[+] Successfully created Supervisor Namespace: {ns_name}")
-
-except Exception as e:
-    print(f"[-] Failed to provision namespace: {e}")
-    sys.exit(1)
-  '
+  if [[ -f "${ROOT_DIR}/scripts/create_shared_namespace.py" ]]; then
+    log "Executing standalone script to provision Supervisor Namespace..."
+    python3 "${ROOT_DIR}/scripts/create_shared_namespace.py" \
+      --host "${VC_HOST}" \
+      --user "${VC_USER}" \
+      --password "${VC_PASS}" \
+      --namespace "shared-infrastructure" \
+      --storage-policy "vSAN Default Storage Policy" || { error "Namespace script failed!"; exit 1; }
+  else
+    error "create_shared_namespace.py not found in ${ROOT_DIR}/scripts!"
+    exit 1
+  fi
 
   log "Authenticating to Supervisor Control Plane at ${SUP_IP} using VCF CLI..."
-  
   vcf context create lab-supervisor \
     --endpoint "${SUP_IP}" \
     --auth-type basic \
@@ -480,10 +445,7 @@ except Exception as e:
   kubectl apply -f "${ROOT_DIR}/openldap-vsphere-pod.yaml"
 
   log "Waiting for Avi to assign a Load Balancer VIP to the LDAP Service..."
-  log "(This may take 1-2 minutes as Avi spins up the NSX-T Virtual Service)"
-  
   for ((i=1; i<=20; i++)); do
-    # Suppressing stderr just in case the resource isn't instantly available
     LDAP_VIP=$(kubectl get svc openldap-lb -n shared-infrastructure -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
     
     if [[ -n "$LDAP_VIP" ]]; then
