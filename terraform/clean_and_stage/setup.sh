@@ -407,7 +407,106 @@ step10_prime_vcfa_objects(){
   pause
 }
 
-step11_deploy_openldap(){
+
+step11_install_supervisor_services(){
+  log "[11] Installing Contour & Harbor via Supervisor Services API…"
+
+  SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
+  VC_HOST="$(read_tfvar vsphere_server)"
+  VC_USER="$(read_tfvar vsphere_user)"
+  VC_PASS="$(read_tfvar vsphere_password)"
+  
+  # Set paths to the YAML config files two directories up
+  SERVICE_DIR="$(cd "${ROOT_DIR}/../../" && pwd)"
+  CONTOUR_YAML="${SERVICE_DIR}/contour.yaml"
+  HARBOR_YAML="${SERVICE_DIR}/harbor.yaml"
+
+  # --- 1. INSTALL CONTOUR ---
+  log "Calling vCenter API to install Contour Supervisor Service..."
+  python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
+    --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
+    --service-name "contour" --config-yaml "${CONTOUR_YAML}" || exit 1
+
+  # Authenticate to the Supervisor to watch the deployment status
+  CTX_NAME="lab-sup-$$"
+  export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
+  export VSPHERE_PASSWORD="${VC_PASS}"
+  vcf context create "${CTX_NAME}" --endpoint "${SUP_IP}" --auth-type basic --username "${VC_USER}" --insecure-skip-tls-verify
+  vcf context use "${CTX_NAME}"
+
+  log "Waiting for Contour Envoy to receive an Avi Load Balancer IP..."
+  for ((i=1; i<=30; i++)); do
+    # Adjust namespace if the native service uses a different one (e.g., svc-contour)
+    CONTOUR_IP=$(kubectl get svc -n svc-contour envoy -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+    if [[ -n "$CONTOUR_IP" ]]; then
+      printf "\n"
+      log "[+] Contour Ingress active at IP: ${CONTOUR_IP}"
+      break
+    else
+      printf "."
+      sleep 10
+    fi
+    [[ $i -eq 30 ]] && { error "[-] Timeout waiting for Contour IP."; exit 1; }
+  done
+
+  # --- 2. INSTALL HARBOR ---
+  log "Calling vCenter API to install Harbor Supervisor Service..."
+  python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
+    --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
+    --service-name "harbor" --config-yaml "${HARBOR_YAML}" || exit 1
+  
+  HARBOR_URL="${CONTOUR_IP}"
+  
+  log "Waiting for Harbor core services to initialize (This can take 3-5 minutes)..."
+  for ((i=1; i<=40; i++)); do
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -k "https://${HARBOR_URL}/api/v2.0/health" || true)
+    if [[ "$HTTP_CODE" == "200" ]]; then
+      printf "\n"
+      log "[+] Supervisor Harbor Instance is UP and Healthy!"
+      break
+    else
+      printf "."
+      sleep 15
+    fi
+    [[ $i -eq 40 ]] && { error "[-] Timeout waiting for Harbor API."; exit 1; }
+  done
+
+  # --- 3. DOCKER PUSH AUTOMATION ---
+  log "Configuring jumpbox Docker Daemon to trust the new Harbor instance (${HARBOR_URL})..."
+  sudo mkdir -p /etc/docker
+  if [[ -f /etc/docker/daemon.json ]]; then
+    sudo jq --arg ip "${HARBOR_URL}" '. + {"insecure-registries": (."insecure-registries" // []) + [$ip] | unique}' /etc/docker/daemon.json > /tmp/daemon.json
+    sudo mv /tmp/daemon.json /etc/docker/daemon.json
+  else
+    echo "{\"insecure-registries\": [\"${HARBOR_URL}\"]}" | sudo tee /etc/docker/daemon.json > /dev/null
+  fi
+
+  log "Restarting Docker service..."
+  sudo systemctl restart docker
+  sleep 5
+
+  log "Pulling OpenLDAP from upstream..."
+  docker pull osixia/openldap:1.5.0
+
+  log "Tagging image for Supervisor Harbor..."
+  TARGET_IMAGE="${HARBOR_URL}/library/osixia-openldap:1.5.0"
+  docker tag osixia/openldap:1.5.0 "${TARGET_IMAGE}"
+
+  log "Logging into Supervisor Harbor..."
+  # NOTE: Update 'admin' and 'Harbor12345' with the credentials mapped in your Harbor YAML config
+  docker login "${HARBOR_URL}" -u "admin" -p "Harbor12345"
+
+  log "Pushing OpenLDAP image into the Supervisor..."
+  docker push "${TARGET_IMAGE}"
+
+  log "Updating OpenLDAP vSphere Pod YAML with new local image URL..."
+  sed -i "s|image:.*|image: ${TARGET_IMAGE}|g" "${ROOT_DIR}/openldap-vsphere-pod.yaml"
+
+  log "[+] Step 11 Complete! Supervisor Services installed and Image staged."
+  pause
+}
+
+step12_deploy_openldap(){
   log "[11] Creating Shared Namespace & Deploying OpenLDAP…"
 
   SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
@@ -483,7 +582,8 @@ do_step() {
     8) step8_nsx_cloud;;
     9) step9_install_sup;;
    10) step10_prime_vcfa_objects;;
-   11) step11_deploy_openldap;;
+   11) step11_install_sup_services;;
+   12) step12_deploy_openldap;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
@@ -491,7 +591,7 @@ do_step() {
 run() {
   local spec="${1:-all}"
   if [[ "$spec" == "all" ]]; then
-    for n in {1..11}; do do_step "$n"; done
+    for n in {1..12}; do do_step "$n"; done
     echo "All steps complete. ✅"
     return
   fi
