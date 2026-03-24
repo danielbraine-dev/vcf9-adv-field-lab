@@ -423,7 +423,6 @@ step11_install_supervisor_services(){
   SERVICE_DIR="$(cd "${ROOT_DIR}/../../Supervisor_Services" && pwd)"
   
   CONTOUR_DEF="${SERVICE_DIR}/contour-service-v1.32.0.yml"
-  # New: Defining the Contour values file
   CONTOUR_VALS="${SERVICE_DIR}/contour-data-values.yml"
   
   HARBOR_DEF="${SERVICE_DIR}/harbor-service-v2.13.1.0.yml"
