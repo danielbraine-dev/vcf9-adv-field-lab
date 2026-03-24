@@ -425,7 +425,7 @@ step11_install_supervisor_services(){
   CONTOUR_DEF="${SERVICE_DIR}/contour-service-v1.32.0.yml"
   CONTOUR_VALS="${SERVICE_DIR}/contour-data-values.yml"
   
-  HARBOR_DEF="${SERVICE_DIR}/harbor-service-v2.13.1.0.yml"
+  HARBOR_DEF="${SERVICE_DIR}/harbor-service-v2.13.1.yml"
   
   [[ ! -f "${ROOT_DIR}/scripts/install_sup_service.py" ]] && { error "install_sup_service.py missing!"; exit 1; }
   [[ ! -f "${CONTOUR_DEF}" ]] && { error "Contour definition YAML not found at ${CONTOUR_DEF}!"; exit 1; }
