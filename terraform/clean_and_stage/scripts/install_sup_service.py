@@ -177,26 +177,35 @@ def main():
         # Phase 1: Registration
         svc_id, svc_ver = register_and_activate_service(session, args.host, args.definition_yaml, args.service_name)
 
-        # --- THE FIX: Look up the Dedicated Supervisor ID, not the Cluster ID ---
-        res_sups = session.get(f"https://{args.host}/api/vcenter/namespace-management/supervisors")
-        res_sups.raise_for_status()
-        sups_data = res_sups.json()
-        sups_list = sups_data.get("value", []) if isinstance(sups_data, dict) else sups_data
+        # --- THE FIX: Dynamic Resolution of the Supervisor ID ---
+        install_url = ""
         
-        if not sups_list:
-            print("[-] No active Supervisors found!")
-            sys.exit(1)
-            
-        supervisor_id = sups_list[0]["supervisor"]
+        # 1. Try the new vSphere 8.0.1+ / VCF 9 Summaries API
+        res_sups = session.get(f"https://{args.host}/api/vcenter/namespace-management/supervisors/summaries")
+        if res_sups.status_code == 200 and res_sups.json().get("items"):
+            supervisor_id = res_sups.json()["items"][0]["supervisor"]
+            install_url = f"https://{args.host}/api/vcenter/namespace-management/supervisors/{supervisor_id}/supervisor-services"
+            print(f"[*] Found Decoupled Supervisor ID: {supervisor_id}")
+        else:
+            # 2. Fallback to the legacy vSphere 7 / 8.0 Clusters API
+            res_clusters = session.get(f"https://{args.host}/api/vcenter/namespace-management/clusters")
+            res_clusters.raise_for_status()
+            clusters_data = res_clusters.json()
+            cluster_list = clusters_data.get("value", []) if isinstance(clusters_data, dict) else clusters_data
+            if not cluster_list:
+                print("[-] No active Clusters/Supervisors found!")
+                sys.exit(1)
+            cluster_id = cluster_list[0]["cluster"]
+            install_url = f"https://{args.host}/api/vcenter/namespace-management/clusters/{cluster_id}/supervisor-services"
+            print(f"[*] Found Legacy Cluster ID: {cluster_id}")
 
         # Phase 2: Installation
         payload = {"supervisor_service": svc_id, "version": svc_ver}
         if args.values_yaml:
             with open(args.values_yaml, "rb") as f:
                 payload["yaml_service_config"] = base64.b64encode(f.read()).decode('utf-8')
-
-        install_url = f"https://{args.host}/api/vcenter/namespace-management/supervisors/{supervisor_id}/supervisor-services"
         
+        # Idempotency check: Is it already installed?
         try:
             r_exist = session.get(install_url)
             if r_exist.status_code == 200:
@@ -211,7 +220,7 @@ def main():
         except Exception:
             pass # Failsafe, attempt install anyway
 
-        print(f"[*] Deploying {args.service_name} onto Supervisor {supervisor_id}...")
+        print(f"[*] Deploying {args.service_name} onto Supervisor infrastructure...")
         r = robust_post(session, install_url, payload)
         
         if r.status_code >= 400:
