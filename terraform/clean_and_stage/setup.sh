@@ -669,6 +669,24 @@ step12_deploy_openldap(){
   pause
 }
 
+do_step() {
+  case "$1" in
+    1) step1_install_tools;;
+    2) step2_teardown_environment;;
+    3) step3_tf_init;;
+    4) step4_create_nsx_objects;;
+    5) step5_deploy_avi;;
+    6) step6_init_avi;;
+    7) step7_avi_base_config;;
+    8) step8_nsx_cloud;;
+    9) step9_install_sup;;
+   10) step10_prime_vcfa_objects;;
+   11) step11_install_supervisor_services;;
+   12) step12_deploy_openldap;;
+    *) echo "Unknown step $1"; exit 2;;
+  esac
+}
+
 run() {
   local spec="${1:-all}"
   if [[ "$spec" == "all" ]]; then
