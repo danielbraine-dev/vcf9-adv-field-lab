@@ -177,17 +177,14 @@ def main():
         # Phase 1: Registration
         svc_id, svc_ver = register_and_activate_service(session, args.host, args.definition_yaml, args.service_name)
 
-        # --- THE FIX: Dynamic Resolution of the Supervisor ID ---
+        # Dynamic Resolution of the Supervisor ID
         install_url = ""
-        
-        # 1. Try the new vSphere 8.0.1+ / VCF 9 Summaries API
         res_sups = session.get(f"https://{args.host}/api/vcenter/namespace-management/supervisors/summaries")
         if res_sups.status_code == 200 and res_sups.json().get("items"):
             supervisor_id = res_sups.json()["items"][0]["supervisor"]
             install_url = f"https://{args.host}/api/vcenter/namespace-management/supervisors/{supervisor_id}/supervisor-services"
             print(f"[*] Found Decoupled Supervisor ID: {supervisor_id}")
         else:
-            # 2. Fallback to the legacy vSphere 7 / 8.0 Clusters API
             res_clusters = session.get(f"https://{args.host}/api/vcenter/namespace-management/clusters")
             res_clusters.raise_for_status()
             clusters_data = res_clusters.json()
@@ -205,14 +202,21 @@ def main():
             with open(args.values_yaml, "rb") as f:
                 payload["yaml_service_config"] = base64.b64encode(f.read()).decode('utf-8')
         
-        # Idempotency check: Is it already installed?
+        # Check 1: Pre-emptive GET Idempotency
         try:
             r_exist = session.get(install_url)
             if r_exist.status_code == 200:
                 existing_data = r_exist.json()
                 svc_list = existing_data.get("value", []) if isinstance(existing_data, dict) else existing_data
                 
-                installed_ids = [item if isinstance(item, str) else item.get("supervisor_service", "") for item in svc_list]
+                # Broadened the key check because vCenter uses different schemas randomly
+                installed_ids = []
+                for item in svc_list:
+                    if isinstance(item, str): installed_ids.append(item)
+                    elif isinstance(item, dict):
+                        installed_ids.append(item.get("supervisor_service", ""))
+                        installed_ids.append(item.get("service", ""))
+                        installed_ids.append(item.get("name", ""))
                 
                 if svc_id in installed_ids:
                     print(f"[+] Service {svc_id} is already deployed on the Supervisor. Skipping installation.")
@@ -223,13 +227,20 @@ def main():
         print(f"[*] Deploying {args.service_name} onto Supervisor infrastructure...")
         r = robust_post(session, install_url, payload)
         
-        if r.status_code >= 400:
+        # Check 2: Reactive POST Idempotency (THE FIX)
+        text_lower = r.text.lower()
+        is_already_installed = r.status_code >= 400 and ("already exist" in text_lower or "already_exists" in text_lower)
+
+        if r.status_code >= 400 and not is_already_installed:
             print(f"[-] API POST failed! HTTP {r.status_code}")
             try: print(json.dumps(r.json(), indent=2))
             except: print(r.text)
             sys.exit(1)
             
-        print(f"[+] Successfully initiated installation of {args.service_name}!")
+        if is_already_installed:
+            print(f"[+] Service {args.service_name} is already deployed (caught by API block). Skipping.")
+        else:
+            print(f"[+] Successfully initiated installation of {args.service_name}!")
 
     except requests.exceptions.RequestException as e:
         print(f"[-] API connection failed: {e}")
