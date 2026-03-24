@@ -42,19 +42,37 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
         res = session.get(f"https://{avi_ip}/api/ipamdnsproviderprofile", headers=headers)
         res.raise_for_status()
         
-        dns_profile = next((p for p in res.json().get("results", []) if p.get("type") == "PROFILE_TYPE_DNS"), None)
+        profiles = res.json().get("results", [])
+        
+        # THE FIX: Avi uses 'IPAMDNS_TYPE_INTERNAL_DNS' for native DNS profiles
+        dns_profile = next((p for p in profiles if "INTERNAL_DNS" in str(p.get("type", "")).upper()), None)
+        
         if not dns_profile:
             print("[-] No DNS Provider Profile found in Avi. Skipping DNS injection.")
             return False
 
         profile_uuid = dns_profile["uuid"]
-        dns_domain = dns_profile.get("internal_profile", {}).get("dns_service_domain", [{}])[0]
         
-        if "record_table" not in dns_domain: dns_domain["record_table"] = []
+        if "internal_profile" not in dns_profile or "dns_service_domain" not in dns_profile["internal_profile"]:
+            print("[-] DNS Profile exists, but has no internal domain configured. Check your Terraform.")
+            return False
 
+        # Target the primary DNS domain created in Step 8
+        dns_domain = dns_profile["internal_profile"]["dns_service_domain"][0]
+        
+        if "record_table" not in dns_domain: 
+            dns_domain["record_table"] = []
+
+        # Idempotency check: Remove old entry if it exists
         original_count = len(dns_domain["record_table"])
         dns_domain["record_table"] = [rec for rec in dns_domain["record_table"] if fqdn not in rec.get("fqdn", [])]
-        dns_domain["record_table"].append({"fqdn": [fqdn], "type": "DNS_RECORD_A", "ip_address": {"addr": target_ip, "type": "V4"}})
+        
+        # Inject the new Contour IP mapping
+        dns_domain["record_table"].append({
+            "fqdn": [fqdn], 
+            "type": "DNS_RECORD_A", 
+            "ip_address": {"addr": target_ip, "type": "V4"}
+        })
 
         update_res = session.put(f"https://{avi_ip}/api/ipamdnsproviderprofile/{profile_uuid}", headers=headers, json=dns_profile)
         update_res.raise_for_status()
@@ -65,6 +83,8 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
 
     except requests.exceptions.RequestException as e:
         print(f"[-] Avi API DNS injection failed: {e}")
+        if e.response is not None:
+            print(e.response.text)
         sys.exit(1)
 
 def register_and_activate_service(session, host, definition_path, service_name):
@@ -74,9 +94,10 @@ def register_and_activate_service(session, host, definition_path, service_name):
     
     b64_content = base64.b64encode(content_raw.encode('utf-8')).decode('utf-8')
     
-    # Extract Service ID and Version natively from the Carvel YAML
-    ref_match = re.search(r'refName:\s*([^\s]+)', content_raw)
-    ver_match = re.search(r'version:\s*([^\s]+)', content_raw)
+    # Stricter Regex that forces the version to start with a number (e.g. 2.13.1)
+    ref_match = re.search(r'\n\s*refName:\s*([^\s]+)', content_raw)
+    ver_match = re.search(r'\n\s*version:\s*([0-9][^\s]+)', content_raw)
+    
     svc_id_guess = ref_match.group(1).strip("'\"") if ref_match else service_name
     svc_ver_guess = ver_match.group(1).strip("'\"") if ver_match else "unknown"
 
@@ -120,14 +141,25 @@ def register_and_activate_service(session, host, definition_path, service_name):
 
     if svc_ver_guess not in installed_versions and svc_ver_guess != "unknown":
         print(f"[*] Uploading Version {svc_ver_guess} to existing Service...")
-        payload_ver = {
-            "version": svc_ver_guess,
-            "content": b64_content,
-            "accept_eula": True
+        
+        payload_vsphere_ver = {
+            "vsphere_spec": {
+                "version_spec": {
+                    "content": b64_content,
+                    "accept_eula": True
+                }
+            }
         }
-        r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions", payload_ver)
-        if r.status_code >= 400 and "unique_violation" not in r.text:
+        r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions", payload_vsphere_ver)
+        
+        if r.status_code >= 400 and "unique_violation" not in r.text and "AlreadyExists" not in r.text:
+            payload_carvel_ver = {"carvel_spec": {"version_spec": {"content": b64_content}}}
+            r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions", payload_carvel_ver)
+
+        if r.status_code >= 400 and "unique_violation" not in r.text and "AlreadyExists" not in r.text:
             print(f"[-] Failed to upload version! HTTP {r.status_code}")
+            try: print(json.dumps(r.json(), indent=2))
+            except: print(r.text)
             sys.exit(1)
 
     # --- 3. Poll for ACTIVATED status ---
@@ -163,6 +195,7 @@ def main():
     parser.add_argument("--target-ip")
     args = parser.parse_args()
 
+    # Pre-flight: Avi DNS Injection
     if args.avi_ip and args.fqdn and args.target_ip:
         print(f"[*] Pre-flight task: Injecting DNS mapping for {args.fqdn}...")
         inject_avi_dns(args.avi_ip, args.avi_user, args.avi_pass, args.fqdn, args.target_ip)
@@ -209,7 +242,6 @@ def main():
                 existing_data = r_exist.json()
                 svc_list = existing_data.get("value", []) if isinstance(existing_data, dict) else existing_data
                 
-                # Broadened the key check because vCenter uses different schemas randomly
                 installed_ids = []
                 for item in svc_list:
                     if isinstance(item, str): installed_ids.append(item)
@@ -222,12 +254,12 @@ def main():
                     print(f"[+] Service {svc_id} is already deployed on the Supervisor. Skipping installation.")
                     sys.exit(0)
         except Exception:
-            pass # Failsafe, attempt install anyway
+            pass 
 
         print(f"[*] Deploying {args.service_name} onto Supervisor infrastructure...")
         r = robust_post(session, install_url, payload)
         
-        # Check 2: Reactive POST Idempotency (THE FIX)
+        # Check 2: Reactive POST Idempotency
         text_lower = r.text.lower()
         is_already_installed = r.status_code >= 400 and ("already exist" in text_lower or "already_exists" in text_lower)
 
