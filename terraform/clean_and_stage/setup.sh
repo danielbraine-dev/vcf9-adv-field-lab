@@ -473,7 +473,7 @@ step11_install_supervisor_services(){
     [[ $i -eq 30 ]] && { error "[-] Timeout waiting for Contour IP."; exit 1; }
   done
 
-  # --- 2. GENERATE CUSTOM TLS CERTIFICATE ---
+# --- 2. GENERATE CUSTOM TLS CERTIFICATE ---
   log "Generating Self-Signed TLS Certificate for ${HARBOR_FQDN}..."
   mkdir -p "${ROOT_DIR}/certs"
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -482,10 +482,11 @@ step11_install_supervisor_services(){
     -subj "/C=US/ST=VA/L=DunnLoring/O=VCF/OU=Lab/CN=${HARBOR_FQDN}" \
     -addext "subjectAltName=DNS:${HARBOR_FQDN}" 2>/dev/null
 
-  CERT_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.crt")
-  KEY_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.key")
+  # FIX: Increased indentation to 6 spaces to match the deeper YAML nesting
+  CERT_INDENTED=$(awk '{printf "      %s\n", $0}' "${ROOT_DIR}/certs/harbor.crt")
+  KEY_INDENTED=$(awk '{printf "      %s\n", $0}' "${ROOT_DIR}/certs/harbor.key")
 
-# --- 3. DYNAMICALLY BUILD HARBOR CONFIG ---
+  # --- 3. DYNAMICALLY BUILD HARBOR CONFIG ---
   log "Injecting TLS Certs into Harbor Data Values YAML..."
   HARBOR_YAML="${SERVICE_DIR}/harbor-dynamic-values.yaml"
   cat <<EOF > "${HARBOR_YAML}"
@@ -554,10 +555,10 @@ network:
   ipFamilies: ["IPv4"]
 tlsCertificate:
   tlsSecretLabels: {"managed-by": "vmware-vRegistry"}
-tls:
-  certificate: |
+  tls:
+    certificate: |
 ${CERT_INDENTED}
-  key: |
+    key: |
 ${KEY_INDENTED}
 EOF
 
