@@ -423,11 +423,11 @@ step11_install_supervisor_services(){
   SERVICE_DIR="$(cd "${ROOT_DIR}/../../Supervisor_Services" && pwd)"
   CONTOUR_YAML="${SERVICE_DIR}/contour-service-v1.32.0.yaml"
   
-  [[ ! -f "${ROOT_DIR}/scripts/install_sup_service.py" ]] && { error "install_sup_service.py missing!"; exit 1; }
+  [[ ! -f "${ROOT_DIR}/scripts/install_sup_services.py" ]] && { error "install_sup_services.py missing!"; exit 1; }
 
   # --- 1. INSTALL CONTOUR & GET IP ---
   log "Calling vCenter API to install Contour Supervisor Service..."
-  python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
+  python3 "${ROOT_DIR}/scripts/install_sup_services.py" \
     --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
     --service-name "contour" --config-yaml "${CONTOUR_YAML}" || exit 1
 
