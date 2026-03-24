@@ -409,25 +409,28 @@ step10_prime_vcfa_objects(){
 
 
 step11_install_supervisor_services(){
-  log "[11] Installing Contour & Harbor via Supervisor Services API…"
+  log "[11] Installing Contour & Harbor (Consolidated API Deployment)…"
 
   SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
   VC_HOST="$(read_tfvar vsphere_server)"
   VC_USER="$(read_tfvar vsphere_user)"
   VC_PASS="$(read_tfvar vsphere_password)"
   
-  # Set paths to the YAML config files two directories up
+  AVI_IP="$(read_tfvar avi_mgmt_ip)"
+  AVI_PASS="$(read_tfvar avi_admin_password)"
+  
+  HARBOR_FQDN="harbor.lb.site-a.vcf.lab"
   SERVICE_DIR="$(cd "${ROOT_DIR}/../../" && pwd)"
   CONTOUR_YAML="${SERVICE_DIR}/contour.yaml"
-  HARBOR_YAML="${SERVICE_DIR}/harbor.yaml"
+  
+  [[ ! -f "${ROOT_DIR}/scripts/install_sup_service.py" ]] && { error "install_sup_service.py missing!"; exit 1; }
 
-  # --- 1. INSTALL CONTOUR ---
+  # --- 1. INSTALL CONTOUR & GET IP ---
   log "Calling vCenter API to install Contour Supervisor Service..."
   python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
     --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
     --service-name "contour" --config-yaml "${CONTOUR_YAML}" || exit 1
 
-  # Authenticate to the Supervisor to watch the deployment status
   CTX_NAME="lab-sup-$$"
   export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
   export VSPHERE_PASSWORD="${VC_PASS}"
@@ -436,7 +439,6 @@ step11_install_supervisor_services(){
 
   log "Waiting for Contour Envoy to receive an Avi Load Balancer IP..."
   for ((i=1; i<=30; i++)); do
-    # Adjust namespace if the native service uses a different one (e.g., svc-contour)
     CONTOUR_IP=$(kubectl get svc -n svc-contour envoy -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
     if [[ -n "$CONTOUR_IP" ]]; then
       printf "\n"
@@ -449,17 +451,41 @@ step11_install_supervisor_services(){
     [[ $i -eq 30 ]] && { error "[-] Timeout waiting for Contour IP."; exit 1; }
   done
 
-  # --- 2. INSTALL HARBOR ---
-  log "Calling vCenter API to install Harbor Supervisor Service..."
+  # --- 2. GENERATE CUSTOM TLS CERTIFICATE ---
+  log "Generating Self-Signed TLS Certificate for ${HARBOR_FQDN}..."
+  mkdir -p "${ROOT_DIR}/certs"
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout "${ROOT_DIR}/certs/harbor.key" \
+    -out "${ROOT_DIR}/certs/harbor.crt" \
+    -subj "/C=US/ST=VA/L=DunnLoring/O=VCF/OU=Lab/CN=${HARBOR_FQDN}" \
+    -addext "subjectAltName=DNS:${HARBOR_FQDN}" 2>/dev/null
+
+  CERT_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.crt")
+  KEY_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.key")
+
+  # --- 3. DYNAMICALLY BUILD HARBOR CONFIG ---
+  log "Injecting TLS Certs into Harbor Data Values YAML..."
+  HARBOR_YAML="${ROOT_DIR}/harbor-dynamic-values.yaml"
+  cat <<EOF > "${HARBOR_YAML}"
+hostname: "${HARBOR_FQDN}"
+tls:
+  certificate: |
+${CERT_INDENTED}
+  key: |
+${KEY_INDENTED}
+EOF
+
+  # --- 4. INSTALL HARBOR (WITH INTEGRATED AVI DNS INJECTION) ---
+  log "Calling Python helper to inject Avi DNS AND install Harbor..."
   python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
     --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
-    --service-name "harbor" --config-yaml "${HARBOR_YAML}" || exit 1
-  
-  HARBOR_URL="${CONTOUR_IP}"
+    --service-name "harbor" --config-yaml "${HARBOR_YAML}" \
+    --avi-ip "${AVI_IP}" --avi-pass "${AVI_PASS}" \
+    --fqdn "${HARBOR_FQDN}" --target-ip "${CONTOUR_IP}" || exit 1
   
   log "Waiting for Harbor core services to initialize (This can take 3-5 minutes)..."
   for ((i=1; i<=40; i++)); do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -k "https://${HARBOR_URL}/api/v2.0/health" || true)
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -k "https://${HARBOR_FQDN}/api/v2.0/health" || true)
     if [[ "$HTTP_CODE" == "200" ]]; then
       printf "\n"
       log "[+] Supervisor Harbor Instance is UP and Healthy!"
@@ -471,30 +497,21 @@ step11_install_supervisor_services(){
     [[ $i -eq 40 ]] && { error "[-] Timeout waiting for Harbor API."; exit 1; }
   done
 
-  # --- 3. DOCKER PUSH AUTOMATION ---
-  log "Configuring jumpbox Docker Daemon to trust the new Harbor instance (${HARBOR_URL})..."
-  sudo mkdir -p /etc/docker
-  if [[ -f /etc/docker/daemon.json ]]; then
-    sudo jq --arg ip "${HARBOR_URL}" '. + {"insecure-registries": (."insecure-registries" // []) + [$ip] | unique}' /etc/docker/daemon.json > /tmp/daemon.json
-    sudo mv /tmp/daemon.json /etc/docker/daemon.json
-  else
-    echo "{\"insecure-registries\": [\"${HARBOR_URL}\"]}" | sudo tee /etc/docker/daemon.json > /dev/null
-  fi
+  # --- 5. ESTABLISH DOCKER TLS TRUST ---
+  log "Injecting Custom Certificate into local Docker Trust Store..."
+  sudo mkdir -p "/etc/docker/certs.d/${HARBOR_FQDN}"
+  sudo cp "${ROOT_DIR}/certs/harbor.crt" "/etc/docker/certs.d/${HARBOR_FQDN}/ca.crt"
 
-  log "Restarting Docker service..."
-  sudo systemctl restart docker
-  sleep 5
-
+  # --- 6. STAGE THE IMAGE ---
   log "Pulling OpenLDAP from upstream..."
   docker pull osixia/openldap:1.5.0
 
   log "Tagging image for Supervisor Harbor..."
-  TARGET_IMAGE="${HARBOR_URL}/library/osixia-openldap:1.5.0"
+  TARGET_IMAGE="${HARBOR_FQDN}/library/osixia-openldap:1.5.0"
   docker tag osixia/openldap:1.5.0 "${TARGET_IMAGE}"
 
-  log "Logging into Supervisor Harbor..."
-  # NOTE: Update 'admin' and 'Harbor12345' with the credentials mapped in your Harbor YAML config
-  docker login "${HARBOR_URL}" -u "admin" -p "Harbor12345"
+  log "Logging into Supervisor Harbor (${HARBOR_FQDN})..."
+  docker login "${HARBOR_FQDN}" -u "admin" -p "Harbor12345"
 
   log "Pushing OpenLDAP image into the Supervisor..."
   docker push "${TARGET_IMAGE}"
@@ -502,7 +519,7 @@ step11_install_supervisor_services(){
   log "Updating OpenLDAP vSphere Pod YAML with new local image URL..."
   sed -i "s|image:.*|image: ${TARGET_IMAGE}|g" "${ROOT_DIR}/openldap-vsphere-pod.yaml"
 
-  log "[+] Step 11 Complete! Supervisor Services installed and Image staged."
+  log "[+] Step 11 Complete! Setup is deeply integrated and self-contained."
   pause
 }
 
