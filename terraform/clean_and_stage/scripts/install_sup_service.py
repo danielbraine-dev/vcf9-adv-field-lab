@@ -177,7 +177,17 @@ def main():
         # Phase 1: Registration
         svc_id, svc_ver = register_and_activate_service(session, args.host, args.definition_yaml, args.service_name)
 
-        supervisor_id = session.get(f"https://{args.host}/api/vcenter/namespace-management/clusters").json()[0]["cluster"]
+        # --- THE FIX: Look up the Dedicated Supervisor ID, not the Cluster ID ---
+        res_sups = session.get(f"https://{args.host}/api/vcenter/namespace-management/supervisors")
+        res_sups.raise_for_status()
+        sups_data = res_sups.json()
+        sups_list = sups_data.get("value", []) if isinstance(sups_data, dict) else sups_data
+        
+        if not sups_list:
+            print("[-] No active Supervisors found!")
+            sys.exit(1)
+            
+        supervisor_id = sups_list[0]["supervisor"]
 
         # Phase 2: Installation
         payload = {"supervisor_service": svc_id, "version": svc_ver}
