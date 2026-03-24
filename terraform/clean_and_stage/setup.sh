@@ -423,20 +423,24 @@ step11_install_supervisor_services(){
   SERVICE_DIR="$(cd "${ROOT_DIR}/../../Supervisor_Services" && pwd)"
   
   CONTOUR_DEF="${SERVICE_DIR}/contour-service-v1.32.0.yml"
+  # New: Defining the Contour values file
+  CONTOUR_VALS="${SERVICE_DIR}/contour-data-values.yml"
   
-  # Dynamically find the base Harbor Definition YAML (excluding your dynamic values file)
-  HARBOR_DEF=$(ls -1 "${SERVICE_DIR}"/harbor-*.yaml 2>/dev/null | grep -v "dynamic-values" | head -n1 || true)
+  HARBOR_DEF="${SERVICE_DIR}/harbor-service-v2.13.1.0.yml"
   
   [[ ! -f "${ROOT_DIR}/scripts/install_sup_service.py" ]] && { error "install_sup_service.py missing!"; exit 1; }
-  [[ ! -f "${CONTOUR_DEF}" ]] && { error "Contour definition not found at ${CONTOUR_DEF}!"; exit 1; }
-  [[ -z "${HARBOR_DEF}" ]] && { error "Harbor definition YAML not found in ${SERVICE_DIR}!"; exit 1; }
+  [[ ! -f "${CONTOUR_DEF}" ]] && { error "Contour definition YAML not found at ${CONTOUR_DEF}!"; exit 1; }
+  [[ ! -f "${CONTOUR_VALS}" ]] && { error "Contour values YAML not found at ${CONTOUR_VALS}!"; exit 1; }
+  [[ ! -f "${HARBOR_DEF}" ]] && { error "Harbor definition YAML not found at ${HARBOR_DEF}!"; exit 1; }
 
   # --- 1. INSTALL CONTOUR & GET IP ---
   log "Calling vCenter API to Register & Install Contour Supervisor Service..."
-  # Notice we pass --definition-yaml here!
+  # Fix: Added the --values-yaml argument to the Contour installation
   python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
     --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
-    --service-name "contour" --definition-yaml "${CONTOUR_DEF}" || exit 1
+    --service-name "contour" \
+    --definition-yaml "${CONTOUR_DEF}" \
+    --values-yaml "${CONTOUR_VALS}" || exit 1
 
   CTX_NAME="lab-supervisor"
   export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
@@ -444,7 +448,6 @@ step11_install_supervisor_services(){
   export KUBECTL_VSPHERE_PASSWORD="${VC_PASS}"
   
   log "Authenticating to Supervisor Control Plane using VCF CLI..."
-  # SILENT DELETE FIX: Auto-confirming 'y' to prevent hanging
   echo "y" | vcf context delete "${CTX_NAME}" >/dev/null 2>&1 || true
   
   vcf context create "${CTX_NAME}" --endpoint "${SUP_IP}" --auth-type basic --username "${VC_USER}" --insecure-skip-tls-verify
@@ -554,7 +557,6 @@ EOF
 
   # --- 4. INSTALL HARBOR (WITH INTEGRATED AVI DNS INJECTION) ---
   log "Calling Python helper to inject Avi DNS, Register, AND Install Harbor..."
-  # Passing both the Definition YAML (App) and the Values YAML (Settings)
   python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
     --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
     --service-name "harbor" \
