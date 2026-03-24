@@ -422,7 +422,7 @@ step11_install_supervisor_services(){
   HARBOR_FQDN="harbor.lb.site-a.vcf.lab"
   SERVICE_DIR="$(cd "${ROOT_DIR}/../../Supervisor_Services" && pwd)"
   
-  CONTOUR_DEF="${SERVICE_DIR}/contour-service-v1.32.0.yaml"
+  CONTOUR_DEF="${SERVICE_DIR}/contour-service-v1.32.0.yml"
   
   # Dynamically find the base Harbor Definition YAML (excluding your dynamic values file)
   HARBOR_DEF=$(ls -1 "${SERVICE_DIR}"/harbor-*.yaml 2>/dev/null | grep -v "dynamic-values" | head -n1 || true)
