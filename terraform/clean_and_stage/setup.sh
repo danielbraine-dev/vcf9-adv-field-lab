@@ -420,8 +420,8 @@ step11_install_supervisor_services(){
   AVI_PASS="$(read_tfvar avi_admin_password)"
   
   HARBOR_FQDN="harbor.lb.site-a.vcf.lab"
-  SERVICE_DIR="$(cd "${ROOT_DIR}/../../" && pwd)"
-  CONTOUR_YAML="${SERVICE_DIR}/contour.yaml"
+  SERVICE_DIR="$(cd "${ROOT_DIR}/../../Supervisor_Services" && pwd)"
+  CONTOUR_YAML="${SERVICE_DIR}/contour-service-v1.32.0.yaml"
   
   [[ ! -f "${ROOT_DIR}/scripts/install_sup_service.py" ]] && { error "install_sup_service.py missing!"; exit 1; }
 
@@ -431,7 +431,7 @@ step11_install_supervisor_services(){
     --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
     --service-name "contour" --config-yaml "${CONTOUR_YAML}" || exit 1
 
-  CTX_NAME="lab-sup-$$"
+  CTX_NAME="lab-supervisor"
   export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
   export VSPHERE_PASSWORD="${VC_PASS}"
   vcf context create "${CTX_NAME}" --endpoint "${SUP_IP}" --auth-type basic --username "${VC_USER}" --insecure-skip-tls-verify
@@ -465,9 +465,73 @@ step11_install_supervisor_services(){
 
   # --- 3. DYNAMICALLY BUILD HARBOR CONFIG ---
   log "Injecting TLS Certs into Harbor Data Values YAML..."
-  HARBOR_YAML="${ROOT_DIR}/harbor-dynamic-values.yaml"
+  HARBOR_YAML="${ROOT_DIR}/../../Supervisor_Services/harbor-dynamic-values.yaml"
   cat <<EOF > "${HARBOR_YAML}"
 hostname: "${HARBOR_FQDN}"
+port:
+  https: 443
+createNetworkPolicy: true
+harborAdminPassword: VMware123!VMware123!
+secretKey: 0123456789ABCDEF
+database:
+  password: VMware123!VMware123!
+core:
+  replicas: 1
+  secret: VMware123!VMware123!
+  xsrfKey: 0123456789ABCDEF0123456789ABCDEF
+jobservice:
+  replicas: 1
+  secret: VMware123!VMware123!
+registry:
+  replicas: 1
+  secret: VMware123!VMware123!
+persistence:
+  persistenceVolumeClaim:
+    registry:
+      storageClass: "vsan-default-storage-policy"
+      subPath: ""
+      accessMode: ReadWriteOnce
+      size: 10Gi
+    jobservice:
+      jobLog:
+        existingClaim: ""
+        storageClass: "vsan-default-storage-policy"
+        subPath: ""
+        accessMode:ReadWriteOnce
+        size: 1Gi
+    database:
+      existingClaim: ""
+      storageClass: "vsan-default-storage-policy"
+      subPath: ""
+      accessMode:ReadWriteOnce
+      size: 1Gi
+    redis:
+      existingClaim: ""
+      storageClass: "vsan-default-storage-policy"
+      subPath: ""
+      accessMode:ReadWriteOnce
+      size: 1Gi
+    trivy:
+      existingClaim: ""
+      storageClass: "vsan-default-storage-policy"
+      subPath: ""
+      accessMode:ReadWriteOnce
+      size: 1Gi
+metrics:
+  enabled: true
+  core:
+    path: /metrics
+    port: 8001
+  registry:
+    path: /metrics
+    port: 8001
+  exporter:
+    path: /metrics
+    port: 8001
+network:
+  ipFamilies: ["IPv4"]
+tlsCertificate:
+  tlsSecretLabels: {"managed-by": "vmware-vRegistry"}
 tls:
   certificate: |
 ${CERT_INDENTED}
