@@ -3,31 +3,26 @@ import sys, requests, urllib3, argparse, json, base64, re, time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def robust_post(session, url, payload):
+def vapi_post(session, url, payload, wrap_create_spec=False):
     """
-    vCenter REST APIs (VAPI) are notoriously inconsistent with how they wrap payloads.
-    Some require flat JSON, some require {"spec": {...}}, and some require {"create_spec": {...}}.
-    This function dynamically brute-forces the correct structure so it never fails on a schema error.
+    Executes a POST request to the vCenter REST API.
+    If wrap_create_spec is True, it wraps the payload exactly as vCenter 8 expects for creation tasks.
     """
-    # 1. Try flat payload
-    r = session.post(url, json=payload)
-    if r.status_code < 400: return r
+    req_data = {"create_spec": payload} if wrap_create_spec else payload
+    r = session.post(url, json=req_data)
     
-    # 2. Try wrapping the entire payload
-    for wrapper in ["create_spec", "spec", "createSpec"]:
-        r = session.post(url, json={wrapper: payload})
-        if r.status_code < 400: return r
-
-    # 3. Try splitting out the "version" key (common in VAPI update/version endpoints)
-    if "version" in payload:
-        v = payload.pop("version")
-        for wrapper in ["create_spec", "spec", "createSpec"]:
-            r = session.post(url, json={"version": v, wrapper: payload})
-            if r.status_code < 400: return r
-        payload["version"] = v # Restore if failed
-        
-    # Fallback to flat to trigger the normal error trace to the user
-    return session.post(url, json=payload)
+    # If the API rejects it, print the EXACT error from vCenter so we aren't guessing in the dark.
+    if r.status_code >= 400:
+        print(f"[-] API POST failed! HTTP {r.status_code}")
+        print(f"[-] URL: {url}")
+        print("\n--- vCenter API Error Response ---")
+        try:
+            print(json.dumps(r.json(), indent=2))
+        except Exception:
+            print(r.text)
+        print("----------------------------------\n")
+        sys.exit(1)
+    return r
 
 def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
     """Handles the Avi REST API logic for injecting a DNS A-Record."""
@@ -91,31 +86,29 @@ def register_and_activate_service(session, host, definition_path, service_name):
     svc_id = ref_match.group(1).strip("'\"")
     svc_ver = ver_match.group(1).strip("'\"")
     
-    # 1. Register the Service Name if it doesn't exist
+    # 1. Register the Service Name (Requires create_spec wrapper)
     res = session.get(f"https://{host}/api/vcenter/namespace-management/supervisor-services")
     res.raise_for_status()
     if svc_id not in [s["supervisor_service"] for s in res.json()]:
         print(f"[*] Registering new Supervisor Service in Catalog: {svc_id}")
         payload = {
-            "supervisor_service": svc_id, 
-            "display_name": service_name.capitalize(), 
+            "supervisor_service": svc_id,
+            "name": service_name.capitalize(),  # The API strictly expects "name", not "display_name"
             "description": f"{service_name} deployed via automation"
         }
-        r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload)
-        r.raise_for_status()
+        vapi_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services", payload, wrap_create_spec=True)
 
-    # 2. Upload the Version YAML if it doesn't exist
+    # 2. Upload the Version YAML (Requires create_spec wrapper)
     res = session.get(f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions")
     res.raise_for_status()
     if svc_ver not in [v["version"] for v in res.json()]:
         print(f"[*] Uploading Version {svc_ver} to vCenter...")
         payload = {
-            "version": svc_ver, 
-            "content": base64.b64encode(content_raw.encode('utf-8')).decode('utf-8'), 
-            "eula_accept": True
+            "version": svc_ver,
+            "content": base64.b64encode(content_raw.encode('utf-8')).decode('utf-8'),
+            "accept_eula": True
         }
-        r = robust_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions", payload)
-        r.raise_for_status()
+        vapi_post(session, f"https://{host}/api/vcenter/namespace-management/supervisor-services/{svc_id}/versions", payload, wrap_create_spec=True)
 
     # 3. Wait for vCenter to unpack and ACTIVATE the version
     print(f"[*] Waiting for version {svc_ver} to reach ACTIVATED state (can take a minute)...")
@@ -177,19 +170,14 @@ def main():
             sys.exit(0)
             
         print(f"[*] Deploying {args.service_name} onto Supervisor {supervisor_id}...")
-        r = robust_post(session, install_url, payload)
-        r.raise_for_status()
+        # The Installation endpoint expects FLAT JSON (wrap_create_spec=False)
+        vapi_post(session, install_url, payload, wrap_create_spec=False)
         print(f"[+] Successfully initiated installation of {args.service_name}!")
 
     except requests.exceptions.RequestException as e:
         print(f"[-] API call failed! HTTP {e.response.status_code if e.response is not None else 'Unknown'}")
         if e.response is not None:
-            print("\n--- vCenter API Error Response ---")
-            try:
-                print(json.dumps(e.response.json(), indent=2))
-            except:
-                print(e.response.text)
-            print("----------------------------------\n")
+            print(e.response.text)
         sys.exit(1)
 
 if __name__ == "__main__":
