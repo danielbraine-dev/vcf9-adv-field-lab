@@ -421,15 +421,22 @@ step11_install_supervisor_services(){
   
   HARBOR_FQDN="harbor.lb.site-a.vcf.lab"
   SERVICE_DIR="$(cd "${ROOT_DIR}/../../Supervisor_Services" && pwd)"
-  CONTOUR_YAML="${SERVICE_DIR}/contour-service-v1.32.0.yaml"
   
-  [[ ! -f "${ROOT_DIR}/scripts/install_sup_services.py" ]] && { error "install_sup_services.py missing!"; exit 1; }
+  CONTOUR_DEF="${SERVICE_DIR}/contour-service-v1.32.0.yaml"
+  
+  # Dynamically find the base Harbor Definition YAML (excluding your dynamic values file)
+  HARBOR_DEF=$(ls -1 "${SERVICE_DIR}"/harbor-*.yaml 2>/dev/null | grep -v "dynamic-values" | head -n1 || true)
+  
+  [[ ! -f "${ROOT_DIR}/scripts/install_sup_service.py" ]] && { error "install_sup_service.py missing!"; exit 1; }
+  [[ ! -f "${CONTOUR_DEF}" ]] && { error "Contour definition not found at ${CONTOUR_DEF}!"; exit 1; }
+  [[ -z "${HARBOR_DEF}" ]] && { error "Harbor definition YAML not found in ${SERVICE_DIR}!"; exit 1; }
 
   # --- 1. INSTALL CONTOUR & GET IP ---
-  log "Calling vCenter API to install Contour Supervisor Service..."
-  python3 "${ROOT_DIR}/scripts/install_sup_services.py" \
+  log "Calling vCenter API to Register & Install Contour Supervisor Service..."
+  # Notice we pass --definition-yaml here!
+  python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
     --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
-    --service-name "contour" --config-yaml "${CONTOUR_YAML}" || exit 1
+    --service-name "contour" --definition-yaml "${CONTOUR_DEF}" || exit 1
 
   CTX_NAME="lab-supervisor"
   export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
@@ -437,7 +444,7 @@ step11_install_supervisor_services(){
   export KUBECTL_VSPHERE_PASSWORD="${VC_PASS}"
   
   log "Authenticating to Supervisor Control Plane using VCF CLI..."
-  # Silently delete existing context to prevent hanging
+  # SILENT DELETE FIX: Auto-confirming 'y' to prevent hanging
   echo "y" | vcf context delete "${CTX_NAME}" >/dev/null 2>&1 || true
   
   vcf context create "${CTX_NAME}" --endpoint "${SUP_IP}" --auth-type basic --username "${VC_USER}" --insecure-skip-tls-verify
@@ -471,7 +478,7 @@ step11_install_supervisor_services(){
 
   # --- 3. DYNAMICALLY BUILD HARBOR CONFIG ---
   log "Injecting TLS Certs into Harbor Data Values YAML..."
-  HARBOR_YAML="${ROOT_DIR}/../../Supervisor_Services/harbor-dynamic-values.yaml"
+  HARBOR_YAML="${SERVICE_DIR}/harbor-dynamic-values.yaml"
   cat <<EOF > "${HARBOR_YAML}"
 hostname: "${HARBOR_FQDN}"
 port:
@@ -546,10 +553,13 @@ ${KEY_INDENTED}
 EOF
 
   # --- 4. INSTALL HARBOR (WITH INTEGRATED AVI DNS INJECTION) ---
-  log "Calling Python helper to inject Avi DNS AND install Harbor..."
+  log "Calling Python helper to inject Avi DNS, Register, AND Install Harbor..."
+  # Passing both the Definition YAML (App) and the Values YAML (Settings)
   python3 "${ROOT_DIR}/scripts/install_sup_service.py" \
     --host "${VC_HOST}" --user "${VC_USER}" --password "${VC_PASS}" \
-    --service-name "harbor" --config-yaml "${HARBOR_YAML}" \
+    --service-name "harbor" \
+    --definition-yaml "${HARBOR_DEF}" \
+    --values-yaml "${HARBOR_YAML}" \
     --avi-ip "${AVI_IP}" --avi-pass "${AVI_PASS}" \
     --fqdn "${HARBOR_FQDN}" --target-ip "${CONTOUR_IP}" || exit 1
   
@@ -581,7 +591,6 @@ EOF
   docker tag osixia/openldap:1.5.0 "${TARGET_IMAGE}"
 
   log "Logging into Supervisor Harbor (${HARBOR_FQDN})..."
-  # MATCHED PASSWORD to Harbor YAML
   docker login "${HARBOR_FQDN}" -u "admin" -p "VMware123!VMware123!"
 
   log "Pushing OpenLDAP image into the Supervisor..."
@@ -617,21 +626,22 @@ step12_deploy_openldap(){
 
   log "Authenticating to Supervisor Control Plane at ${SUP_IP} using VCF CLI..."
   
-  # Silently delete existing context first
-  echo "y" | vcf context delete lab-supervisor >/dev/null 2>&1 || true
-  
+  CTX_NAME="lab-supervisor"
   export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
   export VSPHERE_PASSWORD="${VC_PASS}"
   export KUBECTL_VSPHERE_PASSWORD="${VC_PASS}"
   
-  vcf context create lab-supervisor \
+  # SILENT DELETE FIX: Auto-confirming 'y' to prevent hanging
+  echo "y" | vcf context delete "${CTX_NAME}" >/dev/null 2>&1 || true
+  
+  vcf context create "${CTX_NAME}" \
     --endpoint "${SUP_IP}" \
     --auth-type basic \
     --username "${VC_USER}" \
     --insecure-skip-tls-verify
 
   log "Setting default Kubernetes context..."
-  vcf context use lab-supervisor
+  vcf context use "${CTX_NAME}"
 
   log "Applying OpenLDAP Manifest to the Shared Infrastructure Namespace..."
   kubectl apply -f "${ROOT_DIR}/openldap-vsphere-pod.yaml"
@@ -640,7 +650,6 @@ step12_deploy_openldap(){
   log "(This may take 1-2 minutes as Avi spins up the NSX-T Virtual Service)"
   
   for ((i=1; i<=20; i++)); do
-    # Suppressing stderr just in case the resource isn't instantly available
     LDAP_VIP=$(kubectl get svc openldap-lb -n shared-infrastructure -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
     
     if [[ -n "$LDAP_VIP" ]]; then
@@ -658,24 +667,6 @@ step12_deploy_openldap(){
 
   log "[+] Step 12 Complete! Global Identity Provider is online."
   pause
-}
-
-do_step() {
-  case "$1" in
-    1) step1_install_tools;;
-    2) step2_teardown_environment;;
-    3) step3_tf_init;;
-    4) step4_create_nsx_objects;;
-    5) step5_deploy_avi;;
-    6) step6_init_avi;;
-    7) step7_avi_base_config;;
-    8) step8_nsx_cloud;;
-    9) step9_install_sup;;
-   10) step10_prime_vcfa_objects;;
-   11) step11_install_supervisor_services;;
-   12) step12_deploy_openldap;;
-    *) echo "Unknown step $1"; exit 2;;
-  esac
 }
 
 run() {
