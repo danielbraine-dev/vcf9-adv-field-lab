@@ -415,9 +415,6 @@ step11_deploy_openldap(){
   VC_USER="$(read_tfvar vsphere_user)"
   VC_PASS="$(read_tfvar vsphere_password)"
   
-  # The new VCF 9 CLI Environment Variable
-  export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
-
   if [[ -f "${ROOT_DIR}/scripts/create_shared_namespace.py" ]]; then
     log "Executing standalone script to provision Supervisor Namespace..."
     python3 "${ROOT_DIR}/scripts/create_shared_namespace.py" \
@@ -432,7 +429,13 @@ step11_deploy_openldap(){
   fi
 
   log "Authenticating to Supervisor Control Plane at ${SUP_IP} using VCF CLI..."
-  vcf context create lab-supervisor \
+  
+  vcf context delete lab-supervisor >/dev/null 2>&1 || true
+  
+  export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
+  export KUBECTL_VSPHERE_PASSWORD="${VC_PASS}"
+  
+  echo "${VC_PASS}" | vcf context create lab-supervisor \
     --endpoint "${SUP_IP}" \
     --auth-type basic \
     --username "${VC_USER}" \
@@ -445,7 +448,10 @@ step11_deploy_openldap(){
   kubectl apply -f "${ROOT_DIR}/openldap-vsphere-pod.yaml"
 
   log "Waiting for Avi to assign a Load Balancer VIP to the LDAP Service..."
+  log "(This may take 1-2 minutes as Avi spins up the NSX-T Virtual Service)"
+  
   for ((i=1; i<=20; i++)); do
+    # Suppressing stderr just in case the resource isn't instantly available
     LDAP_VIP=$(kubectl get svc openldap-lb -n shared-infrastructure -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
     
     if [[ -n "$LDAP_VIP" ]]; then
