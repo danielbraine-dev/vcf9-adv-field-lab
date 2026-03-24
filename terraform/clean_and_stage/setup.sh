@@ -672,7 +672,7 @@ do_step() {
     8) step8_nsx_cloud;;
     9) step9_install_sup;;
    10) step10_prime_vcfa_objects;;
-   11) step11_install_sup_services;;
+   11) step11_install_supervisor_services;;
    12) step12_deploy_openldap;;
     *) echo "Unknown step $1"; exit 2;;
   esac
