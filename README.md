@@ -1,6 +1,8 @@
 # vcf9-adv-deploy-lab-setup
 
 Open a Terminal on the Linux console and copy/paste the following commands. Enter the lab password when prompted.
+Make sure to download the AVI controller OVA and place it in the ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage folder
+prior to step 5.
 
 Commands:
 
