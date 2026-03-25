@@ -482,9 +482,9 @@ step11_install_supervisor_services(){
     -subj "/C=US/ST=VA/L=DunnLoring/O=VCF/OU=Lab/CN=${HARBOR_FQDN}" \
     -addext "subjectAltName=DNS:${HARBOR_FQDN}" 2>/dev/null
 
-  # FIX: Increased indentation to 6 spaces to match the deeper YAML nesting
-  CERT_INDENTED=$(awk '{printf "      %s\n", $0}' "${ROOT_DIR}/certs/harbor.crt")
-  KEY_INDENTED=$(awk '{printf "      %s\n", $0}' "${ROOT_DIR}/certs/harbor.key")
+  # FIX: Reset indentation to 4 spaces to match the flattened schema
+  CERT_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.crt")
+  KEY_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.key")
 
   # --- 3. DYNAMICALLY BUILD HARBOR CONFIG ---
   log "Injecting TLS Certs into Harbor Data Values YAML..."
@@ -555,11 +555,12 @@ network:
   ipFamilies: ["IPv4"]
 tlsCertificate:
   tlsSecretLabels: {"managed-by": "vmware-vRegistry"}
-  tls:
-    certificate: |
+  tls.crt: |
 ${CERT_INDENTED}
-    key: |
+  tls.key: |
 ${KEY_INDENTED}
+  ca.crt: |
+${CERT_INDENTED}
 EOF
 
   # --- 4. INSTALL HARBOR (WITH INTEGRATED AVI DNS INJECTION) ---
