@@ -750,14 +750,58 @@ EOF
 }
 
 step12_prime_vcfa_objects(){
-  log "[12] Priming VCFA Region and Tenant Org…"
+  log "[12] Priming VCFA Region, Tenant Org, and LDAP Integration…"
+  
+  # --- 1. AUTHENTICATE TO SUPERVISOR ---
+  SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
+  VC_USER="$(read_tfvar vsphere_user)"
+  VC_PASS="$(read_tfvar vsphere_password)"
+
+  CTX_NAME="lab-supervisor"
+  export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
+  export VSPHERE_PASSWORD="${VC_PASS}"
+  export KUBECTL_VSPHERE_PASSWORD="${VC_PASS}"
+
+  log "Authenticating to Supervisor Control Plane at ${SUP_IP} using VCF CLI..."
+  
+  # SILENT DELETE FIX: Auto-confirming 'y' to prevent hanging on stale contexts
+  echo "y" | vcf context delete "${CTX_NAME}" >/dev/null 2>&1 || true
+
+  vcf context create "${CTX_NAME}" \
+    --endpoint "${SUP_IP}" \
+    --auth-type basic \
+    --username "${VC_USER}" \
+    --insecure-skip-tls-verify
+    
+  vcf context use "${CTX_NAME}" >/dev/null 2>&1
+
+  # --- 2. EXTRACT LDAP VIP ---
+  log "Retrieving OpenLDAP LoadBalancer IP from Avi..."
+  
+  LDAP_VIP=""
+  for ((i=1; i<=30; i++)); do
+    # Extract the IP directly using jsonpath
+    LDAP_VIP=$(kubectl get svc openldap-lb -n shared-infrastructure -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+    
+    if [[ -n "$LDAP_VIP" ]]; then
+      printf "\n"
+      log "[+] Found OpenLDAP VIP: ${LDAP_VIP}"
+      break
+    fi
+    printf "."
+    sleep 10
+    [[ $i -eq 30 ]] && { error "[-] Timeout waiting for OpenLDAP VIP."; exit 1; }
+  done
+  
+  # --- 3. EXECUTE PYTHON AUTOMATION ---
   if [[ -f "${ROOT_DIR}/scripts/prime_vcfa.py" ]]; then
-    log "Executing Python VCFA Prime script..."
-    python3 "${ROOT_DIR}/scripts/prime_vcfa.py" || { error "Prime VCFA script failed!"; exit 1; }
+    log "Executing Python VCFA Prime script with LDAP VIP: ${LDAP_VIP}..."
+    python3 "${ROOT_DIR}/scripts/prime_vcfa.py" "${LDAP_VIP}" || { error "Prime VCFA script failed!"; exit 1; }
   else
     error "prime_vcfa.py not found in ${ROOT_DIR}/scripts!"
     exit 1
   fi
+  
   pause
 }
 
