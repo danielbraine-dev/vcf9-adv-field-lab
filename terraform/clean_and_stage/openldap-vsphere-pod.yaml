@@ -156,6 +156,8 @@ spec:
           value: "vcf.lab"
         - name: LDAP_ADMIN_PASSWORD
           value: "VMware123!"
+        - name: LDAP_TLS
+          value: "false"
         volumeMounts:
         - name: ldap-data
           mountPath: /var/lib/ldap
