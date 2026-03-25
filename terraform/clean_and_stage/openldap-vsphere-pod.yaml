@@ -134,18 +134,15 @@ spec:
       labels:
         app: openldap
     spec:
-      initContainers:
-      - name: prep-ldif
-        image: harbor.lb.site-a.vcf.lab/library/osixia-openldap:1.5.0
-        command: ['sh', '-c', 'cp -L /tmp/configmap/*.ldif /rw-ldif/']
-        volumeMounts:
-        - name: configmap-volume
-          mountPath: /tmp/configmap
-        - name: rw-ldif-volume
-          mountPath: /rw-ldif
       containers:
       - name: openldap
         image: harbor.lb.site-a.vcf.lab/library/osixia-openldap:1.5.0
+        # THE FIX: Hijack the startup command to safely inject the files!
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            cp /custom-ldif/*.ldif /container/service/slapd/assets/config/bootstrap/ldif/custom/
+            exec /container/tool/run --loglevel info
         ports:
         - containerPort: 389
         - containerPort: 636
@@ -163,8 +160,9 @@ spec:
           mountPath: /var/lib/ldap
         - name: ldap-config
           mountPath: /etc/ldap/slapd.d
-        - name: rw-ldif-volume
-          mountPath: /container/service/slapd/assets/config/bootstrap/ldif/custom
+        # Mount the safe, top-level ConfigMap
+        - name: configmap-volume
+          mountPath: /custom-ldif
       volumes:
       - name: ldap-data
         persistentVolumeClaim:
@@ -174,8 +172,6 @@ spec:
       - name: configmap-volume
         configMap:
           name: openldap-bootstrap
-      - name: rw-ldif-volume
-        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
