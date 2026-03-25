@@ -76,3 +76,11 @@
 	"orgLdapMode": "CUSTOM",
 	"vCloudExtension": []
 }
+
+
+X-vCloud-Authorization
+	Cloud-Org-A
+X-VMWARE-VCLOUD-AUTH-CONTEXT
+	Cloud-Org-A
+X-VMWARE-VCLOUD-TENANT-CONTEXT
+	8a239e82-336d-4e1a-8915-b80fa1572412
