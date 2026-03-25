@@ -681,14 +681,16 @@ def create_org_admin(token, org_id, role_urn):
 def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
     print(f"\n[*] Configuring Custom OpenLDAP Directory for Tenant...")
     
-    # Using the exact URL from your DevTools capture
-    api_url = f"https://{vcfa_url}/api/admin/org/{org_id}/settings/ldap" 
+    # THE FIX 1: Strip the 'urn:vcloud:org:' prefix to match the DevTools URL exactly
+    org_uuid = org_id.split(':')[-1]
+    api_url = f"https://{vcfa_url}/api/admin/org/{org_uuid}/settings/ldap" 
     
+    # THE FIX 2: Set Content-Type to plain 'application/json' to cure the 415 error
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
-        "Content-Type": "application/json;version=9.0.0",
-        "X-VMWARE-VCLOUD-AUTH-CONTEXT": ORG_NAME,
+        "Content-Type": "application/json",
+        "X-VMWARE-VCLOUD-AUTH-CONTEXT": "Cloud-Org-A",
         "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
 
@@ -734,14 +736,11 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
     }
 
     try:
-        # Firing the PUT request to save the settings
         response = requests.put(api_url, headers=headers, json=ldap_payload, verify=False)
         response.raise_for_status()
         print(f"[+] Tenant LDAP settings saved successfully (HTTP 200)!")
         
-        # 2. TRIGGER DIRECTORY SYNC
         print(f"[*] Triggering Directory Sync to import Users and Groups...")
-        # In the CloudAPI, sync is usually triggered via an action endpoint
         sync_url = f"{api_url}/action/sync"
         try:
             sync_resp = requests.post(sync_url, headers=headers, verify=False)
@@ -749,7 +748,6 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
                 print("[-] Waiting 15 seconds for VCFA to import objects...")
                 time.sleep(15)
             else:
-                # If the sync endpoint is slightly different, we gracefully fall back
                 raise ValueError(f"Sync returned {sync_resp.status_code}")
         except Exception as sync_e:
             print(f"[!] Warning: API auto-sync endpoint obscured ({sync_e}).")
