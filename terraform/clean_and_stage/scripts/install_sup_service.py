@@ -107,7 +107,8 @@ def trust_harbor_registry(session, host, supervisor_id, fqdn, cert_path):
             registries = r_get.json()
             items = registries.get("value", []) if isinstance(registries, dict) else registries
             for reg in items:
-                if reg.get("registry", "") == fqdn:
+                # Check for both schema variations just in case
+                if reg.get("registry", "") == fqdn or reg.get("image_registry", "") == fqdn:
                     print(f"[*] Registry {fqdn} is already trusted by Supervisor. Skipping.")
                     return
     except Exception:
@@ -115,10 +116,10 @@ def trust_harbor_registry(session, host, supervisor_id, fqdn, cert_path):
 
     print(f"[*] Injecting Harbor TLS certificate into Supervisor {supervisor_id} Trust Store...")
     
-    # THE FIX: Added the mandatory 'name' key for the vSphere 8 API
+    # THE FIX: Changed 'registry' to 'image_registry' to perfectly match the vSphere 8 schema
     payload = {
         "name": "Lab-Harbor-Registry",
-        "registry": fqdn,
+        "image_registry": fqdn,
         "tls_root_ca_bundle": ca_cert
     }
     
