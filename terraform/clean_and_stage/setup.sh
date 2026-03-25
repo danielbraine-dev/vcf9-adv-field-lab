@@ -630,7 +630,8 @@ EOF
 
   # STEP 12: DEPLOY PHPLDAPADMIN UI
   log "--- Starting Step 12: Deploying phpLDAPadmin UI ---"
-
+  
+  HARBOR_FQDN="harbor.lb.site-a.vcf.lab"
   PHPLDAPADMIN_SOURCE="osixia/phpldapadmin:0.9.0"
   PHPLDAPADMIN_TARGET="${HARBOR_FQDN}/library/osixia-phpldapadmin:0.9.0"
   PHPLDAPADMIN_YAML="${ROOT_DIR}/phpldapadmin.yaml"
