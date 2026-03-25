@@ -1,38 +1,78 @@
-holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ k logs deploy/shared-openldap -n shared-infrastructure -p
-Defaulted container "openldap" out of: openldap, prep-ldif (init)
-***  INFO   | 2026-03-25 16:21:49 | CONTAINER_LOG_LEVEL = 3 (info)
-***  INFO   | 2026-03-25 16:21:49 | Search service in CONTAINER_SERVICE_DIR = /container/service :
-***  INFO   | 2026-03-25 16:21:49 | link /container/service/:ssl-tools/startup.sh to /container/run/startup/:ssl-tools
-*** WARNING | 2026-03-25 16:21:49 | failed to link /container/service/:ssl-tools/startup.sh to /container/run/startup/:ssl-tools: [Errno 17] File exists: '/container/service/:ssl-tools/startup.sh' -> '/container/run/startup/:ssl-tools'
-***  INFO   | 2026-03-25 16:21:49 | link /container/service/slapd/startup.sh to /container/run/startup/slapd
-*** WARNING | 2026-03-25 16:21:49 | failed to link /container/service/slapd/startup.sh to /container/run/startup/slapd: [Errno 17] File exists: '/container/service/slapd/startup.sh' -> '/container/run/startup/slapd'
-***  INFO   | 2026-03-25 16:21:49 | link /container/service/slapd/process.sh to /container/run/process/slapd/run
-*** WARNING | 2026-03-25 16:21:49 | directory /container/run/process/slapd already exists
-*** WARNING | 2026-03-25 16:21:49 | failed to link /container/service/slapd/process.sh to /container/run/process/slapd/run : [Errno 17] File exists: '/container/service/slapd/process.sh' -> '/container/run/process/slapd/run'
-***  INFO   | 2026-03-25 16:21:49 | Environment files will be proccessed in this order : 
-Caution: previously defined variables will not be overriden.
-/container/environment/99-default/default.startup.yaml
-/container/environment/99-default/default.yaml
+{
+	"customOrgLdapSettings": {
+		"authenticationMechanism": "SIMPLE",
+		"connectorType": "OPEN_LDAP",
+		"customUiButtonLabel": null,
+		"groupAttributes": {
+			"backLinkIdentifier": "objectSid",
+			"groupName": "cn",
+			"membership": "member",
+			"membershipIdentifier": "dn",
+			"objectClass": "group",
+			"objectIdentifier": "objectGuid",
+			"vCloudExtension": []
+		},
+		"hostName": "10.1.0.10",
+		"isGroupSearchBaseEnabled": false,
+		"isSsl": false,
+		"password": "VMware123!",
+		"port": 389,
+		"searchBase": "ou=Cloud Org A,dc=vcf,dc=lab",
+		"userAttributes": {
+			"email": "mail",
+			"fullName": "displayName",
+			"givenName": "givenName",
+			"groupBackLinkIdentifier": "tokenGroups",
+			"groupMembershipIdentifier": "dn",
+			"objectClass": "user",
+			"objectIdentifier": "objectGuid",
+			"surname": "sn",
+			"telephone": "telephoneNumber",
+			"userName": "sAMAccountName",
+			"vCloudExtension": []
+		},
+		"userName": "cn=admin,dc=vcf,dc=lab",
+		"vCloudExtension": []
+	},
+	"link": [],
+	"orgLdapMode": "CUSTOM",
+	"vCloudExtension": []
+}
 
-To see how this files are processed and environment variables values,
-run this container with '--loglevel debug'
-***  INFO   | 2026-03-25 16:21:49 | Running /container/run/startup/:ssl-tools...
-***  INFO   | 2026-03-25 16:21:49 | Running /container/run/startup/slapd...
-***  INFO   | 2026-03-25 16:21:49 | openldap user and group adjustments
-***  INFO   | 2026-03-25 16:21:49 | get current openldap uid/gid info inside container
-***  INFO   | 2026-03-25 16:21:50 | -------------------------------------
-***  INFO   | 2026-03-25 16:21:50 | openldap GID/UID
-***  INFO   | 2026-03-25 16:21:50 | -------------------------------------
-***  INFO   | 2026-03-25 16:21:50 | User uid: 911
-***  INFO   | 2026-03-25 16:21:50 | User gid: 911
-***  INFO   | 2026-03-25 16:21:50 | uid/gid changed: false
-***  INFO   | 2026-03-25 16:21:50 | -------------------------------------
-***  INFO   | 2026-03-25 16:21:50 | updating file uid/gid ownership
-***  INFO   | 2026-03-25 16:21:50 | Start OpenLDAP...
-***  INFO   | 2026-03-25 16:21:50 | Waiting for OpenLDAP to start...
-***  INFO   | 2026-03-25 16:21:50 | Disable replication config...
-sed: can't read /container/service/slapd/assets/config/replication/replication-disable.ldif: No such file or directory
-sed: can't read /container/service/slapd/assets/config/admin/root-password-change.ldif: No such file or directory
-***  ERROR  | 2026-03-25 16:21:50 | /container/run/startup/slapd failed with status 2
 
-***  INFO   | 2026-03-25 16:21:50 | Killing all processes...
+{
+	"customOrgLdapSettings": {
+		"authenticationMechanism": "SIMPLE",
+		"connectorType": "OPEN_LDAP",
+		"groupAttributes": {
+			"backLinkIdentifier": "objectSid",
+			"groupName": "cn",
+			"membership": "member",
+			"membershipIdentifier": "dn",
+			"objectClass": "group",
+			"objectIdentifier": "objectGuid",
+			"vCloudExtension": []
+		},
+		"isGroupSearchBaseEnabled": false,
+		"isSsl": false,
+		"port": 389,
+		"userAttributes": {
+			"email": "mail",
+			"fullName": "displayName",
+			"givenName": "givenName",
+			"groupBackLinkIdentifier": "tokenGroups",
+			"groupMembershipIdentifier": "dn",
+			"objectClass": "user",
+			"objectIdentifier": "objectGuid",
+			"surname": "sn",
+			"telephone": "telephoneNumber",
+			"userName": "sAMAccountName",
+			"vCloudExtension": []
+		},
+		"vCloudExtension": []
+	},
+	"customUsersOu": null,
+	"link": [],
+	"orgLdapMode": "CUSTOM",
+	"vCloudExtension": []
+}
