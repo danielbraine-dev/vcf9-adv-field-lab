@@ -1,5 +1,110 @@
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openldap-bootstrap
+  namespace: shared-infrastructure
+data:
+  01-tenant-structure.ldif: |
+    # ==========================
+    # CLOUD ORG A (Root)
+    # ==========================
+    dn: ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: organizationalUnit
+    ou: Cloud Org A
+
+    # ==========================
+    # TENANT 123
+    # ==========================
+    dn: ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: organizationalUnit
+    ou: tenant123
+
+    # --- Tenant 123 Users ---
+    dn: uid=admin_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: inetOrgPerson
+    uid: admin_tenant123
+    sn: Admin
+    cn: Tenant 123 Admin
+    userPassword: VMware123!VMware123!
+
+    dn: uid=advuser_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: inetOrgPerson
+    uid: advuser_tenant123
+    sn: AdvUser
+    cn: Tenant 123 Advanced User
+    userPassword: VMware123!VMware123!
+
+    dn: uid=user_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: inetOrgPerson
+    uid: user_tenant123
+    sn: User
+    cn: Tenant 123 User
+    userPassword: VMware123!VMware123!
+
+    # --- Tenant 123 Groups ---
+    dn: cn=project_admin,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: groupOfNames
+    cn: project_admin
+    member: uid=admin_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+
+    dn: cn=project_adv_user,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: groupOfNames
+    cn: project_adv_user
+    member: uid=advuser_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+
+    dn: cn=project_user,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: groupOfNames
+    cn: project_user
+    member: uid=user_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+
+    # ==========================
+    # TENANT 456
+    # ==========================
+    dn: ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: organizationalUnit
+    ou: tenant456
+
+    # --- Tenant 456 Users ---
+    dn: uid=admin_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: inetOrgPerson
+    uid: admin_tenant456
+    sn: Admin
+    cn: Tenant 456 Admin
+    userPassword: VMware123!VMware123!
+
+    dn: uid=advuser_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: inetOrgPerson
+    uid: advuser_tenant456
+    sn: AdvUser
+    cn: Tenant 456 Advanced User
+    userPassword: VMware123!VMware123!
+
+    dn: uid=user_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: inetOrgPerson
+    uid: user_tenant456
+    sn: User
+    cn: Tenant 456 User
+    userPassword: VMware123!VMware123!
+
+    # --- Tenant 456 Groups ---
+    dn: cn=project_admin,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: groupOfNames
+    cn: project_admin
+    member: uid=admin_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+
+    dn: cn=project_adv_user,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: groupOfNames
+    cn: project_adv_user
+    member: uid=advuser_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+
+    dn: cn=project_user,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    objectClass: groupOfNames
+    cn: project_user
+    member: uid=user_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: openldap-data
@@ -31,7 +136,7 @@ spec:
     spec:
       containers:
       - name: openldap
-        image: osixia/openldap:1.5.0
+        image: harbor.lb.site-a.vcf.lab/library/osixia-openldap:1.5.0
         ports:
         - containerPort: 389
         - containerPort: 636
@@ -47,12 +152,18 @@ spec:
           mountPath: /var/lib/ldap
         - name: ldap-config
           mountPath: /etc/ldap/slapd.d
+        # THE FIX: Mount the ConfigMap containing your Tenant Structure!
+        - name: bootstrap-ldif
+          mountPath: /container/service/slapd/assets/config/bootstrap/ldif/custom
       volumes:
       - name: ldap-data
         persistentVolumeClaim:
           claimName: openldap-data
       - name: ldap-config
         emptyDir: {}
+      - name: bootstrap-ldif
+        configMap:
+          name: openldap-bootstrap
 ---
 apiVersion: v1
 kind: Service
@@ -60,7 +171,6 @@ metadata:
   name: openldap-lb
   namespace: shared-infrastructure
 spec:
-  # Avi will intercept this and spin up an NSX-T VIP for your LDAP server!
   type: LoadBalancer 
   ports:
   - name: ldap
