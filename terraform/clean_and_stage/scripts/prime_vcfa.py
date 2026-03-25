@@ -681,17 +681,17 @@ def create_org_admin(token, org_id, role_urn):
 def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
     print(f"\n[*] Configuring Custom OpenLDAP Directory for Tenant...")
     
-    # THE FIX 1: Strip the 'urn:vcloud:org:' prefix to match the DevTools URL exactly
+    # Extract just the UUID from the URN
     org_uuid = org_id.split(':')[-1]
     api_url = f"https://{vcfa_url}/api/admin/org/{org_uuid}/settings/ldap" 
     
-    # THE FIX 2: Set Content-Type to plain 'application/json' to cure the 415 error
+    # THE FIX: Restore the version tag to the Content-Type, and use the clean UUID for context!
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json;version=9.0.0",
         "X-VMWARE-VCLOUD-AUTH-CONTEXT": "Cloud-Org-A",
-        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_uuid 
     }
 
     ldap_payload = {
