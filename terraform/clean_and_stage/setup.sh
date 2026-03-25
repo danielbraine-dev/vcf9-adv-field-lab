@@ -588,9 +588,19 @@ EOF
   done
 
  # --- 5. ESTABLISH DOCKER TLS TRUST ---
-  log "Injecting Custom Certificate into local Docker Trust Store..."
+  log "Injecting Custom Certificate into local Docker Trust Store and OS..."
+  
+  # 1. Docker-specific trust directory
   sudo mkdir -p "/etc/docker/certs.d/${HARBOR_FQDN}"
   sudo cp "${ROOT_DIR}/certs/harbor.crt" "/etc/docker/certs.d/${HARBOR_FQDN}/ca.crt"
+
+  # 2. Native OS-level trust (Ubuntu/Debian bulletproof method)
+  sudo cp "${ROOT_DIR}/certs/harbor.crt" "/usr/local/share/ca-certificates/${HARBOR_FQDN}.crt"
+  sudo update-ca-certificates
+
+  log "Restarting Docker to enforce new certificate trust..."
+  sudo systemctl restart docker
+  sleep 5
 
   log "Granting active shell access to the Docker socket..."
   sudo chmod 666 /var/run/docker.sock
