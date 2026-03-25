@@ -43,17 +43,17 @@ data:
     userPassword: VMware123!VMware123!
 
     # --- Tenant 123 Groups ---
-    dn: cn=project_admin,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    dn: cn=tenant123_project_admin,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
     objectClass: groupOfNames
     cn: project_admin
     member: uid=admin_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
 
-    dn: cn=project_adv_user,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    dn: cn=tenant123_project_adv_user,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
     objectClass: groupOfNames
     cn: project_adv_user
     member: uid=advuser_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
 
-    dn: cn=project_user,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
+    dn: cn=tenant123_project_user,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
     objectClass: groupOfNames
     cn: project_user
     member: uid=user_tenant123,ou=tenant123,ou=Cloud Org A,dc=vcf,dc=lab
@@ -88,17 +88,17 @@ data:
     userPassword: VMware123!VMware123!
 
     # --- Tenant 456 Groups ---
-    dn: cn=project_admin,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    dn: cn=tenant456_project_admin,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
     objectClass: groupOfNames
     cn: project_admin
     member: uid=admin_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
 
-    dn: cn=project_adv_user,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    dn: cn=tenant456_project_adv_user,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
     objectClass: groupOfNames
     cn: project_adv_user
     member: uid=advuser_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
 
-    dn: cn=project_user,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
+    dn: cn=tenant456_project_user,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
     objectClass: groupOfNames
     cn: project_user
     member: uid=user_tenant456,ou=tenant456,ou=Cloud Org A,dc=vcf,dc=lab
