@@ -678,68 +678,88 @@ def create_org_admin(token, org_id, role_urn):
         print(f"[-] Failed to create user: {user_res.status_code} {user_res.text}")
         sys.exit(1)
         
-def configure_and_sync_ldap(vcfa_url, token, ldap_ip, ldap_password):
-    print(f"\n[*] Configuring Custom OpenLDAP Directory in VCF Automation...")
+def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
+    print(f"\n[*] Configuring Custom OpenLDAP Directory for Tenant...")
+    
+    # Using the exact URL from your DevTools capture
+    api_url = f"https://{vcfa_url}/api/admin/org/{org_id}/settings/ldap" 
+    
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json;version=9.0.0",
+        "X-VMWARE-VCLOUD-AUTH-CONTEXT": ORG_NAME,
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
 
-    # 1. CREATE THE DIRECTORY
-    # Note: Update this endpoint if VCF 9 uses a different internal IAM route
-    iam_url = f"https://{vcfa_url}/csp/gateway/am/api/directories" 
-    
     ldap_payload = {
-        "name": "VCF Lab OpenLDAP",
-        "type": "OPEN_LDAP",
-        "domain": "vcf.lab",
-        "host": ldap_ip,
-        "port": 389,
-        "useSsl": False,
-        "baseDn": "ou=Cloud Org A,dc=vcf,dc=lab",
-        "bindDn": "cn=admin,dc=vcf,dc=lab",
-        "bindPassword": ldap_password,
-        # Mapping attributes based on your UI screenshot fixes
-        "userAttributes": {
-            "objectClass": "inetOrgPerson",
-            "uniqueIdentifier": "uid",
-            "userName": "uid",
-            "displayName": "cn",
-            "givenName": "givenName",
-            "surname": "sn",
-            "email": "mail",
-            "telephone": "telephoneNumber",
-            "groupMembershipIdentifier": "dn"
+        "customOrgLdapSettings": {
+            "authenticationMechanism": "SIMPLE",
+            "connectorType": "OPEN_LDAP",
+            "customUiButtonLabel": None,
+            "groupAttributes": {
+                "backLinkIdentifier": "",
+                "groupName": "cn",
+                "membership": "member",
+                "membershipIdentifier": "dn",
+                "objectClass": "groupOfNames",
+                "objectIdentifier": "cn",
+                "vCloudExtension": []
+            },
+            "hostName": ldap_ip,
+            "isGroupSearchBaseEnabled": False,
+            "isSsl": False,
+            "password": ldap_password,
+            "port": 389,
+            "searchBase": "ou=Cloud Org A,dc=vcf,dc=lab",
+            "userAttributes": {
+                "email": "mail",
+                "fullName": "cn",
+                "givenName": "givenName",
+                "groupBackLinkIdentifier": "",
+                "groupMembershipIdentifier": "dn",
+                "objectClass": "inetOrgPerson",
+                "objectIdentifier": "uid",
+                "surname": "sn",
+                "telephone": "telephoneNumber",
+                "userName": "uid",
+                "vCloudExtension": []
+            },
+            "userName": "cn=admin,dc=vcf,dc=lab",
+            "vCloudExtension": []
         },
-        "groupAttributes": {
-            "objectClass": "groupOfNames",
-            "uniqueIdentifier": "cn",
-            "name": "cn",
-            "membership": "member",
-            "groupMembershipIdentifier": "dn"
-        }
+        "link": [],
+        "orgLdapMode": "CUSTOM",
+        "vCloudExtension": []
     }
 
     try:
-        response = requests.post(iam_url, headers=headers, json=ldap_payload, verify=False)
+        # Firing the PUT request to save the settings
+        response = requests.put(api_url, headers=headers, json=ldap_payload, verify=False)
         response.raise_for_status()
-        directory_id = response.json().get("id")
-        print(f"[+] LDAP Directory created successfully. ID: {directory_id}")
+        print(f"[+] Tenant LDAP settings saved successfully (HTTP 200)!")
         
         # 2. TRIGGER DIRECTORY SYNC
         print(f"[*] Triggering Directory Sync to import Users and Groups...")
-        sync_url = f"https://{vcfa_url}/csp/gateway/am/api/directories/{directory_id}/syncs"
-        requests.post(sync_url, headers=headers, verify=False)
-        
-        # Give VCFA a moment to process the sync before assigning roles
-        print("[-] Waiting 15 seconds for VCFA to import objects...")
-        time.sleep(15)
+        # In the CloudAPI, sync is usually triggered via an action endpoint
+        sync_url = f"{api_url}/action/sync"
+        try:
+            sync_resp = requests.post(sync_url, headers=headers, verify=False)
+            if sync_resp.status_code in [200, 202, 204]:
+                print("[-] Waiting 15 seconds for VCFA to import objects...")
+                time.sleep(15)
+            else:
+                # If the sync endpoint is slightly different, we gracefully fall back
+                raise ValueError(f"Sync returned {sync_resp.status_code}")
+        except Exception as sync_e:
+            print(f"[!] Warning: API auto-sync endpoint obscured ({sync_e}).")
+            print("    The directory is configured, but you may need to click 'Sync' in the VCFA UI.")
+            time.sleep(5)
         
     except requests.exceptions.RequestException as e:
-        print(f"[!] Warning: Could not configure LDAP via API: {e}")
-        if response.text:
-            print(f"    Response: {response.text}")
+        print(f"[-] FATAL: Could not configure LDAP via API: {e}")
+        if 'response' in locals() and response.text:
+            print(f"    Response Body: {response.text}")
 
 
 def assign_project_roles(vcfa_url, token):
