@@ -587,10 +587,13 @@ EOF
     [[ $i -eq 40 ]] && { error "[-] Timeout waiting for Harbor API."; exit 1; }
   done
 
-  # --- 5. ESTABLISH DOCKER TLS TRUST ---
+ # --- 5. ESTABLISH DOCKER TLS TRUST ---
   log "Injecting Custom Certificate into local Docker Trust Store..."
   sudo mkdir -p "/etc/docker/certs.d/${HARBOR_FQDN}"
   sudo cp "${ROOT_DIR}/certs/harbor.crt" "/etc/docker/certs.d/${HARBOR_FQDN}/ca.crt"
+
+  log "Granting active shell access to the Docker socket..."
+  sudo chmod 666 /var/run/docker.sock
 
   # --- 6. STAGE THE IMAGE ---
   log "Pulling OpenLDAP from upstream..."
