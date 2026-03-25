@@ -660,7 +660,6 @@ def create_org_admin(token, org_id, role_urn):
         },
         "enabled": True,
         "providerType": "LOCAL",
-        # THE FIX: Assigning the role at the exact moment of creation
         "roleEntityRefs": [
             {
                 "name": "Organization Administrator",
@@ -681,9 +680,7 @@ def create_org_admin(token, org_id, role_urn):
 def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
     print(f"\n[*] Configuring Custom OpenLDAP Directory for Tenant...")
     
-    # Extract just the UUID from the URN
-    org_uuid = org_id.split(':')[-1]
-    api_url = f"https://{vcfa_url}/api/admin/org/{org_uuid}/settings/ldap" 
+    api_url = f"https://{vcfa_url}/api/admin/org/{org_id}/settings/ldap" 
     
     headers = {
         "Authorization": f"Bearer {token}",
