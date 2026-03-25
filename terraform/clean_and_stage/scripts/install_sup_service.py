@@ -115,7 +115,9 @@ def trust_harbor_registry(session, host, supervisor_id, fqdn, cert_path):
 
     print(f"[*] Injecting Harbor TLS certificate into Supervisor {supervisor_id} Trust Store...")
     
+    # THE FIX: Added the mandatory 'name' key for the vSphere 8 API
     payload = {
+        "name": "Lab-Harbor-Registry",
         "registry": fqdn,
         "tls_root_ca_bundle": ca_cert
     }
@@ -235,7 +237,6 @@ def main():
     parser.add_argument("--avi-pass")
     parser.add_argument("--fqdn")
     parser.add_argument("--target-ip")
-    # Added argument to map the locally generated cert without modifying bash
     parser.add_argument("--cert-path", default="certs/harbor.crt")
     args = parser.parse_args()
 
