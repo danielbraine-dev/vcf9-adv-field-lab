@@ -107,7 +107,6 @@ def trust_harbor_registry(session, host, supervisor_id, fqdn, cert_path):
             registries = r_get.json()
             items = registries.get("value", []) if isinstance(registries, dict) else registries
             for reg in items:
-                # Check for both schema variations just in case
                 if reg.get("registry", "") == fqdn or reg.get("image_registry", "") == fqdn:
                     print(f"[*] Registry {fqdn} is already trusted by Supervisor. Skipping.")
                     return
@@ -116,14 +115,14 @@ def trust_harbor_registry(session, host, supervisor_id, fqdn, cert_path):
 
     print(f"[*] Injecting Harbor TLS certificate into Supervisor {supervisor_id} Trust Store...")
     
-    # THE FIX: Changed 'registry' to 'image_registry' to perfectly match the vSphere 8 schema
+    # THE FIX: Removed the hallucinated 'name' field. We only send what vCenter strictly requires.
     payload = {
-        "name": "Lab-Harbor-Registry",
         "image_registry": fqdn,
         "tls_root_ca_bundle": ca_cert
     }
     
-    r = robust_post(session, url, payload)
+    # Bypass the brute-forcer and send the exact schema vSphere 8 demands
+    r = session.post(url, json={"create_spec": payload})
     
     if r.status_code >= 400 and "already_exists" not in r.text.lower() and "AlreadyExists" not in r.text:
         print(f"[-] Failed to add Harbor to Supervisor trusted registries! HTTP {r.status_code}")
