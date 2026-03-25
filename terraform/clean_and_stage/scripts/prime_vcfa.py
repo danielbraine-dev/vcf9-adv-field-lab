@@ -685,13 +685,11 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
     org_uuid = org_id.split(':')[-1]
     api_url = f"https://{vcfa_url}/api/admin/org/{org_uuid}/settings/ldap" 
     
-    # THE FIX: Restore the version tag to the Content-Type, and use the clean UUID for context!
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
-        "X-VMWARE-VCLOUD-AUTH-CONTEXT": "Cloud-Org-A",
-        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_uuid 
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id 
     }
 
     ldap_payload = {
