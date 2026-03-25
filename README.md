@@ -17,7 +17,7 @@ Commands:
 
 
 **Use these options via direct calling, or via sequential steps i.e.: setup.sh 1:9 to perform steps 1 through 9
-**
+**  
    - 1) step1_install_tools;;
    - 2) step2_teardown_environment;;
    - 3) step3_tf_init;;
@@ -27,8 +27,9 @@ Commands:
    - 7) step7_avi_base_config;;
    - 8) step8_nsx_cloud;;
    - 9) step9_install_sup;;
-   - 10) step10_prime_vcfa_objects;;
+   - 10) step10_install_supervisor_services;;
    - 11) step11_deploy_openldap;;
+   - 12) step12_prime_vcfa_objects;;
 
 Additional Help:
 Do you need to Relax the Pod Security on the a namespace:
