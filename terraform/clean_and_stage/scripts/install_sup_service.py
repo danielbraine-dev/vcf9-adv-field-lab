@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, requests, urllib3, argparse, json, base64, re, time
+import sys, os, requests, urllib3, argparse, json, base64, re, time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -39,7 +39,6 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
             "Content-Type": "application/json"
         }
 
-        # THE FIX: Fetch the actual 'delegated-dns' Virtual Service directly
         res = session.get(f"https://{avi_ip}/api/virtualservice?name=delegated-dns", headers=headers)
         res.raise_for_status()
         
@@ -56,7 +55,6 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
 
         original_count = len(vs_obj["static_dns_records"])
         
-        # Idempotency check: Remove old entry if it exists to prevent duplicates
         filtered_records = []
         for rec in vs_obj["static_dns_records"]:
             rec_fqdns = rec.get("fqdn", [])
@@ -66,7 +64,6 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
                 
         vs_obj["static_dns_records"] = filtered_records
         
-        # Inject the new Contour IP mapping exactly as the UI does
         vs_obj["static_dns_records"].append({
             "fqdn": [fqdn], 
             "type": "DNS_RECORD_A", 
@@ -93,6 +90,46 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
             print(e.response.text)
         sys.exit(1)
 
+def trust_harbor_registry(session, host, supervisor_id, fqdn, cert_path):
+    """Automates the injection of the Harbor TLS cert into the Supervisor's Image Registry Trust Store."""
+    if not os.path.exists(cert_path):
+        return
+
+    with open(cert_path, "r") as f:
+        ca_cert = f.read()
+
+    url = f"https://{host}/api/vcenter/namespace-management/supervisors/{supervisor_id}/container-image-registries"
+    
+    # Idempotency Check: Don't add if it's already trusted
+    try:
+        r_get = session.get(url)
+        if r_get.status_code == 200:
+            registries = r_get.json()
+            items = registries.get("value", []) if isinstance(registries, dict) else registries
+            for reg in items:
+                if reg.get("registry", "") == fqdn:
+                    print(f"[*] Registry {fqdn} is already trusted by Supervisor. Skipping.")
+                    return
+    except Exception:
+        pass
+
+    print(f"[*] Injecting Harbor TLS certificate into Supervisor {supervisor_id} Trust Store...")
+    
+    payload = {
+        "registry": fqdn,
+        "tls_root_ca_bundle": ca_cert
+    }
+    
+    r = robust_post(session, url, payload)
+    
+    if r.status_code >= 400 and "already_exists" not in r.text.lower() and "AlreadyExists" not in r.text:
+        print(f"[-] Failed to add Harbor to Supervisor trusted registries! HTTP {r.status_code}")
+        try: print(json.dumps(r.json(), indent=2))
+        except: print(r.text)
+        sys.exit(1)
+        
+    print("[+] Successfully added Harbor to Supervisor Trusted Registries!")
+
 def register_and_activate_service(session, host, definition_path, service_name):
     """Automates Phase 1: Uploading the Service Definition using the Native Schema idempotently"""
     with open(definition_path, 'r') as f:
@@ -100,7 +137,6 @@ def register_and_activate_service(session, host, definition_path, service_name):
     
     b64_content = base64.b64encode(content_raw.encode('utf-8')).decode('utf-8')
     
-    # Stricter Regex that forces the version to start with a number (e.g. 2.13.1)
     ref_match = re.search(r'\n\s*refName:\s*([^\s]+)', content_raw)
     ver_match = re.search(r'\n\s*version:\s*([0-9][^\s]+)', content_raw)
     
@@ -199,6 +235,8 @@ def main():
     parser.add_argument("--avi-pass")
     parser.add_argument("--fqdn")
     parser.add_argument("--target-ip")
+    # Added argument to map the locally generated cert without modifying bash
+    parser.add_argument("--cert-path", default="certs/harbor.crt")
     args = parser.parse_args()
 
     # Pre-flight: Avi DNS Injection
@@ -218,6 +256,7 @@ def main():
 
         # Dynamic Resolution of the Supervisor ID
         install_url = ""
+        supervisor_id = None
         res_sups = session.get(f"https://{args.host}/api/vcenter/namespace-management/supervisors/summaries")
         if res_sups.status_code == 200 and res_sups.json().get("items"):
             supervisor_id = res_sups.json()["items"][0]["supervisor"]
@@ -231,9 +270,13 @@ def main():
             if not cluster_list:
                 print("[-] No active Clusters/Supervisors found!")
                 sys.exit(1)
-            cluster_id = cluster_list[0]["cluster"]
-            install_url = f"https://{args.host}/api/vcenter/namespace-management/clusters/{cluster_id}/supervisor-services"
-            print(f"[*] Found Legacy Cluster ID: {cluster_id}")
+            supervisor_id = cluster_list[0]["cluster"]
+            install_url = f"https://{args.host}/api/vcenter/namespace-management/clusters/{supervisor_id}/supervisor-services"
+            print(f"[*] Found Legacy Cluster ID: {supervisor_id}")
+
+        # --- Phase 1.5: INJECT TRUSTED REGISTRY CERTIFICATE ---
+        if args.fqdn and os.path.exists(args.cert_path):
+            trust_harbor_registry(session, args.host, supervisor_id, args.fqdn, args.cert_path)
 
         # Phase 2: Installation
         payload = {"supervisor_service": svc_id, "version": svc_ver}
