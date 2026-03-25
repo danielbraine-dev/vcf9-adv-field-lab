@@ -844,6 +844,7 @@ if __name__ == "__main__":
                 all_classes = get_all_vm_classes(token)
                 if all_classes:
                     #TEMPenable_all_vdc_vm_classes(token, vdc_urn, all_classes)
+                    pass
                 else:
                     print("[-] No VM classes found to bind, or fetch failed.")
                     sys.exit(1)
