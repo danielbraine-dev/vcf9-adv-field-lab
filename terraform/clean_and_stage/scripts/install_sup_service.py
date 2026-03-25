@@ -104,10 +104,11 @@ def trust_harbor_registry(session, host, supervisor_id, fqdn, cert_path):
     try:
         r_get = session.get(url)
         if r_get.status_code == 200:
-            registries = r_get.json()
-            items = registries.get("value", []) if isinstance(registries, dict) else registries
+            data = r_get.json()
+            items = data if isinstance(data, list) else data.get("value", [])
             for reg in items:
-                if reg.get("registry", "") == fqdn or reg.get("image_registry", "") == fqdn:
+                info = reg.get("image_registry", {})
+                if info.get("hostname", "") == fqdn or reg.get("name", "") == "Lab-Harbor-Registry":
                     print(f"[*] Registry {fqdn} is already trusted by Supervisor. Skipping.")
                     return
     except Exception:
@@ -115,16 +116,21 @@ def trust_harbor_registry(session, host, supervisor_id, fqdn, cert_path):
 
     print(f"[*] Injecting Harbor TLS certificate into Supervisor {supervisor_id} Trust Store...")
     
-    # THE FIX: Removed the hallucinated 'name' field. We only send what vCenter strictly requires.
+    # THE FIX: Exact vSphere 8.0.3.0 Schema (Flat JSON, nested image_registry object)
     payload = {
-        "image_registry": fqdn,
-        "tls_root_ca_bundle": ca_cert
+        "name": "Lab-Harbor-Registry",
+        "image_registry": {
+            "hostname": fqdn,
+            "port": 443,
+            "certificate_chain": ca_cert
+        }
     }
     
-    # Bypass the brute-forcer and send the exact schema vSphere 8 demands
-    r = session.post(url, json={"create_spec": payload})
+    # Bypass the brute-forcer completely to avoid wrapper errors
+    r = session.post(url, json=payload)
     
-    if r.status_code >= 400 and "already_exists" not in r.text.lower() and "AlreadyExists" not in r.text:
+    text_lower = r.text.lower()
+    if r.status_code >= 400 and "alreadyexist" not in text_lower and "already_exists" not in text_lower:
         print(f"[-] Failed to add Harbor to Supervisor trusted registries! HTTP {r.status_code}")
         try: print(json.dumps(r.json(), indent=2))
         except: print(r.text)
