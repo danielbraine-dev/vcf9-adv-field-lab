@@ -395,21 +395,9 @@ step9_install_sup(){
   pause
 }
 
-step10_prime_vcfa_objects(){
-  log "[10] Priming VCFA Region and Tenant Org…"
-  if [[ -f "${ROOT_DIR}/scripts/prime_vcfa.py" ]]; then
-    log "Executing Python VCFA Prime script..."
-    python3 "${ROOT_DIR}/scripts/prime_vcfa.py" || { error "Prime VCFA script failed!"; exit 1; }
-  else
-    error "prime_vcfa.py not found in ${ROOT_DIR}/scripts!"
-    exit 1
-  fi
-  pause
-}
 
-
-step11_install_supervisor_services(){
-  log "[11] Installing Contour & Harbor (Consolidated API Deployment)…"
+step10_install_supervisor_services(){
+  log "[10] Installing Contour & Harbor (Consolidated API Deployment)…"
 
   SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
   VC_HOST="$(read_tfvar vsphere_server)"
@@ -628,8 +616,8 @@ EOF
   pause
 }
 
-step12_deploy_openldap(){
-  log "[12] Creating Shared Namespace, Deploying OpenLDAP, and phpLDAPAdmin UI"  
+step11_deploy_openldap(){
+  log "[11] Creating Shared Namespace, Deploying OpenLDAP, and phpLDAPAdmin UI"  
   
   SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
   VC_HOST="$(read_tfvar vsphere_server)"
@@ -761,6 +749,18 @@ EOF
   pause
 }
 
+step12_prime_vcfa_objects(){
+  log "[12] Priming VCFA Region and Tenant Org…"
+  if [[ -f "${ROOT_DIR}/scripts/prime_vcfa.py" ]]; then
+    log "Executing Python VCFA Prime script..."
+    python3 "${ROOT_DIR}/scripts/prime_vcfa.py" || { error "Prime VCFA script failed!"; exit 1; }
+  else
+    error "prime_vcfa.py not found in ${ROOT_DIR}/scripts!"
+    exit 1
+  fi
+  pause
+}
+
 do_step() {
   case "$1" in
     1) step1_install_tools;;
@@ -772,9 +772,9 @@ do_step() {
     7) step7_avi_base_config;;
     8) step8_nsx_cloud;;
     9) step9_install_sup;;
-   10) step10_prime_vcfa_objects;;
-   11) step11_install_supervisor_services;;
-   12) step12_deploy_openldap;;
+   10) step10_install_supervisor_services;;
+   11) step11_deploy_openldap;;
+   12) step12_prime_vcfa_objects;;
     *) echo "Unknown step $1"; exit 2;;
   esac
 }
