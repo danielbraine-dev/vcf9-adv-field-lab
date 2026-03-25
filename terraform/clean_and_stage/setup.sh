@@ -628,8 +628,68 @@ EOF
   pause
 }
 
-  # STEP 12: DEPLOY PHPLDAPADMIN UI
-  log "--- Starting Step 12: Deploying phpLDAPadmin UI ---"
+step12_deploy_openldap(){
+  log "[12] Creating Shared Namespace, Deploying OpenLDAP, and phpLDAPAdmin UI"  
+  
+  SUP_IP=$(read_tfvar sup_mgmt_ip_range | awk -F'-' '{print $1}')
+  VC_HOST="$(read_tfvar vsphere_server)"
+  VC_USER="$(read_tfvar vsphere_user)"
+  VC_PASS="$(read_tfvar vsphere_password)"
+  
+  if [[ -f "${ROOT_DIR}/scripts/create_shared_namespace.py" ]]; then
+    log "Executing standalone script to provision Supervisor Namespace..."
+    python3 "${ROOT_DIR}/scripts/create_shared_namespace.py" \
+      --host "${VC_HOST}" \
+      --user "${VC_USER}" \
+      --password "${VC_PASS}" \
+      --namespace "shared-infrastructure" \
+      --storage-policy "vSAN Default Storage Policy" || { error "Namespace script failed!"; exit 1; }
+  else
+    error "create_shared_namespace.py not found in ${ROOT_DIR}/scripts!"
+    exit 1
+  fi
+
+  log "Authenticating to Supervisor Control Plane at ${SUP_IP} using VCF CLI..."
+  
+  CTX_NAME="lab-supervisor"
+  export VCF_CLI_VSPHERE_PASSWORD="${VC_PASS}"
+  export VSPHERE_PASSWORD="${VC_PASS}"
+  export KUBECTL_VSPHERE_PASSWORD="${VC_PASS}"
+  
+  # SILENT DELETE FIX: Auto-confirming 'y' to prevent hanging
+  echo "y" | vcf context delete "${CTX_NAME}" >/dev/null 2>&1 || true
+  
+  vcf context create "${CTX_NAME}" \
+    --endpoint "${SUP_IP}" \
+    --auth-type basic \
+    --username "${VC_USER}" \
+    --insecure-skip-tls-verify
+  
+  log "Setting default Kubernetes context..."
+  vcf context use "${CTX_NAME}"
+  
+  log "Applying OpenLDAP Manifest to the Shared Infrastructure Namespace..."
+  kubectl apply -f "${ROOT_DIR}/openldap-vsphere-pod.yaml"  
+  log "Waiting for Avi to assign a Load Balancer VIP to the LDAP Service..."
+  log "(This may take 1-2 minutes as Avi spins up the NSX-T Virtual Service)"
+  
+  for ((i=1; i<=20; i++)); do
+    LDAP_VIP=$(kubectl get svc openldap-lb -n shared-infrastructure -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+    
+    if [[ -n "$LDAP_VIP" ]]; then
+      printf "\n"
+      log "[+] OpenLDAP successfully provisioned!"
+      log "    LDAP Endpoint: ldap://${LDAP_VIP}:389"
+      log "    Admin DN:      cn=admin,dc=vcf,dc=lab"
+      log "    Password:      VMware123!"
+      break
+    else
+      printf "."
+      sleep 10
+    fi
+  done
+  
+  
   
   HARBOR_FQDN="harbor.lb.site-a.vcf.lab"
   PHPLDAPADMIN_SOURCE="osixia/phpldapadmin:0.9.0"
@@ -695,6 +755,9 @@ EOF
   log "[+] phpLDAPadmin deployment initiated!"
   log "Setup is complete. Run the following command to get your UI IP address:"
   log "kubectl get svc -n shared-infrastructure -w"
+  
+  pause
+}
 
 do_step() {
   case "$1" in
