@@ -25,7 +25,7 @@ def robust_post(session, url, payload):
     return r
 
 def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
-    """Handles the Avi REST API logic for injecting a DNS A-Record."""
+    """Handles the Avi REST API logic for injecting a Static DNS A-Record directly into the Virtual Service."""
     session = requests.Session()
     session.verify = False
     try:
@@ -39,46 +39,52 @@ def inject_avi_dns(avi_ip, avi_user, avi_pass, fqdn, target_ip):
             "Content-Type": "application/json"
         }
 
-        res = session.get(f"https://{avi_ip}/api/ipamdnsproviderprofile", headers=headers)
+        # THE FIX: Fetch the actual 'delegated-dns' Virtual Service directly
+        res = session.get(f"https://{avi_ip}/api/virtualservice?name=delegated-dns", headers=headers)
         res.raise_for_status()
         
-        profiles = res.json().get("results", [])
-        
-        # THE FIX: Avi uses 'IPAMDNS_TYPE_INTERNAL_DNS' for native DNS profiles
-        dns_profile = next((p for p in profiles if "INTERNAL_DNS" in str(p.get("type", "")).upper()), None)
-        
-        if not dns_profile:
-            print("[-] No DNS Provider Profile found in Avi. Skipping DNS injection.")
+        results = res.json().get("results", [])
+        if not results:
+            print("[-] No Virtual Service named 'delegated-dns' found in Avi. Skipping DNS injection.")
             return False
 
-        profile_uuid = dns_profile["uuid"]
+        vs_obj = results[0]
+        vs_uuid = vs_obj["uuid"]
         
-        if "internal_profile" not in dns_profile or "dns_service_domain" not in dns_profile["internal_profile"]:
-            print("[-] DNS Profile exists, but has no internal domain configured. Check your Terraform.")
-            return False
+        if "static_dns_records" not in vs_obj: 
+            vs_obj["static_dns_records"] = []
 
-        # Target the primary DNS domain created in Step 8
-        dns_domain = dns_profile["internal_profile"]["dns_service_domain"][0]
+        original_count = len(vs_obj["static_dns_records"])
         
-        if "record_table" not in dns_domain: 
-            dns_domain["record_table"] = []
-
-        # Idempotency check: Remove old entry if it exists
-        original_count = len(dns_domain["record_table"])
-        dns_domain["record_table"] = [rec for rec in dns_domain["record_table"] if fqdn not in rec.get("fqdn", [])]
+        # Idempotency check: Remove old entry if it exists to prevent duplicates
+        filtered_records = []
+        for rec in vs_obj["static_dns_records"]:
+            rec_fqdns = rec.get("fqdn", [])
+            if isinstance(rec_fqdns, str): rec_fqdns = [rec_fqdns]
+            if fqdn not in rec_fqdns:
+                filtered_records.append(rec)
+                
+        vs_obj["static_dns_records"] = filtered_records
         
-        # Inject the new Contour IP mapping
-        dns_domain["record_table"].append({
+        # Inject the new Contour IP mapping exactly as the UI does
+        vs_obj["static_dns_records"].append({
             "fqdn": [fqdn], 
             "type": "DNS_RECORD_A", 
-            "ip_address": {"addr": target_ip, "type": "V4"}
+            "ip_address": [
+                {
+                    "ip_address": {
+                        "addr": target_ip, 
+                        "type": "V4"
+                    }
+                }
+            ]
         })
 
-        update_res = session.put(f"https://{avi_ip}/api/ipamdnsproviderprofile/{profile_uuid}", headers=headers, json=dns_profile)
+        update_res = session.put(f"https://{avi_ip}/api/virtualservice/{vs_uuid}", headers=headers, json=vs_obj)
         update_res.raise_for_status()
         
-        action = "Updated" if original_count == len(dns_domain["record_table"]) else "Added"
-        print(f"[+] Successfully {action} DNS Record in Avi: {fqdn} -> {target_ip}")
+        action = "Updated" if original_count == len(vs_obj["static_dns_records"]) else "Added"
+        print(f"[+] Successfully {action} Static DNS Record on Virtual Service 'delegated-dns': {fqdn} -> {target_ip}")
         return True
 
     except requests.exceptions.RequestException as e:
