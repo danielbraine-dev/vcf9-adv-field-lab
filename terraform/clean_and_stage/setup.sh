@@ -703,6 +703,8 @@ step12_deploy_openldap(){
   log "Tagging image for Supervisor Harbor..."
   docker tag "${PHPLDAPADMIN_SOURCE}" "${PHPLDAPADMIN_TARGET}"
 
+  docker login "${HARBOR_FQDN}" -u "admin" -p "VMware123!VMware123!"
+
   log "Pushing phpLDAPadmin image into the Supervisor..."
   docker push "${PHPLDAPADMIN_TARGET}"
 
@@ -731,7 +733,7 @@ spec:
         - containerPort: 443
         env:
         - name: PHPLDAPADMIN_LDAP_HOSTS
-          value: "osixia-openldap"
+          value: "openldap-lb"
 ---
 apiVersion: v1
 kind: Service
