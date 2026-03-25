@@ -1,36 +1,35 @@
-holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ kubectl logs deploy/shared-openldap -c openldap -n shared-infrastructure -p
-***  INFO   | 2026-03-25 15:08:47 | CONTAINER_LOG_LEVEL = 3 (info)
-***  INFO   | 2026-03-25 15:08:47 | Search service in CONTAINER_SERVICE_DIR = /container/service :
-***  INFO   | 2026-03-25 15:08:47 | link /container/service/:ssl-tools/startup.sh to /container/run/startup/:ssl-tools
-*** WARNING | 2026-03-25 15:08:47 | failed to link /container/service/:ssl-tools/startup.sh to /container/run/startup/:ssl-tools: [Errno 17] File exists: '/container/service/:ssl-tools/startup.sh' -> '/container/run/startup/:ssl-tools'
-***  INFO   | 2026-03-25 15:08:47 | link /container/service/slapd/startup.sh to /container/run/startup/slapd
-*** WARNING | 2026-03-25 15:08:47 | failed to link /container/service/slapd/startup.sh to /container/run/startup/slapd: [Errno 17] File exists: '/container/service/slapd/startup.sh' -> '/container/run/startup/slapd'
-***  INFO   | 2026-03-25 15:08:47 | link /container/service/slapd/process.sh to /container/run/process/slapd/run
-*** WARNING | 2026-03-25 15:08:47 | directory /container/run/process/slapd already exists
-*** WARNING | 2026-03-25 15:08:47 | failed to link /container/service/slapd/process.sh to /container/run/process/slapd/run : [Errno 17] File exists: '/container/service/slapd/process.sh' -> '/container/run/process/slapd/run'
-***  INFO   | 2026-03-25 15:08:47 | Environment files will be proccessed in this order : 
+holuser@console:~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage$ k logs deploy/shared-openldap -n shared-infrastructure -p
+Found 6 pods, using pod/shared-openldap-5b845f9774-rvmnf
+Defaulted container "openldap" out of: openldap, prep-ldif (init)
+***  INFO   | 2026-03-25 15:51:30 | CONTAINER_LOG_LEVEL = 3 (info)
+***  INFO   | 2026-03-25 15:51:30 | Search service in CONTAINER_SERVICE_DIR = /container/service :
+***  INFO   | 2026-03-25 15:51:30 | link /container/service/:ssl-tools/startup.sh to /container/run/startup/:ssl-tools
+*** WARNING | 2026-03-25 15:51:30 | failed to link /container/service/:ssl-tools/startup.sh to /container/run/startup/:ssl-tools: [Errno 17] File exists: '/container/service/:ssl-tools/startup.sh' -> '/container/run/startup/:ssl-tools'
+***  INFO   | 2026-03-25 15:51:30 | link /container/service/slapd/startup.sh to /container/run/startup/slapd
+*** WARNING | 2026-03-25 15:51:30 | failed to link /container/service/slapd/startup.sh to /container/run/startup/slapd: [Errno 17] File exists: '/container/service/slapd/startup.sh' -> '/container/run/startup/slapd'
+***  INFO   | 2026-03-25 15:51:30 | link /container/service/slapd/process.sh to /container/run/process/slapd/run
+*** WARNING | 2026-03-25 15:51:30 | directory /container/run/process/slapd already exists
+*** WARNING | 2026-03-25 15:51:30 | failed to link /container/service/slapd/process.sh to /container/run/process/slapd/run : [Errno 17] File exists: '/container/service/slapd/process.sh' -> '/container/run/process/slapd/run'
+***  INFO   | 2026-03-25 15:51:30 | Environment files will be proccessed in this order : 
 Caution: previously defined variables will not be overriden.
 /container/environment/99-default/default.startup.yaml
 /container/environment/99-default/default.yaml
 
 To see how this files are processed and environment variables values,
 run this container with '--loglevel debug'
-***  INFO   | 2026-03-25 15:08:47 | Running /container/run/startup/:ssl-tools...
-***  INFO   | 2026-03-25 15:08:47 | Running /container/run/startup/slapd...
-***  INFO   | 2026-03-25 15:08:47 | openldap user and group adjustments
-***  INFO   | 2026-03-25 15:08:48 | get current openldap uid/gid info inside container
-***  INFO   | 2026-03-25 15:08:48 | -------------------------------------
-***  INFO   | 2026-03-25 15:08:48 | openldap GID/UID
-***  INFO   | 2026-03-25 15:08:48 | -------------------------------------
-***  INFO   | 2026-03-25 15:08:48 | User uid: 911
-***  INFO   | 2026-03-25 15:08:48 | User gid: 911
-***  INFO   | 2026-03-25 15:08:48 | uid/gid changed: false
-***  INFO   | 2026-03-25 15:08:48 | -------------------------------------
-***  INFO   | 2026-03-25 15:08:48 | updating file uid/gid ownership
-***  INFO   | 2026-03-25 15:08:48 | Start OpenLDAP...
-***  INFO   | 2026-03-25 15:08:48 | Waiting for OpenLDAP to start...
-***  INFO   | 2026-03-25 15:08:48 | Add TLS config...
-sed: can't read /container/service/slapd/assets/config/tls/tls-enable.ldif: No such file or directory
-***  ERROR  | 2026-03-25 15:08:48 | /container/run/startup/slapd failed with status 2
+***  INFO   | 2026-03-25 15:51:30 | Running /container/run/startup/:ssl-tools...
+***  INFO   | 2026-03-25 15:51:30 | Running /container/run/startup/slapd...
+***  INFO   | 2026-03-25 15:51:30 | openldap user and group adjustments
+***  INFO   | 2026-03-25 15:51:30 | get current openldap uid/gid info inside container
+***  INFO   | 2026-03-25 15:51:30 | -------------------------------------
+***  INFO   | 2026-03-25 15:51:30 | openldap GID/UID
+***  INFO   | 2026-03-25 15:51:30 | -------------------------------------
+***  INFO   | 2026-03-25 15:51:30 | User uid: 911
+***  INFO   | 2026-03-25 15:51:30 | User gid: 911
+***  INFO   | 2026-03-25 15:51:30 | uid/gid changed: false
+***  INFO   | 2026-03-25 15:51:30 | -------------------------------------
+***  INFO   | 2026-03-25 15:51:30 | updating file uid/gid ownership
+***  ERROR  | 2026-03-25 15:51:30 | Error: the config directory (/etc/ldap/slapd.d) is empty but not the database directory (/var/lib/ldap)
+***  ERROR  | 2026-03-25 15:51:30 | /container/run/startup/slapd failed with status 1
 
-***  INFO   | 2026-03-25 15:08:48 | Killing all processes...
+***  INFO   | 2026-03-25 15:51:30 | Killing all processes...
