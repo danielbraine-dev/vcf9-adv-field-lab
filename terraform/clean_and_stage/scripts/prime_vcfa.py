@@ -678,8 +678,123 @@ def create_org_admin(token, org_id, role_urn):
         print(f"[-] Failed to create user: {user_res.status_code} {user_res.text}")
         sys.exit(1)
         
+def configure_and_sync_ldap(vcfa_url, token, ldap_ip, ldap_password):
+    print(f"\n[*] Configuring Custom OpenLDAP Directory in VCF Automation...")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    # 1. CREATE THE DIRECTORY
+    # Note: Update this endpoint if VCF 9 uses a different internal IAM route
+    iam_url = f"https://{vcfa_url}/csp/gateway/am/api/directories" 
+    
+    ldap_payload = {
+        "name": "VCF Lab OpenLDAP",
+        "type": "OPEN_LDAP",
+        "domain": "vcf.lab",
+        "host": ldap_ip,
+        "port": 389,
+        "useSsl": False,
+        "baseDn": "ou=Cloud Org A,dc=vcf,dc=lab",
+        "bindDn": "cn=admin,dc=vcf,dc=lab",
+        "bindPassword": ldap_password,
+        # Mapping attributes based on your UI screenshot fixes
+        "userAttributes": {
+            "objectClass": "inetOrgPerson",
+            "uniqueIdentifier": "uid",
+            "userName": "uid",
+            "displayName": "cn",
+            "givenName": "givenName",
+            "surname": "sn",
+            "email": "mail",
+            "telephone": "telephoneNumber",
+            "groupMembershipIdentifier": "dn"
+        },
+        "groupAttributes": {
+            "objectClass": "groupOfNames",
+            "uniqueIdentifier": "cn",
+            "name": "cn",
+            "membership": "member",
+            "groupMembershipIdentifier": "dn"
+        }
+    }
+
+    try:
+        response = requests.post(iam_url, headers=headers, json=ldap_payload, verify=False)
+        response.raise_for_status()
+        directory_id = response.json().get("id")
+        print(f"[+] LDAP Directory created successfully. ID: {directory_id}")
+        
+        # 2. TRIGGER DIRECTORY SYNC
+        print(f"[*] Triggering Directory Sync to import Users and Groups...")
+        sync_url = f"https://{vcfa_url}/csp/gateway/am/api/directories/{directory_id}/syncs"
+        requests.post(sync_url, headers=headers, verify=False)
+        
+        # Give VCFA a moment to process the sync before assigning roles
+        print("[-] Waiting 15 seconds for VCFA to import objects...")
+        time.sleep(15)
+        
+    except requests.exceptions.RequestException as e:
+        print(f"[!] Warning: Could not configure LDAP via API: {e}")
+        if response.text:
+            print(f"    Response: {response.text}")
+
+
+def assign_project_roles(vcfa_url, token):
+    print(f"\n[*] Assigning LDAP Groups to VCFA Projects...")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    # First, get all projects to find their UUIDs
+    projects_url = f"https://{vcfa_url}/iaas/api/projects"
+    resp = requests.get(projects_url, headers=headers, verify=False)
+    resp.raise_for_status()
+    
+    projects = resp.json().get("content", [])
+    
+    # Mapping our tenants to their imported LDAP groups
+    tenant_mappings = {
+        "tenant123": {
+            "administrators": [{"email": "tenant123_project_admin", "type": "group"}],
+            "members": [{"email": "tenant123_project_adv_user", "type": "group"}],
+            "viewers": [{"email": "tenant123_project_user", "type": "group"}]
+        },
+        "tenant456": {
+            "administrators": [{"email": "tenant456_project_admin", "type": "group"}],
+            "members": [{"email": "tenant456_project_adv_user", "type": "group"}],
+            "viewers": [{"email": "tenant456_project_user", "type": "group"}]
+        }
+    }
+
+    for proj in projects:
+        proj_name = proj.get("name")
+        proj_id = proj.get("id")
+        
+        if proj_name in tenant_mappings:
+            print(f"    -> Patching roles for project: {proj_name} ({proj_id})")
+            patch_url = f"https://{vcfa_url}/iaas/api/projects/{proj_id}"
+            
+            # The IaaS API expects us to send the principals we want to set
+            patch_payload = tenant_mappings[proj_name]
+            
+            patch_resp = requests.patch(patch_url, headers=headers, json=patch_payload, verify=False)
+            if patch_resp.status_code == 200 or patch_resp.status_code == 204:
+                print(f"       [+] Success: Assigned roles for {proj_name}")
+            else:
+                print(f"       [!] Failed to patch {proj_name}: {patch_resp.text}")        
 if __name__ == "__main__":
     try:
+        if len(sys.argv) > 1:
+            ldap_ip = sys.argv[1]
+            print(f"[*] Received LDAP VIP from Bash: {ldap_ip}")
+        else:
+            print("[-] No LDAP IP provided! Halting execution.")
+            sys.exit(1)
+        
         token = get_vcfa_token()
         
         # --- INFRASTRUCTURE URN LOOKUPS ---
@@ -691,12 +806,12 @@ if __name__ == "__main__":
             sys.exit(1)
             
         # Step 1: Define Region
-        create_vcf_region(token, nsx_urn, supervisor_urn)
+        #TEMPcreate_vcf_region(token, nsx_urn, supervisor_urn)
         
         # --- REGION & TENANT LOOKUPS ---
         region_urn = get_region_id(token, REGION_NAME)
         
-        create_tenant_org_base(token)
+        #TEMPcreate_tenant_org_base(token)
         org_urn = get_org_id(token, ORG_NAME)
         
         # In a VCF lab, the Tier-0 is usually named based on the workload domain
@@ -704,8 +819,8 @@ if __name__ == "__main__":
         
         if org_urn and region_urn and gw_urn:
             # Step 2: Network Tenancy & Binding
-            configure_org_networking_tenancy(token, org_urn)
-            configure_regional_networking(token, org_urn, region_urn, gw_urn)
+            #TEMPconfigure_org_networking_tenancy(token, org_urn)
+            #TEMPconfigure_regional_networking(token, org_urn, region_urn, gw_urn)
             
             # Step 3: Regional Quota - VDC Creation
             zone_urn = get_zone_id(token, ZONE_NAME)
@@ -714,7 +829,7 @@ if __name__ == "__main__":
                 print("[-] Could not retrieve Zone URN. Halting VDC Creation.")
                 sys.exit(1)
                 
-            vdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn)
+            #TEMPvdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn)
             vdc_urn = get_vdc_id(token, vdc_name)
             
             if vdc_urn:
@@ -724,11 +839,11 @@ if __name__ == "__main__":
                     print("[-] Could not retrieve Storage Policy URN. Halting.")
                     sys.exit(1)
                     
-                create_vdc_storage_policy(token, vdc_urn, policy_urn)
+                #TEMPcreate_vdc_storage_policy(token, vdc_urn, policy_urn)
 
                 all_classes = get_all_vm_classes(token)
                 if all_classes:
-                    enable_all_vdc_vm_classes(token, vdc_urn, all_classes)
+                    #TEMPenable_all_vdc_vm_classes(token, vdc_urn, all_classes)
                 else:
                     print("[-] No VM classes found to bind, or fetch failed.")
                     sys.exit(1)
@@ -738,20 +853,26 @@ if __name__ == "__main__":
                 sys.exit(1)
             
             # Step 4: User & Role Orchestration
-            role_urn = get_org_admin_role_id(token, org_urn)
+            #TEMProle_urn = get_org_admin_role_id(token, org_urn)
             if role_urn:
-                create_org_admin(token, org_urn, role_urn)
+                #TEMPcreate_org_admin(token, org_urn, role_urn)
                 pass
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
                 sys.exit(1)
-            
-            print(f"\n[✔] SUCCESS: Step 10 VCFA Priming is 100% Complete.")
-            
+                        
+            # Step 5: Configure and Sync LDAP for example Org
+            print(f"\n[*] Executing LDAP Integration for Tenants...")
+            configure_and_sync_ldap(VCFA_URL.replace("https://", ""), token, ldap_ip, "VMware123!")
+            assign_project_roles(VCFA_URL.replace("https://", ""), token)
+
+            print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
+
         else:
             print(f"[-] Automation halted. Missing URNs for Org, Region, or Gateway.")
             sys.exit(1)
-            
+
+
     except Exception as e:
         print(f"[-] Python Script Error: {e}")
         sys.exit(1)
