@@ -474,15 +474,17 @@ step11_install_supervisor_services(){
   done
 
 # --- 2. GENERATE CUSTOM TLS CERTIFICATE ---
-  log "Generating Self-Signed TLS Certificate for ${HARBOR_FQDN}..."
+  log "Generating Go-Compliant Self-Signed TLS Certificate for ${HARBOR_FQDN}..."
   mkdir -p "${ROOT_DIR}/certs"
+  
+  # THE FIX: Added the critical CA:TRUE constraint so containerd on ESXi trusts it
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "${ROOT_DIR}/certs/harbor.key" \
     -out "${ROOT_DIR}/certs/harbor.crt" \
     -subj "/C=US/ST=VA/L=DunnLoring/O=VCF/OU=Lab/CN=${HARBOR_FQDN}" \
-    -addext "subjectAltName=DNS:${HARBOR_FQDN}" 2>/dev/null
+    -addext "subjectAltName=DNS:${HARBOR_FQDN}" \
+    -addext "basicConstraints=critical,CA:TRUE" 2>/dev/null
 
-  # FIX: Reset indentation to 4 spaces to match the flattened schema
   CERT_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.crt")
   KEY_INDENTED=$(awk '{printf "    %s\n", $0}' "${ROOT_DIR}/certs/harbor.key")
 
