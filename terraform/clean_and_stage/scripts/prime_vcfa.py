@@ -830,28 +830,28 @@ if __name__ == "__main__":
                 sys.exit(1)
                 
             #TEMPvdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn)
-            vdc_urn = get_vdc_id(token, vdc_name)
+            #TEMPvdc_urn = get_vdc_id(token, vdc_name)
             
             if vdc_urn:
-                policy_urn = get_region_storage_policy_id(token, POLICY_NAME)
-                
+                #TEMPpolicy_urn = get_region_storage_policy_id(token, POLICY_NAME)
+                pass
                 if not policy_urn:
                     print("[-] Could not retrieve Storage Policy URN. Halting.")
-                    sys.exit(1)
+                    #TEMPsys.exit(1)
                     
                 #TEMPcreate_vdc_storage_policy(token, vdc_urn, policy_urn)
 
-                all_classes = get_all_vm_classes(token)
+                #TEMPall_classes = get_all_vm_classes(token)
                 if all_classes:
                     #TEMPenable_all_vdc_vm_classes(token, vdc_urn, all_classes)
                     pass
                 else:
                     print("[-] No VM classes found to bind, or fetch failed.")
-                    sys.exit(1)
+                    #TEMPsys.exit(1)
                     
             else:
                 print("[-] Could not retrieve VDC URN. Storage and Compute mapping aborted.")
-                sys.exit(1)
+                #TEMPsys.exit(1)
             
             # Step 4: User & Role Orchestration
             #TEMProle_urn = get_org_admin_role_id(token, org_urn)
@@ -860,7 +860,7 @@ if __name__ == "__main__":
                 pass
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
-                sys.exit(1)
+                #TEMPsys.exit(1)
                         
             # Step 5: Configure and Sync LDAP for example Org
             print(f"\n[*] Executing LDAP Integration for Tenants...")
