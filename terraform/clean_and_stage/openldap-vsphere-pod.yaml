@@ -137,10 +137,11 @@ spec:
       containers:
       - name: openldap
         image: harbor.lb.site-a.vcf.lab/library/osixia-openldap:1.5.0
-        # THE FIX: Hijack the startup command to safely inject the files!
+        # THE FIX: Hijack the startup command to safely copy files without mounting directly
         command: ["/bin/bash", "-c"]
         args:
           - |
+            mkdir -p /container/service/slapd/assets/config/bootstrap/ldif/custom
             cp /custom-ldif/*.ldif /container/service/slapd/assets/config/bootstrap/ldif/custom/
             exec /container/tool/run --loglevel info
         ports:
@@ -153,6 +154,7 @@ spec:
           value: "vcf.lab"
         - name: LDAP_ADMIN_PASSWORD
           value: "VMware123!"
+        # THE FIX: Disable internal TLS generation to bypass the missing template crash
         - name: LDAP_TLS
           value: "false"
         volumeMounts:
@@ -160,7 +162,6 @@ spec:
           mountPath: /var/lib/ldap
         - name: ldap-config
           mountPath: /etc/ldap/slapd.d
-        # Mount the safe, top-level ConfigMap
         - name: configmap-volume
           mountPath: /custom-ldif
       volumes:
