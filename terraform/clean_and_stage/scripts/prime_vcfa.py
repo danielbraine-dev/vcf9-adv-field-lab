@@ -818,9 +818,9 @@ if __name__ == "__main__":
         gw_urn = get_provider_gateway_id(token, PROVIDER_GATEWAY_NAME)
         
         if org_urn and region_urn and gw_urn:
-            # Step 2: Network Tenancy & Binding
-            #TEMPconfigure_org_networking_tenancy(token, org_urn)
-            #TEMPconfigure_regional_networking(token, org_urn, region_urn, gw_urn)
+            '''# Step 2: Network Tenancy & Binding
+            configure_org_networking_tenancy(token, org_urn)
+            configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
             # Step 3: Regional Quota - VDC Creation
             zone_urn = get_zone_id(token, ZONE_NAME)
@@ -829,39 +829,38 @@ if __name__ == "__main__":
                 print("[-] Could not retrieve Zone URN. Halting VDC Creation.")
                 sys.exit(1)
                 
-            #TEMPvdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn)
-            #TEMPvdc_urn = get_vdc_id(token, vdc_name)
+            vdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn)
+            vdc_urn = get_vdc_id(token, vdc_name)
             
             if vdc_urn:
-                #TEMPpolicy_urn = get_region_storage_policy_id(token, POLICY_NAME)
-                pass
+                policy_urn = get_region_storage_policy_id(token, POLICY_NAME)
+                
                 if not policy_urn:
                     print("[-] Could not retrieve Storage Policy URN. Halting.")
-                    #TEMPsys.exit(1)
+                    sys.exit(1)
                     
-                #TEMPcreate_vdc_storage_policy(token, vdc_urn, policy_urn)
+                create_vdc_storage_policy(token, vdc_urn, policy_urn)
 
-                #TEMPall_classes = get_all_vm_classes(token)
+                all_classes = get_all_vm_classes(token)
                 if all_classes:
-                    #TEMPenable_all_vdc_vm_classes(token, vdc_urn, all_classes)
-                    pass
+                    enable_all_vdc_vm_classes(token, vdc_urn, all_classes)
                 else:
                     print("[-] No VM classes found to bind, or fetch failed.")
-                    #TEMPsys.exit(1)
+                    sys.exit(1)
                     
             else:
                 print("[-] Could not retrieve VDC URN. Storage and Compute mapping aborted.")
-                #TEMPsys.exit(1)
+                sys.exit(1)
             
             # Step 4: User & Role Orchestration
-            #TEMProle_urn = get_org_admin_role_id(token, org_urn)
+            role_urn = get_org_admin_role_id(token, org_urn)
             if role_urn:
-                #TEMPcreate_org_admin(token, org_urn, role_urn)
-                pass
+                create_org_admin(token, org_urn, role_urn)
+                
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
-                #TEMPsys.exit(1)
-                        
+                sys.exit(1)
+            '''            
             # Step 5: Configure and Sync LDAP for example Org
             print(f"\n[*] Executing LDAP Integration for Tenants...")
             configure_and_sync_ldap(VCFA_URL.replace("https://", ""), token, ldap_ip, "VMware123!")
