@@ -954,7 +954,7 @@ if __name__ == "__main__":
             print(f"\n[*] Executing LDAP Integration for Tenants...")
             configure_and_sync_ldap(VCFA_URL.replace("https://", ""), token, org_urn, ldap_ip, "VMware123!")
             '''
-            import_org_groups(vcfa_fqdn, token, org_urn)
+            import_org_groups(VCFA_URL, token, org_urn)
             assign_project_roles(VCFA_URL.replace("https://", ""), token)
 
             print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
