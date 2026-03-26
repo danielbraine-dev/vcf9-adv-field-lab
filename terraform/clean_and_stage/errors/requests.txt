@@ -1,19 +1,20 @@
 {
-	"PUT": {
+	"POST": {
 		"scheme": "https",
 		"host": "auto-a.site-a.vcf.lab",
-		"filename": "/api/admin/org/8a239e82-336d-4e1a-8915-b80fa1572412/settings/ldap",
+		"filename": "/cloudapi/1.0.0/ldap/sync",
 		"remote": {
 			"Address": "10.1.1.70:443"
 		}
 	}
 }
+
 {
 	"requestHeaders": {
 		"headers": [
 			{
 				"name": "Accept",
-				"value": "application/*+json;version=41.0.0-alpha"
+				"value": "application/json;version=41.0.0-alpha"
 			},
 			{
 				"name": "Accept-Encoding",
@@ -21,7 +22,7 @@
 			},
 			{
 				"name": "Accept-Language",
-				"value": "en-US,en;q=0.9"
+				"value": "en"
 			},
 			{
 				"name": "Authorization",
@@ -33,15 +34,15 @@
 			},
 			{
 				"name": "Content-Length",
-				"value": "871"
+				"value": "0"
 			},
 			{
 				"name": "Content-Type",
-				"value": "application/*+json"
+				"value": "application/json"
 			},
 			{
 				"name": "Cookie",
-				"value": "_pk_id.1.4962=b27fd40adb5dbc85.1746833453.33.1774541403.1774534956..03093ac2a7eb7a86aefba0489ceca440c26eb929ea73c90b8fdd0304a412ff5c; vcs_cookies_dismissed=true; vcloud_refresh_token=besqSvXGO5wUUj0G6ZGb7zMpLT_zslrs41FqsHGEdAgncM8sCt_yb884GUv-dIpaXaAoeq8IGMOXwCnXb_CXttdagQaw5q-3iFy-jrX4GSmJWM0DqmcG30k1a_PTgsj1; vcloud_jwt=eyJraWQiOiJ1cm46dmNsb3VkOm9wZW5JZFByb3ZpZGVyS2V5OjM5ZmVmYTJlLWJlZjgtNGM0Ny05NjVlLTAzNzc0NGEzZTEyNSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiI5NmQ4MDg0NS0zMjljLTQ1MzItOGIyMi0yOTE3OGM4ZjI2YTIiLCJyb2xlcyI6WyJPcmdhbml6YXRpb24gQWRtaW5pc3RyYXRvciJdLCJpc3MiOiJodHRwczovL2F1dG8tYS5zaXRlLWEudmNmLmxhYi9vaWRjIiwibnVtYmVyX29mX2dyb3VwcyI6MCwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2xvdWQtb3JnLWFfYWRtaW4iLCJhdWQiOiI5MjJmNGExMi04MmM5LTQ0NDAtODQ2Ni1mMWIxZmFjYTA2NzUiLCJuYmYiOjE3NzQ1NDAxNTksIm51bWJlcl9vZl9yb2xlcyI6MSwib3JnX2lkIjoiOGEyMzllODItMzM2ZC00ZTFhLTg5MTUtYjgwZmExNTcyNDEyIiwic2NvcGUiOlsidmNkX2lkcCIsInBob25lIiwib3BlbmlkIiwicHJvZmlsZSIsImdyb3VwcyIsImVtYWlsIiwidG1fdWkiXSwib3JnX2Rpc3BsYXlfbmFtZSI6IkNsb3VkIE9yZyBBIiwibmFtZSI6IkNsb3VkIE9yZyBBIEFkbWluaXN0cmF0b3IiLCJzaXRlX2lkIjoiN2EzZjAwMzctZWQ5Yy00YzM3LThjMjItYzY0ZTU1ZGVmOTdjIiwiZXhwIjoxNzc0NTQzNzU5LCJvcmdfbmFtZSI6IkNsb3VkLU9yZy1BIiwiaWF0IjoxNzc0NTQwMTU5LCJqdGkiOiJiOTQ3MTY1MS00YTc3LTQ3NjgtYTRmYS1iNjdmZmFkMTA2NTgifQ.Yl1kbPlrK0390q8yx6_sDrnaGCfHV10kvEhWeCq_CVOPyYmv9FWRvlu-MNcRxMPNgIbZKNyzeckddRl0id82Ogc-_VEZeGi9hOojiYnbG37IPryYYzYvglae-T8-Is6oZTsk2aZGVGnQ3v8MQ7F2JV5YrbyJJtJKdkgiwTAQFhRNpwC-K_8OVC7xJztqUF8XINnsIdetjxlftRqHWZSjUYxza4Y8BFyxEruiMoLxQO61XkLU2mBy2QQnrbJDa3_EiNv6Owkhn1ezs52yHjHO1uUY7YTysEnI0_an3mn6GWCVwwpkqyCPdKH8u34S1azMqsTK06nF_3csGlXQZl87gw; vcloud_session_id=0d692a1aa2044bc889699eb2da7bcb19; _pk_ses.1.4962=0"
+				"value": "_pk_id.1.4962=b27fd40adb5dbc85.1746833453.33.1774542769.1774534956..03093ac2a7eb7a86aefba0489ceca440c26eb929ea73c90b8fdd0304a412ff5c; vcs_cookies_dismissed=true; vcloud_refresh_token=besqSvXGO5wUUj0G6ZGb7zMpLT_zslrs41FqsHGEdAgncM8sCt_yb884GUv-dIpaXaAoeq8IGMOXwCnXb_CXttdagQaw5q-3iFy-jrX4GSmJWM0DqmcG30k1a_PTgsj1; vcloud_jwt=eyJraWQiOiJ1cm46dmNsb3VkOm9wZW5JZFByb3ZpZGVyS2V5OjM5ZmVmYTJlLWJlZjgtNGM0Ny05NjVlLTAzNzc0NGEzZTEyNSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiI5NmQ4MDg0NS0zMjljLTQ1MzItOGIyMi0yOTE3OGM4ZjI2YTIiLCJyb2xlcyI6WyJPcmdhbml6YXRpb24gQWRtaW5pc3RyYXRvciJdLCJpc3MiOiJodHRwczovL2F1dG8tYS5zaXRlLWEudmNmLmxhYi9vaWRjIiwibnVtYmVyX29mX2dyb3VwcyI6MCwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2xvdWQtb3JnLWFfYWRtaW4iLCJhdWQiOiI5MjJmNGExMi04MmM5LTQ0NDAtODQ2Ni1mMWIxZmFjYTA2NzUiLCJuYmYiOjE3NzQ1NDAxNTksIm51bWJlcl9vZl9yb2xlcyI6MSwib3JnX2lkIjoiOGEyMzllODItMzM2ZC00ZTFhLTg5MTUtYjgwZmExNTcyNDEyIiwic2NvcGUiOlsidmNkX2lkcCIsInBob25lIiwib3BlbmlkIiwicHJvZmlsZSIsImdyb3VwcyIsImVtYWlsIiwidG1fdWkiXSwib3JnX2Rpc3BsYXlfbmFtZSI6IkNsb3VkIE9yZyBBIiwibmFtZSI6IkNsb3VkIE9yZyBBIEFkbWluaXN0cmF0b3IiLCJzaXRlX2lkIjoiN2EzZjAwMzctZWQ5Yy00YzM3LThjMjItYzY0ZTU1ZGVmOTdjIiwiZXhwIjoxNzc0NTQzNzU5LCJvcmdfbmFtZSI6IkNsb3VkLU9yZy1BIiwiaWF0IjoxNzc0NTQwMTU5LCJqdGkiOiJiOTQ3MTY1MS00YTc3LTQ3NjgtYTRmYS1iNjdmZmFkMTA2NTgifQ.Yl1kbPlrK0390q8yx6_sDrnaGCfHV10kvEhWeCq_CVOPyYmv9FWRvlu-MNcRxMPNgIbZKNyzeckddRl0id82Ogc-_VEZeGi9hOojiYnbG37IPryYYzYvglae-T8-Is6oZTsk2aZGVGnQ3v8MQ7F2JV5YrbyJJtJKdkgiwTAQFhRNpwC-K_8OVC7xJztqUF8XINnsIdetjxlftRqHWZSjUYxza4Y8BFyxEruiMoLxQO61XkLU2mBy2QQnrbJDa3_EiNv6Owkhn1ezs52yHjHO1uUY7YTysEnI0_an3mn6GWCVwwpkqyCPdKH8u34S1azMqsTK06nF_3csGlXQZl87gw; vcloud_session_id=0d692a1aa2044bc889699eb2da7bcb19; _pk_ses.1.4962=0"
 			},
 			{
 				"name": "DNT",
@@ -54,6 +55,10 @@
 			{
 				"name": "Origin",
 				"value": "https://auto-a.site-a.vcf.lab"
+			},
+			{
+				"name": "Priority",
+				"value": "u=0"
 			},
 			{
 				"name": "Referer",
@@ -76,12 +81,16 @@
 				"value": "1"
 			},
 			{
+				"name": "TE",
+				"value": "trailers"
+			},
+			{
 				"name": "User-Agent",
 				"value": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:148.0) Gecko/20100101 Firefox/148.0"
 			},
 			{
 				"name": "X-vCloud-Authorization",
-				"value": "Cloud-Org-A"
+				"value": "null"
 			},
 			{
 				"name": "X-VMWARE-VCLOUD-AUTH-CONTEXT",
@@ -93,45 +102,4 @@
 			}
 		]
 	}
-
-{
-	"customOrgLdapSettings": {
-		"authenticationMechanism": "SIMPLE",
-		"connectorType": "OPEN_LDAP",
-		"customUiButtonLabel": null,
-		"groupAttributes": {
-			"backLinkIdentifier": "objectSid",
-			"groupName": "cn",
-			"membership": "member",
-			"membershipIdentifier": "dn",
-			"objectClass": "groupOfNames",
-			"objectIdentifier": "cn",
-			"vCloudExtension": []
-		},
-		"hostName": "10.1.0.10",
-		"isGroupSearchBaseEnabled": false,
-		"isSsl": false,
-		"password": "VMware123!",
-		"port": 389,
-		"searchBase": "ou=Cloud Org A,dc=vcf,dc=lab",
-		"userAttributes": {
-			"email": "mail",
-			"fullName": "displayName",
-			"givenName": "givenName",
-			"groupBackLinkIdentifier": "tokenGroups",
-			"groupMembershipIdentifier": "dn",
-			"objectClass": "inetOrgPerson",
-			"objectIdentifier": "entryUUID",
-			"surname": "sn",
-			"telephone": "telephoneNumber",
-			"userName": "uid",
-			"vCloudExtension": []
-		},
-		"userName": "cn=admin,dc=vcf,dc=lab",
-		"vCloudExtension": []
-	},
-	"link": [],
-	"orgLdapMode": "CUSTOM",
-	"vCloudExtension": []
-}
 }
