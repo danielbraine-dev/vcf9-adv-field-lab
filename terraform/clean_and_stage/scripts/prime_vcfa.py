@@ -854,31 +854,24 @@ def assign_project_roles(vcfa_url, tenant_token):
 
     projects = resp.json().get("content", [])
     
-    # DEBUG 1: How many projects did the API actually return to this token?
-    print(f"    [DEBUG] API returned {len(projects)} projects for this Tenant Admin.")
-    
     tenant_mappings = {
-        "tenant123": [
+        "tenant-123": [
             {"email": "tenant123_project_admin@", "role": "administrator", "type": "group"},
             {"email": "tenant123_project_adv_user@", "role": "advanced_user", "type": "group"},
             {"email": "tenant123_project_user@", "role": "user", "type": "group"}
         ],
-        "tenant456": [
+        "tenant-456": [
             {"email": "tenant456_project_admin@", "role": "administrator", "type": "group"},
             {"email": "tenant456_project_adv_user@", "role": "advanced_user", "type": "group"},
             {"email": "tenant456_project_user@", "role": "user", "type": "group"}
         ]
     }
 
-    # Creating a lowercase map to prevent case-sensitivity mismatches
     safe_mappings = {k.lower(): v for k, v in tenant_mappings.items()}
 
     for proj in projects:
         proj_name = proj.get("name", "")
         proj_id = proj.get("id")
-        
-        # DEBUG 2: What is the exact name the API sees?
-        print(f"    [DEBUG] Inspecting Project: '{proj_name}' ({proj_id})")
         
         if proj_name.lower() in safe_mappings:
             print(f"    -> Match Found! Patching roles for project: {proj_name}")
@@ -890,10 +883,6 @@ def assign_project_roles(vcfa_url, tenant_token):
                 "remove": []
             }
             
-            # DEBUG 3: Show exactly what is being sent to the server
-            import json
-            print(f"    [DEBUG] Sending Payload: {json.dumps(patch_payload)}")
-            
             patch_resp = requests.patch(patch_url, headers=headers, json=patch_payload, verify=False)
             
             if patch_resp.status_code in [200, 204]:
@@ -901,8 +890,6 @@ def assign_project_roles(vcfa_url, tenant_token):
             else:
                 print(f"       [!] Failed to patch {proj_name}: HTTP {patch_resp.status_code}")
                 print(f"           Response: {patch_resp.text}")
-        else:
-            print(f"    [DEBUG] '{proj_name}' did not match our mapping. Skipping.")
      
 if __name__ == "__main__":
     try:
