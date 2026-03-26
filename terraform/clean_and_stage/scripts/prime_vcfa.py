@@ -680,13 +680,17 @@ def create_org_admin(token, org_id, role_urn):
 def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
     print(f"\n[*] Configuring Custom OpenLDAP Directory for Tenant...")
     
-    api_url = f"https://{vcfa_url}/api/admin/org/8a239e82-336d-4e1a-8915-b80fa1572412/settings/ldap" 
+    # Extract the raw UUID from the URN
+    org_uuid = org_id.split(':')[-1]
+    api_url = f"https://{vcfa_url}/api/admin/org/{org_uuid}/settings/ldap" 
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/json;version=9.0.0",
-        "Content-Type": "application/json;version=9.0.0",
-        "X-VMWARE-VCLOUD-TENANT-CONTEXT": "8a239e82-336d-4e1a-8915-b80fa1572412" 
+        "Accept": "application/*+json;version=9.0.0",
+        "Content-Type": "application/*+json",
+        "X-vCloud-Authorization": ORG_NAME,
+        "X-VMWARE-VCLOUD-AUTH-CONTEXT": ORG_NAME,
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_uuid
     }
 
     ldap_payload = {
@@ -695,7 +699,7 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
             "connectorType": "OPEN_LDAP",
             "customUiButtonLabel": None,
             "groupAttributes": {
-                "backLinkIdentifier": "",
+                "backLinkIdentifier": "objectSid",
                 "groupName": "cn",
                 "membership": "member",
                 "membershipIdentifier": "dn",
@@ -711,9 +715,9 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
             "searchBase": "ou=Cloud Org A,dc=vcf,dc=lab",
             "userAttributes": {
                 "email": "mail",
-                "fullName": "cn",
+                "fullName": "displayName",
                 "givenName": "givenName",
-                "groupBackLinkIdentifier": "",
+                "groupBackLinkIdentifier": "tokenGroups",
                 "groupMembershipIdentifier": "dn",
                 "objectClass": "inetOrgPerson",
                 "objectIdentifier": "entryUUID",
@@ -736,6 +740,7 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
         print(f"[+] Tenant LDAP settings saved successfully (HTTP 200)!")
         
         print(f"[*] Triggering Directory Sync to import Users and Groups...")
+        # Note: If the sync endpoint fails, the payload is still saved successfully!
         sync_url = f"{api_url}/action/sync"
         try:
             sync_resp = requests.post(sync_url, headers=headers, verify=False)
