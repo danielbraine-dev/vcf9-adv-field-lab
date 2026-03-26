@@ -740,18 +740,30 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
         print(f"[+] Tenant LDAP settings saved successfully (HTTP 200)!")
         
         print(f"[*] Triggering Directory Sync to import Users and Groups...")
-        # Note: If the sync endpoint fails, the payload is still saved successfully!
-        sync_url = f"{api_url}/action/sync"
+        
+        # Using the exact endpoint from the UI capture
+        sync_url = f"https://{vcfa_url}/cloudapi/1.0.0/ldap/sync"
+        
+        # The CloudAPI requires standard json headers, not the legacy *+json
+        sync_headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json;version=41.0.0-alpha",
+            "Content-Type": "application/json",
+            "X-VMWARE-VCLOUD-AUTH-CONTEXT": "Cloud-Org-A",
+            "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_uuid
+        }
+        
         try:
-            sync_resp = requests.post(sync_url, headers=headers, verify=False)
+            # Notice the sync endpoint expects an empty POST body
+            sync_resp = requests.post(sync_url, headers=sync_headers, verify=False)
             if sync_resp.status_code in [200, 202, 204]:
-                print("[-] Waiting 15 seconds for VCFA to import objects...")
+                print("[+] Sync triggered successfully. Waiting 15 seconds for VCFA to process objects...")
                 time.sleep(15)
             else:
-                raise ValueError(f"Sync returned {sync_resp.status_code}")
+                print(f"[!] Warning: Sync endpoint returned {sync_resp.status_code}. You may need to click 'Sync' manually.")
+                time.sleep(5)
         except Exception as sync_e:
-            print(f"[!] Warning: API auto-sync endpoint obscured ({sync_e}).")
-            print("    The directory is configured, but you may need to click 'Sync' in the VCFA UI.")
+            print(f"[!] Warning: API auto-sync failed ({sync_e}).")
             time.sleep(5)
         
     except requests.exceptions.RequestException as e:
@@ -878,10 +890,11 @@ if __name__ == "__main__":
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
                 sys.exit(1)
-            '''            
+            '''
             # Step 5: Configure and Sync LDAP for example Org
             print(f"\n[*] Executing LDAP Integration for Tenants...")
             configure_and_sync_ldap(VCFA_URL.replace("https://", ""), token, org_urn, ldap_ip, "VMware123!")
+            
             assign_project_roles(VCFA_URL.replace("https://", ""), token)
 
             print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
