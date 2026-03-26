@@ -717,7 +717,7 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
             "connectorType": "OPEN_LDAP",
             "customUiButtonLabel": None,
             "groupAttributes": {
-                "backLinkIdentifier": "objectSid",
+                "backLinkIdentifier": "",
                 "groupName": "cn",
                 "membership": "member",
                 "membershipIdentifier": "dn",
@@ -735,7 +735,7 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
                 "email": "mail",
                 "fullName": "displayName",
                 "givenName": "givenName",
-                "groupBackLinkIdentifier": "tokenGroups",
+                "groupBackLinkIdentifier": "",
                 "groupMembershipIdentifier": "dn",
                 "objectClass": "inetOrgPerson",
                 "objectIdentifier": "entryUUID",
