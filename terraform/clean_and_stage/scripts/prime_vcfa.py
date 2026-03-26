@@ -716,7 +716,7 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
                 "groupBackLinkIdentifier": "",
                 "groupMembershipIdentifier": "dn",
                 "objectClass": "inetOrgPerson",
-                "objectIdentifier": "uid",
+                "objectIdentifier": "entryUUID",
                 "surname": "sn",
                 "telephone": "telephoneNumber",
                 "userName": "uid",
