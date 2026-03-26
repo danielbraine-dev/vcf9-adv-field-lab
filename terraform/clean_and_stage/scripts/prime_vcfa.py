@@ -42,6 +42,24 @@ def get_vcfa_token():
         raise ValueError("Failed to extract access token!")
     return token
 
+def get_tenant_token(vcfa_url, tenant_user, tenant_pass, tenant_org):
+    print(f"\n[*] Authenticating to VCFA as Tenant Admin ({tenant_user}@{tenant_org})...")
+    
+    # Notice we drop the /provider from the sessions endpoint for tenant users
+    auth_url = f"https://{vcfa_url}/cloudapi/1.0.0/sessions"
+    
+    headers = {"Accept": "application/json;version=9.0.0"} 
+    auth = (f"{tenant_user}@{tenant_org}", tenant_pass) 
+    
+    response = requests.post(auth_url, headers=headers, auth=auth, verify=False)
+    if response.status_code == 200:
+        token = response.headers.get("x-vmware-vcloud-access-token")
+        print("[+] Tenant authentication successful!")
+        return token
+    else:
+        print(f"[-] Tenant Auth failed: {response.status_code} {response.text}")
+        return None
+
 def get_org_id(token, org_name):
     print(f"\n[*] Fetching URN for Tenant: {org_name}...")
     
@@ -817,17 +835,13 @@ def import_org_groups(vcfa_url, token, org_id):
         else:
             print(f"    [-] Failed to import {group}: {post_res.status_code} {post_res.text}")
 
-def assign_project_roles(vcfa_url, token, org_id):
-    print(f"\n[*] Assigning Groups to Projects via Project Service...")
+def assign_project_roles(vcfa_url, tenant_token):
+    print(f"\n[*] Assigning Groups to Projects as Tenant Admin...")
     
-    # Extract the clean UUID for the headers
-    org_uuid = org_id.split(':')[-1]
-    
+    # Beautiful, clean headers. The token natively scopes us to Cloud Org A!
     headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "X-VMWARE-VCLOUD-AUTH-CONTEXT": "Cloud-Org-A",
-        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_uuid
+        "Authorization": f"Bearer {tenant_token}",
+        "Content-Type": "application/json"
     }
 
     projects_url = f"https://{vcfa_url}/project-service/api/projects"
@@ -836,14 +850,13 @@ def assign_project_roles(vcfa_url, token, org_id):
         resp = requests.get(projects_url, headers=headers, verify=False)
         resp.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(f"[-] Failed to fetch projects from {projects_url}: {e}")
+        print(f"[-] Failed to fetch projects: {e}")
         if 'resp' in locals() and resp.text:
             print(f"    Response: {resp.text}")
         return
 
     projects = resp.json().get("content", [])
     
-    # VCF 9 Project-Service mapping structure
     tenant_mappings = {
         "tenant123": [
             {"email": "tenant123_project_admin@", "role": "administrator", "type": "group"},
@@ -955,11 +968,19 @@ if __name__ == "__main__":
             
             # Step 5: Configure and Sync LDAP for example Org
             print(f"\n[*] Executing LDAP Integration for Tenants...")
-            configure_and_sync_ldap(VCFA_URL.replace("https://", ""), token, org_urn, ldap_ip, "VMware123!")
-            import_org_groups(VCFA_URL.replace("https://", ""), token, org_urn)
+            clean_vcfa_fqdn = VCFA_URL.replace("https://", "")
+            configure_and_sync_ldap(clean_vcfa_fqdn, token, org_urn, ldap_ip, "VMware123!")
+            import_org_groups(clean_vcfa_fqdn, token, org_urn)
             '''
-            assign_project_roles(VCFA_URL.replace("https://", ""), token, org_urn)
-            print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
+            tenant_token = get_tenant_token(VCFA_URL.replace("https://", ""), "cloud-org-a_admin", "VMware123!VMware123!", "Cloud-Org-A")
+            
+            if tenant_token:
+                # 4. Patch the Projects (Using the Tenant Token!)
+                assign_project_roles(VCFA_URL.replace("https://", ""), tenant_token)
+                print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
+            else:
+                print("\n[-] FATAL: Could not authenticate as Tenant Admin to assign project roles.")
+                sys.exit(1)
 
         else:
             print(f"[-] Automation halted. Missing URNs for Org, Region, or Gateway.")
