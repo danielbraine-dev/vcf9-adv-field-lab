@@ -890,11 +890,11 @@ if __name__ == "__main__":
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
                 sys.exit(1)
-            '''
+            
             # Step 5: Configure and Sync LDAP for example Org
             print(f"\n[*] Executing LDAP Integration for Tenants...")
             configure_and_sync_ldap(VCFA_URL.replace("https://", ""), token, org_urn, ldap_ip, "VMware123!")
-            
+            '''
             assign_project_roles(VCFA_URL.replace("https://", ""), token)
 
             print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
