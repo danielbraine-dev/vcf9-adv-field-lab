@@ -686,7 +686,7 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
-        "X-VMWARE-VCLOUD-TENANT-CONTEXT": 8a239e82-336d-4e1a-8915-b80fa1572412 
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": "8a239e82-336d-4e1a-8915-b80fa1572412" 
     }
 
     ldap_payload = {
