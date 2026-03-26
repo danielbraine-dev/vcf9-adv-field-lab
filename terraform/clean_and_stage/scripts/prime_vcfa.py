@@ -771,34 +771,102 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
         if 'response' in locals() and response.text:
             print(f"    Response Body: {response.text}")
 
+def import_org_groups(vcfa_url, token, org_id):
+    print(f"\n[*] Importing LDAP Groups into Tenant Organization...")
+    
+    org_uuid = org_id.split(':')[-1]
+    
+    # Headers matching your group POST capture
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json;version=9.0.0",
+        "Content-Type": "application/json",
+        "X-VMWARE-VCLOUD-AUTH-CONTEXT": "Cloud-Org-A",
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_uuid
+    }
+
+    # 1. Dynamically fetch the "Organization User" Role URN
+    roles_url = f"https://{vcfa_url}/cloudapi/1.0.0/roles"
+    role_urn = "urn:vcloud:role:a649ae37-4c6a-5cd3-a0a1-cea773358ee4" # Fallback from capture
+    
+    res = requests.get(roles_url, headers=headers, params={"filter": "name==Organization User"}, verify=False)
+    if res.status_code == 200 and res.json().get("values"):
+        role_urn = res.json()["values"][0]["id"]
+
+    # 2. Import the 6 LDAP groups
+    groups_to_import = [
+        "tenant123_project_admin", "tenant123_project_adv_user", "tenant123_project_user",
+        "tenant456_project_admin", "tenant456_project_adv_user", "tenant456_project_user"
+    ]
+    
+    groups_url = f"https://{vcfa_url}/cloudapi/1.0.0/groups"
+    
+    for group in groups_to_import:
+        payload = {
+            "description": "Imported via Automation",
+            "name": group,
+            "providerType": "LDAP",
+            "roleEntityRefs": [{"id": role_urn, "name": "Organization User"}]
+        }
+        post_res = requests.post(groups_url, headers=headers, json=payload, verify=False)
+        
+        if post_res.status_code in [200, 201, 202]:
+            print(f"    [+] Imported group: {group}")
+        elif post_res.status_code == 400 and "already exists" in post_res.text.lower():
+            print(f"    [~] Group already imported: {group}")
+        else:
+            print(f"    [-] Failed to import {group}: {post_res.status_code} {post_res.text}")
+
 
 def assign_project_roles(vcfa_url, token):
-    print(f"\n[*] Assigning LDAP Groups to VCFA Projects...")
+    print(f"\n[*] Assigning Groups to Projects via Project Service...")
+    
+    # Standard headers for IaaS/Project-Service
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
 
-    # First, get all projects to find their UUIDs
-    projects_url = f"https://{vcfa_url}/iaas/api/projects"
+    # Fetch projects to get their UUIDs
+    projects_url = f"https://{vcfa_url}/iaas/api/projects?apiVersion=2021-07-15"
     resp = requests.get(projects_url, headers=headers, verify=False)
     resp.raise_for_status()
-    
     projects = resp.json().get("content", [])
     
-    # Mapping our tenants to their imported LDAP groups
     tenant_mappings = {
-        "tenant123": {
-            "administrators": [{"email": "tenant123_project_admin", "type": "group"}],
-            "members": [{"email": "tenant123_project_adv_user", "type": "group"}],
-            "viewers": [{"email": "tenant123_project_user", "type": "group"}]
-        },
-        "tenant456": {
-            "administrators": [{"email": "tenant456_project_admin", "type": "group"}],
-            "members": [{"email": "tenant456_project_adv_user", "type": "group"}],
-            "viewers": [{"email": "tenant456_project_user", "type": "group"}]
-        }
+        "tenant123": [
+            {"email": "tenant123_project_admin@", "role": "administrator", "type": "group"},
+            {"email": "tenant123_project_adv_user@", "role": "advanced_user", "type": "group"},
+            {"email": "tenant123_project_user@", "role": "user", "type": "group"}
+        ],
+        "tenant456": [
+            {"email": "tenant456_project_admin@", "role": "administrator", "type": "group"},
+            {"email": "tenant456_project_adv_user@", "role": "advanced_user", "type": "group"},
+            {"email": "tenant456_project_user@", "role": "user", "type": "group"}
+        ]
     }
+
+    for proj in projects:
+        proj_name = proj.get("name")
+        proj_id = proj.get("id")
+        
+        if proj_name in tenant_mappings:
+            print(f"    -> Patching roles for project: {proj_name} ({proj_id})")
+            
+            # THE FIX: VCF 9 Project-Service Endpoint
+            patch_url = f"https://{vcfa_url}/project-service/api/projects/{proj_id}/principals"
+            
+            patch_payload = {
+                "modify": tenant_mappings[proj_name],
+                "remove": []
+            }
+            
+            patch_resp = requests.patch(patch_url, headers=headers, json=patch_payload, verify=False)
+            
+            if patch_resp.status_code in [200, 204]:
+                print(f"       [+] Success: Assigned roles for {proj_name}")
+            else:
+                print(f"       [!] Failed to patch {proj_name}: {patch_resp.text}")
 
     for proj in projects:
         proj_name = proj.get("name")
@@ -895,6 +963,7 @@ if __name__ == "__main__":
             print(f"\n[*] Executing LDAP Integration for Tenants...")
             configure_and_sync_ldap(VCFA_URL.replace("https://", ""), token, org_urn, ldap_ip, "VMware123!")
             '''
+            import_org_groups(vcfa_fqdn, token, org_urn)
             assign_project_roles(VCFA_URL.replace("https://", ""), token)
 
             print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
