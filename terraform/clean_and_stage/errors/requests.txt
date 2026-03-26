@@ -2,13 +2,12 @@
 	"POST": {
 		"scheme": "https",
 		"host": "auto-a.site-a.vcf.lab",
-		"filename": "/cloudapi/1.0.0/ldap/sync",
+		"filename": "/cloudapi/1.0.0/groups",
 		"remote": {
 			"Address": "10.1.1.70:443"
 		}
 	}
 }
-
 {
 	"requestHeaders": {
 		"headers": [
@@ -26,7 +25,7 @@
 			},
 			{
 				"name": "Authorization",
-				"value": "Bearer eyJraWQiOiJ1cm46dmNsb3VkOm9wZW5JZFByb3ZpZGVyS2V5OjM5ZmVmYTJlLWJlZjgtNGM0Ny05NjVlLTAzNzc0NGEzZTEyNSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiI5NmQ4MDg0NS0zMjljLTQ1MzItOGIyMi0yOTE3OGM4ZjI2YTIiLCJyb2xlcyI6WyJPcmdhbml6YXRpb24gQWRtaW5pc3RyYXRvciJdLCJpc3MiOiJodHRwczovL2F1dG8tYS5zaXRlLWEudmNmLmxhYi9vaWRjIiwibnVtYmVyX29mX2dyb3VwcyI6MCwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2xvdWQtb3JnLWFfYWRtaW4iLCJhdWQiOiI5MjJmNGExMi04MmM5LTQ0NDAtODQ2Ni1mMWIxZmFjYTA2NzUiLCJuYmYiOjE3NzQ1NDAxNTksIm51bWJlcl9vZl9yb2xlcyI6MSwib3JnX2lkIjoiOGEyMzllODItMzM2ZC00ZTFhLTg5MTUtYjgwZmExNTcyNDEyIiwic2NvcGUiOlsidmNkX2lkcCIsInBob25lIiwib3BlbmlkIiwicHJvZmlsZSIsImdyb3VwcyIsImVtYWlsIiwidG1fdWkiXSwib3JnX2Rpc3BsYXlfbmFtZSI6IkNsb3VkIE9yZyBBIiwibmFtZSI6IkNsb3VkIE9yZyBBIEFkbWluaXN0cmF0b3IiLCJzaXRlX2lkIjoiN2EzZjAwMzctZWQ5Yy00YzM3LThjMjItYzY0ZTU1ZGVmOTdjIiwiZXhwIjoxNzc0NTQzNzU5LCJvcmdfbmFtZSI6IkNsb3VkLU9yZy1BIiwiaWF0IjoxNzc0NTQwMTU5LCJqdGkiOiJiOTQ3MTY1MS00YTc3LTQ3NjgtYTRmYS1iNjdmZmFkMTA2NTgifQ.Yl1kbPlrK0390q8yx6_sDrnaGCfHV10kvEhWeCq_CVOPyYmv9FWRvlu-MNcRxMPNgIbZKNyzeckddRl0id82Ogc-_VEZeGi9hOojiYnbG37IPryYYzYvglae-T8-Is6oZTsk2aZGVGnQ3v8MQ7F2JV5YrbyJJtJKdkgiwTAQFhRNpwC-K_8OVC7xJztqUF8XINnsIdetjxlftRqHWZSjUYxza4Y8BFyxEruiMoLxQO61XkLU2mBy2QQnrbJDa3_EiNv6Owkhn1ezs52yHjHO1uUY7YTysEnI0_an3mn6GWCVwwpkqyCPdKH8u34S1azMqsTK06nF_3csGlXQZl87gw"
+				"value": "Bearer eyJraWQiOiJ1cm46dmNsb3VkOm9wZW5JZFByb3ZpZGVyS2V5OjM5ZmVmYTJlLWJlZjgtNGM0Ny05NjVlLTAzNzc0NGEzZTEyNSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiI5NmQ4MDg0NS0zMjljLTQ1MzItOGIyMi0yOTE3OGM4ZjI2YTIiLCJyb2xlcyI6WyJPcmdhbml6YXRpb24gQWRtaW5pc3RyYXRvciJdLCJpc3MiOiJodHRwczovL2F1dG8tYS5zaXRlLWEudmNmLmxhYi9vaWRjIiwibnVtYmVyX29mX2dyb3VwcyI6MCwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2xvdWQtb3JnLWFfYWRtaW4iLCJhdWQiOiI5MjJmNGExMi04MmM5LTQ0NDAtODQ2Ni1mMWIxZmFjYTA2NzUiLCJuYmYiOjE3NzQ1NDUwNTUsIm51bWJlcl9vZl9yb2xlcyI6MSwib3JnX2lkIjoiOGEyMzllODItMzM2ZC00ZTFhLTg5MTUtYjgwZmExNTcyNDEyIiwic2NvcGUiOlsidmNkX2lkcCIsInBob25lIiwib3BlbmlkIiwicHJvZmlsZSIsImdyb3VwcyIsImVtYWlsIiwidG1fdWkiXSwib3JnX2Rpc3BsYXlfbmFtZSI6IkNsb3VkIE9yZyBBIiwibmFtZSI6IkNsb3VkIE9yZyBBIEFkbWluaXN0cmF0b3IiLCJzaXRlX2lkIjoiN2EzZjAwMzctZWQ5Yy00YzM3LThjMjItYzY0ZTU1ZGVmOTdjIiwiZXhwIjoxNzc0NTQ4NjU1LCJvcmdfbmFtZSI6IkNsb3VkLU9yZy1BIiwiaWF0IjoxNzc0NTQ1MDU1LCJqdGkiOiIyYTMwNDQ3YS1iOGJkLTQwODQtYWU0Mi02YTcyMjJiOTNiMDQifQ.K5C_I4rZHN6cH-dLTpw44M9pbeNDQw1M_gzzjdVzr3Cnq8udCQaSiycRO8SHV0-21t6RNYAh45fM7JGy9V7ux-mZPDDXwCEdkCR2yISkcPHzaqUrp0KgITdZewVYcFxj4BXCYYtk6_jF1ld9uYb1zthLq1UJMKFBkegbukH4Mxx7PqSrKPmUO3BsM00kF6P_k0HSNBL3OCTEkGgGIeMPEuLx7Fdquzv_CmkkPmP2ZOmEcAkuPbcZQ6GC36RT3FUCmHnlBnn645uvLfXDfg9FdTRaDrkKUrDuDzA5lBzOh9mEUoCO4dn12JpVDCEgwov4FRxpTpVYq-Jv0ygfbB2vQA"
 			},
 			{
 				"name": "Connection",
@@ -34,7 +33,7 @@
 			},
 			{
 				"name": "Content-Length",
-				"value": "0"
+				"value": "180"
 			},
 			{
 				"name": "Content-Type",
@@ -42,7 +41,7 @@
 			},
 			{
 				"name": "Cookie",
-				"value": "_pk_id.1.4962=b27fd40adb5dbc85.1746833453.33.1774542769.1774534956..03093ac2a7eb7a86aefba0489ceca440c26eb929ea73c90b8fdd0304a412ff5c; vcs_cookies_dismissed=true; vcloud_refresh_token=besqSvXGO5wUUj0G6ZGb7zMpLT_zslrs41FqsHGEdAgncM8sCt_yb884GUv-dIpaXaAoeq8IGMOXwCnXb_CXttdagQaw5q-3iFy-jrX4GSmJWM0DqmcG30k1a_PTgsj1; vcloud_jwt=eyJraWQiOiJ1cm46dmNsb3VkOm9wZW5JZFByb3ZpZGVyS2V5OjM5ZmVmYTJlLWJlZjgtNGM0Ny05NjVlLTAzNzc0NGEzZTEyNSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiI5NmQ4MDg0NS0zMjljLTQ1MzItOGIyMi0yOTE3OGM4ZjI2YTIiLCJyb2xlcyI6WyJPcmdhbml6YXRpb24gQWRtaW5pc3RyYXRvciJdLCJpc3MiOiJodHRwczovL2F1dG8tYS5zaXRlLWEudmNmLmxhYi9vaWRjIiwibnVtYmVyX29mX2dyb3VwcyI6MCwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2xvdWQtb3JnLWFfYWRtaW4iLCJhdWQiOiI5MjJmNGExMi04MmM5LTQ0NDAtODQ2Ni1mMWIxZmFjYTA2NzUiLCJuYmYiOjE3NzQ1NDAxNTksIm51bWJlcl9vZl9yb2xlcyI6MSwib3JnX2lkIjoiOGEyMzllODItMzM2ZC00ZTFhLTg5MTUtYjgwZmExNTcyNDEyIiwic2NvcGUiOlsidmNkX2lkcCIsInBob25lIiwib3BlbmlkIiwicHJvZmlsZSIsImdyb3VwcyIsImVtYWlsIiwidG1fdWkiXSwib3JnX2Rpc3BsYXlfbmFtZSI6IkNsb3VkIE9yZyBBIiwibmFtZSI6IkNsb3VkIE9yZyBBIEFkbWluaXN0cmF0b3IiLCJzaXRlX2lkIjoiN2EzZjAwMzctZWQ5Yy00YzM3LThjMjItYzY0ZTU1ZGVmOTdjIiwiZXhwIjoxNzc0NTQzNzU5LCJvcmdfbmFtZSI6IkNsb3VkLU9yZy1BIiwiaWF0IjoxNzc0NTQwMTU5LCJqdGkiOiJiOTQ3MTY1MS00YTc3LTQ3NjgtYTRmYS1iNjdmZmFkMTA2NTgifQ.Yl1kbPlrK0390q8yx6_sDrnaGCfHV10kvEhWeCq_CVOPyYmv9FWRvlu-MNcRxMPNgIbZKNyzeckddRl0id82Ogc-_VEZeGi9hOojiYnbG37IPryYYzYvglae-T8-Is6oZTsk2aZGVGnQ3v8MQ7F2JV5YrbyJJtJKdkgiwTAQFhRNpwC-K_8OVC7xJztqUF8XINnsIdetjxlftRqHWZSjUYxza4Y8BFyxEruiMoLxQO61XkLU2mBy2QQnrbJDa3_EiNv6Owkhn1ezs52yHjHO1uUY7YTysEnI0_an3mn6GWCVwwpkqyCPdKH8u34S1azMqsTK06nF_3csGlXQZl87gw; vcloud_session_id=0d692a1aa2044bc889699eb2da7bcb19; _pk_ses.1.4962=0"
+				"value": "_pk_id.1.4962=b27fd40adb5dbc85.1746833453.33.1774545130.1774534956..03093ac2a7eb7a86aefba0489ceca440c26eb929ea73c90b8fdd0304a412ff5c; vcs_cookies_dismissed=true; _pk_ses.1.4962=0; vcloud_refresh_token=qXd8woGHy23YHjNhOr_q23bU_Glwua80Xla8BLAOgJrIEXuuu33EULVBrxvfaVZMcrjrk1qlH003qjd9ClYU9sS8uzIiSyLMcnxdSX3ipUKCjWKZ5tO2JyGBxpIaxht2; vcloud_jwt=eyJraWQiOiJ1cm46dmNsb3VkOm9wZW5JZFByb3ZpZGVyS2V5OjM5ZmVmYTJlLWJlZjgtNGM0Ny05NjVlLTAzNzc0NGEzZTEyNSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiI5NmQ4MDg0NS0zMjljLTQ1MzItOGIyMi0yOTE3OGM4ZjI2YTIiLCJyb2xlcyI6WyJPcmdhbml6YXRpb24gQWRtaW5pc3RyYXRvciJdLCJpc3MiOiJodHRwczovL2F1dG8tYS5zaXRlLWEudmNmLmxhYi9vaWRjIiwibnVtYmVyX29mX2dyb3VwcyI6MCwicHJlZmVycmVkX3VzZXJuYW1lIjoiY2xvdWQtb3JnLWFfYWRtaW4iLCJhdWQiOiI5MjJmNGExMi04MmM5LTQ0NDAtODQ2Ni1mMWIxZmFjYTA2NzUiLCJuYmYiOjE3NzQ1NDUwNTUsIm51bWJlcl9vZl9yb2xlcyI6MSwib3JnX2lkIjoiOGEyMzllODItMzM2ZC00ZTFhLTg5MTUtYjgwZmExNTcyNDEyIiwic2NvcGUiOlsidmNkX2lkcCIsInBob25lIiwib3BlbmlkIiwicHJvZmlsZSIsImdyb3VwcyIsImVtYWlsIiwidG1fdWkiXSwib3JnX2Rpc3BsYXlfbmFtZSI6IkNsb3VkIE9yZyBBIiwibmFtZSI6IkNsb3VkIE9yZyBBIEFkbWluaXN0cmF0b3IiLCJzaXRlX2lkIjoiN2EzZjAwMzctZWQ5Yy00YzM3LThjMjItYzY0ZTU1ZGVmOTdjIiwiZXhwIjoxNzc0NTQ4NjU1LCJvcmdfbmFtZSI6IkNsb3VkLU9yZy1BIiwiaWF0IjoxNzc0NTQ1MDU1LCJqdGkiOiIyYTMwNDQ3YS1iOGJkLTQwODQtYWU0Mi02YTcyMjJiOTNiMDQifQ.K5C_I4rZHN6cH-dLTpw44M9pbeNDQw1M_gzzjdVzr3Cnq8udCQaSiycRO8SHV0-21t6RNYAh45fM7JGy9V7ux-mZPDDXwCEdkCR2yISkcPHzaqUrp0KgITdZewVYcFxj4BXCYYtk6_jF1ld9uYb1zthLq1UJMKFBkegbukH4Mxx7PqSrKPmUO3BsM00kF6P_k0HSNBL3OCTEkGgGIeMPEuLx7Fdquzv_CmkkPmP2ZOmEcAkuPbcZQ6GC36RT3FUCmHnlBnn645uvLfXDfg9FdTRaDrkKUrDuDzA5lBzOh9mEUoCO4dn12JpVDCEgwov4FRxpTpVYq-Jv0ygfbB2vQA; vcloud_session_id=20b8e8f8901741e5b394d841b1300b6b"
 			},
 			{
 				"name": "DNT",
@@ -62,7 +61,7 @@
 			},
 			{
 				"name": "Referer",
-				"value": "https://auto-a.site-a.vcf.lab/tenant/Cloud-Org-A/identity-providers/ldap"
+				"value": "https://auto-a.site-a.vcf.lab/tenant/Cloud-Org-A/access-control/groups"
 			},
 			{
 				"name": "Sec-Fetch-Dest",
@@ -102,4 +101,16 @@
 			}
 		]
 	}
+}
+
+{
+	"description": "",
+	"name": "tenant456_project_user",
+	"providerType": "LDAP",
+	"roleEntityRefs": [
+		{
+			"id": "urn:vcloud:role:a649ae37-4c6a-5cd3-a0a1-cea773358ee4",
+			"name": "Organization User"
+		}
+	]
 }
