@@ -817,13 +817,17 @@ def import_org_groups(vcfa_url, token, org_id):
         else:
             print(f"    [-] Failed to import {group}: {post_res.status_code} {post_res.text}")
 
-def assign_project_roles(vcfa_url, token):
+def assign_project_roles(vcfa_url, token, org_id):
     print(f"\n[*] Assigning Groups to Projects via Project Service...")
     
-    # Standard headers
+    # Extract the clean UUID for the headers
+    org_uuid = org_id.split(':')[-1]
+    
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-VMWARE-VCLOUD-AUTH-CONTEXT": "Cloud-Org-A",
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_uuid
     }
 
     projects_url = f"https://{vcfa_url}/project-service/api/projects"
@@ -860,7 +864,6 @@ def assign_project_roles(vcfa_url, token):
         if proj_name in tenant_mappings:
             print(f"    -> Patching roles for project: {proj_name} ({proj_id})")
             
-            # The PATCH request also correctly targets the project-service
             patch_url = f"https://{vcfa_url}/project-service/api/projects/{proj_id}/principals"
             
             patch_payload = {
@@ -953,10 +956,9 @@ if __name__ == "__main__":
             # Step 5: Configure and Sync LDAP for example Org
             print(f"\n[*] Executing LDAP Integration for Tenants...")
             configure_and_sync_ldap(VCFA_URL.replace("https://", ""), token, org_urn, ldap_ip, "VMware123!")
-            '''
             import_org_groups(VCFA_URL.replace("https://", ""), token, org_urn)
-            assign_project_roles(VCFA_URL.replace("https://", ""), token)
-
+            '''
+            assign_project_roles(VCFA_URL.replace("https://", ""), token, org_urn)
             print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
 
         else:
