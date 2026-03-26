@@ -817,22 +817,29 @@ def import_org_groups(vcfa_url, token, org_id):
         else:
             print(f"    [-] Failed to import {group}: {post_res.status_code} {post_res.text}")
 
-
 def assign_project_roles(vcfa_url, token):
     print(f"\n[*] Assigning Groups to Projects via Project Service...")
     
-    # Standard headers for IaaS/Project-Service
+    # Standard headers
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
 
-    # Fetch projects to get their UUIDs
-    projects_url = f"https://{vcfa_url}/iaas/api/projects?apiVersion=2021-07-15"
-    resp = requests.get(projects_url, headers=headers, verify=False)
-    resp.raise_for_status()
+    projects_url = f"https://{vcfa_url}/project-service/api/projects"
+    
+    try:
+        resp = requests.get(projects_url, headers=headers, verify=False)
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"[-] Failed to fetch projects from {projects_url}: {e}")
+        if 'resp' in locals() and resp.text:
+            print(f"    Response: {resp.text}")
+        return
+
     projects = resp.json().get("content", [])
     
+    # VCF 9 Project-Service mapping structure
     tenant_mappings = {
         "tenant123": [
             {"email": "tenant123_project_admin@", "role": "administrator", "type": "group"},
@@ -853,7 +860,7 @@ def assign_project_roles(vcfa_url, token):
         if proj_name in tenant_mappings:
             print(f"    -> Patching roles for project: {proj_name} ({proj_id})")
             
-            # THE FIX: VCF 9 Project-Service Endpoint
+            # The PATCH request also correctly targets the project-service
             patch_url = f"https://{vcfa_url}/project-service/api/projects/{proj_id}/principals"
             
             patch_payload = {
@@ -867,23 +874,7 @@ def assign_project_roles(vcfa_url, token):
                 print(f"       [+] Success: Assigned roles for {proj_name}")
             else:
                 print(f"       [!] Failed to patch {proj_name}: {patch_resp.text}")
-
-    for proj in projects:
-        proj_name = proj.get("name")
-        proj_id = proj.get("id")
-        
-        if proj_name in tenant_mappings:
-            print(f"    -> Patching roles for project: {proj_name} ({proj_id})")
-            patch_url = f"https://{vcfa_url}/iaas/api/projects/{proj_id}"
-            
-            # The IaaS API expects us to send the principals we want to set
-            patch_payload = tenant_mappings[proj_name]
-            
-            patch_resp = requests.patch(patch_url, headers=headers, json=patch_payload, verify=False)
-            if patch_resp.status_code == 200 or patch_resp.status_code == 204:
-                print(f"       [+] Success: Assigned roles for {proj_name}")
-            else:
-                print(f"       [!] Failed to patch {proj_name}: {patch_resp.text}")        
+     
 if __name__ == "__main__":
     try:
         if len(sys.argv) > 1:
