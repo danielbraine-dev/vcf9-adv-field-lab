@@ -680,13 +680,13 @@ def create_org_admin(token, org_id, role_urn):
 def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
     print(f"\n[*] Configuring Custom OpenLDAP Directory for Tenant...")
     
-    api_url = f"https://{vcfa_url}/api/admin/org/{org_id}/settings/ldap" 
+    api_url = f"https://{vcfa_url}/api/admin/org/8a239e82-336d-4e1a-8915-b80fa1572412/settings/ldap" 
     
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
-        "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id 
+        "X-VMWARE-VCLOUD-TENANT-CONTEXT": 8a239e82-336d-4e1a-8915-b80fa1572412 
     }
 
     ldap_payload = {
