@@ -57,10 +57,10 @@ EOF
     
     # Wait loop: Check every 15 seconds for up to 15 minutes (60 iterations)
     for ((i=1; i<=60; i++)); do
-      local STATUS_CHECK=$(curl -s -k "$VCFA_URL" || true)
+      local STATUS_CHECK=$(curl -s -k -L  "$VCFA_URL" || true)
       
       # If curl succeeds AND the page no longer says 'no healthy upstream'
-      if [[ -n "$STATUS_CHECK" ]] && ! echo "$STATUS_CHECK" | grep -qi "no healthy upstream"; then
+      if [[ -n "$STATUS_CHECK" ]] && ! echo "$STATUS_CHECK" | grep -i "no healthy upstream"; then
         printf "\n"
         log "[+] VCFA is healthy and back online!"
         break
