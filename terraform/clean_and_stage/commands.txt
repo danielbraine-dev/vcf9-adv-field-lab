@@ -1,6 +1,6 @@
 # base tooling
 sudo apt update -y
-sudo apt install -y jq unzip bash-completion gnupg software-properties-common python3 python3-requests docker.io
+sudo apt install -y jq unzip bash-completion gnupg software-properties-common python3 python3-requests docker.io sshpass
 sudo snap install curl
 curl -L "https://github.com/vmware/govmomi/releases/latest/download/govc_$(uname -s)_$(uname -m).tar.gz" -o "govc.tar.gz"
 sudo tar -xvzf govc.tar.gz -C /usr/local/bin
