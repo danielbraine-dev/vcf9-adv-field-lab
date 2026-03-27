@@ -347,12 +347,10 @@ step7_avi_base_config(){
 step8_nsx_cloud(){
   log "[8] NSXCloud Setup & DNS Virtual Service…"
   
-  # Extract IP and Password, but hardcode the admin user and drop the version requirement
   AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
   AVI_USER="admin"
   AVI_PASS=$(read_tfvar avi_admin_password | tr -d '"\r\n')
 
-  # Use jq to safely encode the JSON payload so special characters in the password don't break it
   LOGIN_PAYLOAD=$(jq -n --arg username "$AVI_USER" --arg password "$AVI_PASS" '{username: $username, password: $password}')
 
   # ==========================================
@@ -371,28 +369,25 @@ step8_nsx_cloud(){
       -c "$PREFLIGHT_COOKIE" || echo "000")
 
     if [[ "$LOGIN_STATUS" == "200" || "$LOGIN_STATUS" == "204" ]]; then
-      PREFLIGHT_CSRF=$(grep csrftoken "$PREFLIGHT_COOKIE" 2>/dev/null | awk '{print $7}' || true)
+      # THE FIX: Grab the very last column ($NF) regardless of spacing
+      PREFLIGHT_CSRF=$(awk '/csrftoken/ {print $NF}' "$PREFLIGHT_COOKIE" 2>/dev/null || true)
       
-      if [[ -n "$PREFLIGHT_CSRF" ]]; then
-        # Removed the X-Avi-Version header here
-        CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${EXISTING_CLOUD_UUID}/status" \
-          -H "X-CSRFToken: ${PREFLIGHT_CSRF}" \
-          -H "Referer: https://${AVI_IP}/" \
-          -b "$PREFLIGHT_COOKIE" || true)
+      # We attempt the GET request even if CSRF is blank, as the cookie alone is usually enough
+      CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${EXISTING_CLOUD_UUID}/status" \
+        -H "X-CSRFToken: ${PREFLIGHT_CSRF}" \
+        -H "Referer: https://${AVI_IP}/" \
+        -b "$PREFLIGHT_COOKIE" || true)
 
-        STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || true)
-        
-        if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
-          log "[+] NSX Cloud is already deployed and fully operational! (State: $STATE)"
-          log "[+] Skipping Step 8."
-          rm -f "$PREFLIGHT_COOKIE"
-          pause
-          return 0
-        else
-          log "[-] Cloud exists but is in state '$STATE'. Proceeding with Terraform apply..."
-        fi
+      STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || true)
+      
+      if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
+        log "[+] NSX Cloud is already deployed and fully operational! (State: $STATE)"
+        log "[+] Skipping Step 8."
+        rm -f "$PREFLIGHT_COOKIE"
+        pause
+        return 0
       else
-        log "[-] Authenticated, but could not extract CSRF token. Proceeding..."
+        log "[-] Cloud exists but is in state '$STATE'. Proceeding with Terraform apply..."
       fi
     else
       log "[-] Pre-flight Avi login failed (HTTP $LOGIN_STATUS). Proceeding with Terraform apply..."
@@ -463,19 +458,17 @@ step8_nsx_cloud(){
     exit 1
   fi
 
-  CSRF_TOKEN=$(grep csrftoken "$VAL_COOKIE" 2>/dev/null | awk '{print $7}' || true)
+  # THE FIX: Use $NF for last column, and DO NOT crash if it's empty!
+  CSRF_TOKEN=$(awk '/csrftoken/ {print $NF}' "$VAL_COOKIE" 2>/dev/null || true)
   
   if [[ -z "$CSRF_TOKEN" ]]; then
-    error "[-] FATAL: Authenticated to Avi, but could not retrieve CSRF token from temp file."
-    rm -f "$VAL_COOKIE"
-    exit 1
+    log "[!] Warning: Could not extract CSRF token. Proceeding with session cookie only..."
   fi
 
   log "Waiting for NSX Cloud ('$CLOUD_UUID') to report a healthy, ready state..."
   log "(This includes vCenter/NSX syncing and SE image generation. Typically 5-10 minutes.)"
 
   for ((i=1; i<=40; i++)); do
-    # Removed the X-Avi-Version header here as well
     CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${CLOUD_UUID}/status" \
       -H "X-CSRFToken: ${CSRF_TOKEN}" \
       -H "Referer: https://${AVI_IP}/" \
