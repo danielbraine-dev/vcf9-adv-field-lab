@@ -16,10 +16,10 @@ pause() { [[ "${PAUSE:-0}" == "1" ]] && read -rp "→ Press Enter to continue…
 # Global Helper to read standard strings from tfvars
 read_tfvar() { awk -F= -v key="$1" '$1 ~ "^[[:space:]]*"key"[[:space:]]*$" {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); gsub(/^"|"$|;$/,"",$2); print $2}' "${TFVARS_FILE}" | tail -n1; }
 
-step1_install_tools() {
-  echo "[1] Install tools…"
+step1_install_tools_verify_vcfa() {
+  log "[1] Phase A: Installing Tools from commands.txt…"
+  
   if [[ -f "${ROOT_DIR}/commands.txt" ]]; then
-    log "Installing tools from commands.txt…"
     while IFS= read -r command; do
       [[ -z "$command" || "$command" =~ ^# ]] && continue
       echo "Executing: $command"
@@ -28,6 +28,55 @@ step1_install_tools() {
   else
     warn "commands.txt not found; skipping tool install."
   fi
+
+  log "\n[1] Phase B: Checking VCFA UI for 'no healthy upstream'..."
+  local VCFA_URL="https://auto-a.site-a.vcf.lab"
+  
+  # Fetch the UI page, bypassing SSL (-k) and running silently (-s)
+  local RESPONSE=$(curl -s -k "$VCFA_URL" || true)
+
+  if echo "$RESPONSE" | grep -qi "no healthy upstream"; then
+    log "[!] Detected 'no healthy upstream'. Applying KB 419711 workaround..."
+
+    # Use sshpass to log in, and pipe the password to sudo to silently elevate to root
+    sshpass -p 'VMware123!VMware123!' ssh -o StrictHostKeyChecking=no vmware-system-user@auto-a.site-a.vcf.lab << 'EOF'
+echo 'VMware123!VMware123!' | sudo -S su - << 'ROOT_EOF'
+export KUBECONFIG=/etc/kubernetes/admin.conf
+echo "Restarting vsphere-csi-controller..."
+kubectl rollout restart deployments/vsphere-csi-controller -n kube-system
+
+# Give the API server a few seconds to acknowledge the rollout before pulling the plug
+sleep 5
+echo "Rebooting the VCFA appliance..."
+reboot
+ROOT_EOF
+EOF
+
+    log "[*] Reboot initiated. Waiting for VCFA to return (Timeout: 15 minutes)..."
+    sleep 60
+    
+    # Wait loop: Check every 15 seconds for up to 15 minutes (60 iterations)
+    for ((i=1; i<=60; i++)); do
+      local STATUS_CHECK=$(curl -s -k "$VCFA_URL" || true)
+      
+      # If curl succeeds AND the page no longer says 'no healthy upstream'
+      if [[ -n "$STATUS_CHECK" ]] && ! echo "$STATUS_CHECK" | grep -qi "no healthy upstream"; then
+        printf "\n"
+        log "[+] VCFA is healthy and back online!"
+        break
+      fi
+      
+      printf "."
+      sleep 15
+      
+      # Exit if we hit the 15-minute timeout
+      [[ $i -eq 60 ]] && { error "\n[-] Timeout waiting for VCFA to recover."; exit 1; }
+    done
+
+  else
+    log "[+] VCFA UI is responding normally. Skipping KB workaround."
+  fi
+
   pause
 }
 
@@ -807,7 +856,7 @@ step12_prime_vcfa_objects(){
 
 do_step() {
   case "$1" in
-    1) step1_install_tools;;
+    1) step1_install_tools_verify_vcfa;;
     2) step2_teardown_environment;;
     3) step3_tf_init;;
     4) step4_create_nsx_objects;;
