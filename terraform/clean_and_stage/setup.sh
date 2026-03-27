@@ -30,12 +30,12 @@ step1_install_tools_verify_vcfa() {
   fi
 
   log "\n[1] Phase B: Checking VCFA UI for 'no healthy upstream'..."
-  local VCFA_URL="https://auto-a.site-a.vcf.lab"
+  local VCFA_URL="https://auto-a.site-a.vcf.lab/login/login?service=provider"
   
   # Fetch the UI page, bypassing SSL (-k) and running silently (-s)
-  local RESPONSE=$(curl -s -k "$VCFA_URL" || true)
+  local RESPONSE=$(curl -s -k -L "$VCFA_URL" || true)
 
-  if echo "$RESPONSE" | grep -qi "no healthy upstream"; then
+  if echo "$RESPONSE" | grep -i "no healthy upstream"; then
     log "[!] Detected 'no healthy upstream'. Applying KB 419711 workaround..."
 
     # Use sshpass to log in, and pipe the password to sudo to silently elevate to root
