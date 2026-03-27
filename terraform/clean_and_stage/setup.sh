@@ -369,18 +369,16 @@ step8_nsx_cloud(){
       -c "$PREFLIGHT_COOKIE" || echo "000")
 
     if [[ "$LOGIN_STATUS" == "200" || "$LOGIN_STATUS" == "204" ]]; then
-      # THE FIX: Grab the very last column ($NF) regardless of spacing
       PREFLIGHT_CSRF=$(awk '/csrftoken/ {print $NF}' "$PREFLIGHT_COOKIE" 2>/dev/null || true)
       
-      # We attempt the GET request even if CSRF is blank, as the cookie alone is usually enough
       CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${EXISTING_CLOUD_UUID}/status" \
         -H "X-CSRFToken: ${PREFLIGHT_CSRF}" \
         -H "Referer: https://${AVI_IP}/" \
         -b "$PREFLIGHT_COOKIE" || true)
 
-      STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || true)
+      STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || echo "UNKNOWN")
       
-      if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
+      if [[ "$STATE" == "CLOUD_STATE_PLACEMENT_READY" || "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
         log "[+] NSX Cloud is already deployed and fully operational! (State: $STATE)"
         log "[+] Skipping Step 8."
         rm -f "$PREFLIGHT_COOKIE"
@@ -458,7 +456,6 @@ step8_nsx_cloud(){
     exit 1
   fi
 
-  # THE FIX: Use $NF for last column, and DO NOT crash if it's empty!
   CSRF_TOKEN=$(awk '/csrftoken/ {print $NF}' "$VAL_COOKIE" 2>/dev/null || true)
   
   if [[ -z "$CSRF_TOKEN" ]]; then
@@ -474,20 +471,20 @@ step8_nsx_cloud(){
       -H "Referer: https://${AVI_IP}/" \
       -b "$VAL_COOKIE" || true)
 
-    STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || true)
+    STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || echo "UNKNOWN")
     
-    if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
+    if [[ "$STATE" == "CLOUD_STATE_PLACEMENT_READY" || "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
       printf "\n"
       log "[+] NSX Cloud is fully synced and operational! (State: $STATE)"
       break
-    elif [[ "$STATE" == "CLOUD_STATE_FAILED" || "$STATE" == "CLOUD_STATE_ERROR" ]]; then
+    elif [[ "$STATE" == *"FAILED"* || "$STATE" == *"ERROR"* ]]; then
       printf "\n"
       error "[-] NSX Cloud creation failed! (State: $STATE)"
       error "    Avi API Response: $CLOUD_STATUS"
       rm -f "$VAL_COOKIE"
       exit 1
     else
-      printf "."
+      printf ". [%s] " "$STATE"
       sleep 23
     fi
 
