@@ -347,6 +347,58 @@ step7_avi_base_config(){
 step8_nsx_cloud(){
   log "[8] NSXCloud Setup & DNS Virtual Service…"
   
+  # Extract Avi Connection Details from Terraform Vars
+  AVI_IP="$(read_tfvar avi_mgmt_ip)"
+  AVI_USER="$(read_tfvar avi_admin_user)"
+  AVI_PASS="$(read_tfvar avi_admin_password)"
+  AVI_VERSION="$(read_tfvar avi_version)"
+
+  # ==========================================
+  # PRE-FLIGHT CHECK: Is the cloud already healthy?
+  # ==========================================
+  # Try to grab the UUID from state silently. If it fails, it just means we haven't built it yet.
+  EXISTING_CLOUD_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_cloud.nsx_cloud 2>/dev/null | grep '^ *uuid' | awk '{print $3}' | tr -d '"' || true)
+
+  if [[ -n "$EXISTING_CLOUD_UUID" ]]; then
+    log "[*] Found NSX Cloud in Terraform state. Checking Avi API for current health..."
+    
+    # Get a quick session token
+    curl -s -k -X POST "https://${AVI_IP}/login" \
+      -H "Content-Type: application/json" \
+      -d "{\"username\": \"${AVI_USER}\", \"password\": \"${AVI_PASS}\"}" \
+      -c /tmp/avi_cookies_preflight.txt > /dev/null
+
+    PREFLIGHT_CSRF=$(grep csrftoken /tmp/avi_cookies_preflight.txt 2>/dev/null | awk '{print $7}')
+    
+    if [[ -n "$PREFLIGHT_CSRF" ]]; then
+      CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${EXISTING_CLOUD_UUID}/status" \
+        -H "X-CSRFToken: ${PREFLIGHT_CSRF}" \
+        -H "X-Avi-Version: ${AVI_VERSION}" \
+        -H "Referer: https://${AVI_IP}/" \
+        -b /tmp/avi_cookies_preflight.txt)
+
+      STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null)
+      rm -f /tmp/avi_cookies_preflight.txt
+
+      if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
+        log "[+] NSX Cloud is already deployed and fully operational! (State: $STATE)"
+        log "[+] Skipping Step 8."
+        pause
+        return 0
+      else
+        log "[-] Cloud exists but is in state '$STATE'. Proceeding with Terraform apply..."
+      fi
+    else
+      log "[-] Could not authenticate to Avi for pre-flight check. Proceeding..."
+      rm -f /tmp/avi_cookies_preflight.txt
+    fi
+  else
+    log "[*] NSX Cloud not found in local state. Beginning deployment..."
+  fi
+
+  # ==========================================
+  # PHASE 1: TERRAFORM CREATION
+  # ==========================================
   # Pass 1: Build the Cloud shell, vCenter, IPAM, and DNS. 
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=avi_cloud.nsx_cloud \
@@ -370,7 +422,7 @@ step8_nsx_cloud(){
   sleep 15
 
   log "Deploying Delegated DNS Virtual Service..."
-  # Pass 4: Deploy VS VIP and Virtual Service (We keep passing SE_UUID so it doesn't revert)
+  # Pass 4: Deploy VS VIP and Virtual Service
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="se_group_uuid=${SE_UUID}" \
     -target=data.avi_vrfcontext.t1_se_services \
@@ -388,26 +440,50 @@ step8_nsx_cloud(){
     -var="dns_vs_uuid=${DNS_VS_UUID}" \
     -target=avi_systemconfiguration.this
 
-  # Wait for SE Image Upload to Content Library 
-  CL_NAME=$(terraform -chdir="${ROOT_DIR}" state show vsphere_content_library.avi_se_cl | grep '^ *name ' | awk -F'=' '{print $2}' | tr -d ' "')
+  # ==========================================
+  # PHASE 2: POST-DEPLOYMENT HEALTH CHECK
+  # ==========================================
+  log "Verifying NSX Cloud Status via Avi API..."
   
-  export GOVC_URL="$(read_tfvar vsphere_server)"
-  export GOVC_USERNAME="$(read_tfvar vsphere_user)"
-  export GOVC_PASSWORD="$(read_tfvar vsphere_password)"
-  export GOVC_INSECURE=1
+  CLOUD_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_cloud.nsx_cloud | grep '^ *uuid' | awk '{print $3}' | tr -d '"')
+  [[ -z "$CLOUD_UUID" ]] && { error "[-] Failed to extract NSX Cloud UUID!"; exit 1; }
 
-  log "Waiting for Avi to generate and upload the Service Engine OVA to the vCenter Content Library ('$CL_NAME')..."
-  log "(This typically takes 5-10 minutes depending on storage performance)"
+  log "Authenticating to Avi Controller at ${AVI_IP}..."
+  
+  curl -s -k -X POST "https://${AVI_IP}/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\": \"${AVI_USER}\", \"password\": \"${AVI_PASS}\"}" \
+    -c /tmp/avi_cookies.txt > /dev/null
 
-  # 40 attempts * 23 seconds ~ 15 minutes max wait
+  CSRF_TOKEN=$(grep csrftoken /tmp/avi_cookies.txt | awk '{print $7}')
+  
+  if [[ -z "$CSRF_TOKEN" ]]; then
+    error "[-] Failed to authenticate to Avi Controller. Could not retrieve CSRF token."
+    exit 1
+  fi
+
+  log "Waiting for NSX Cloud ('$CLOUD_UUID') to report a healthy, ready state..."
+  log "(This includes vCenter/NSX syncing and SE image generation. Typically 5-10 minutes.)"
+
   for ((i=1; i<=40; i++)); do
-    # 'grep -c .' counts non-empty lines. '|| true' prevents the script from crashing if it's 0.
-    ITEM_COUNT=$(govc library.item.ls "$CL_NAME" 2>/dev/null | grep -c . || true)
+    CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${CLOUD_UUID}/status" \
+      -H "X-CSRFToken: ${CSRF_TOKEN}" \
+      -H "X-Avi-Version: ${AVI_VERSION}" \
+      -H "Referer: https://${AVI_IP}/" \
+      -b /tmp/avi_cookies.txt)
+
+    STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null)
     
-    if [[ "$ITEM_COUNT" -gt 0 ]]; then
+    if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
       printf "\n"
-      log "[+] Service Engine OVA successfully uploaded to Content Library!"
+      log "[+] NSX Cloud is fully synced and operational! (State: $STATE)"
       break
+    elif [[ "$STATE" == "CLOUD_STATE_FAILED" || "$STATE" == "CLOUD_STATE_ERROR" ]]; then
+      printf "\n"
+      error "[-] NSX Cloud creation failed! (State: $STATE)"
+      error "    Avi API Response: $CLOUD_STATUS"
+      rm -f /tmp/avi_cookies.txt
+      exit 1
     else
       printf "."
       sleep 23
@@ -415,10 +491,14 @@ step8_nsx_cloud(){
 
     if [[ $i -eq 40 ]]; then
       printf "\n"
-      error "[-] Timeout waiting for Avi to upload the SE image. Check vCenter Tasks or Avi UI."
+      error "[-] Timeout waiting for NSX Cloud to become operational. Last State: $STATE"
+      rm -f /tmp/avi_cookies.txt
       exit 1
     fi
   done
+  
+  rm -f /tmp/avi_cookies.txt
+
   log "[+] Step 8 Complete! NSX Cloud Built and System DNS Delegated."
   pause
 }
