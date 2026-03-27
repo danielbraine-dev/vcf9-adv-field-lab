@@ -347,11 +347,14 @@ step7_avi_base_config(){
 step8_nsx_cloud(){
   log "[8] NSXCloud Setup & DNS Virtual Service…"
   
-  # Extract Avi Connection Details from Terraform Vars
-  AVI_IP="$(read_tfvar avi_mgmt_ip)"
-  AVI_USER="$(read_tfvar avi_admin_user)"
-  AVI_PASS="$(read_tfvar avi_admin_password)"
-  AVI_VERSION="$(read_tfvar avi_version)"
+  # THE FIX: Aggressively strip quotes, carriage returns, and newlines from TF vars
+  AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
+  AVI_USER=$(read_tfvar avi_admin_user | tr -d '"\r\n')
+  AVI_PASS=$(read_tfvar avi_admin_password | tr -d '"\r\n')
+  AVI_VERSION=$(read_tfvar avi_version | tr -d '"\r\n')
+
+  # THE FIX: Use jq to safely encode the JSON payload so special characters don't break it
+  LOGIN_PAYLOAD=$(jq -n --arg username "$AVI_USER" --arg password "$AVI_PASS" '{username: $username, password: $password}')
 
   # ==========================================
   # PRE-FLIGHT CHECK: Is the cloud already healthy?
@@ -365,7 +368,7 @@ step8_nsx_cloud(){
     
     LOGIN_STATUS=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "https://${AVI_IP}/login" \
       -H "Content-Type: application/json" \
-      -d "{\"username\": \"${AVI_USER}\", \"password\": \"${AVI_PASS}\"}" \
+      -d "$LOGIN_PAYLOAD" \
       -c "$PREFLIGHT_COOKIE" || echo "000")
 
     if [[ "$LOGIN_STATUS" == "200" || "$LOGIN_STATUS" == "204" ]]; then
@@ -394,6 +397,7 @@ step8_nsx_cloud(){
       fi
     else
       log "[-] Pre-flight Avi login failed (HTTP $LOGIN_STATUS). Proceeding with Terraform apply..."
+      log "    (Debug) IP: $AVI_IP | User: $AVI_USER"
     fi
     
     rm -f "$PREFLIGHT_COOKIE"
@@ -452,7 +456,7 @@ step8_nsx_cloud(){
   
   VAL_LOGIN=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "https://${AVI_IP}/login" \
     -H "Content-Type: application/json" \
-    -d "{\"username\": \"${AVI_USER}\", \"password\": \"${AVI_PASS}\"}" \
+    -d "$LOGIN_PAYLOAD" \
     -c "$VAL_COOKIE" || echo "000")
 
   if [[ "$VAL_LOGIN" != "200" && "$VAL_LOGIN" != "204" ]]; then
@@ -464,7 +468,7 @@ step8_nsx_cloud(){
   CSRF_TOKEN=$(grep csrftoken "$VAL_COOKIE" 2>/dev/null | awk '{print $7}' || true)
   
   if [[ -z "$CSRF_TOKEN" ]]; then
-    error "[-] FATAL: Authenticated to Avi, but could not retrieve CSRF token from $VAL_COOKIE."
+    error "[-] FATAL: Authenticated to Avi, but could not retrieve CSRF token from temp file."
     rm -f "$VAL_COOKIE"
     exit 1
   fi
