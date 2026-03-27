@@ -356,28 +356,30 @@ step8_nsx_cloud(){
   # ==========================================
   # PRE-FLIGHT CHECK: Is the cloud already healthy?
   # ==========================================
-  # Try to grab the UUID from state silently. If it fails, it just means we haven't built it yet.
+  # Try to grab the UUID from state silently. 
   EXISTING_CLOUD_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_cloud.nsx_cloud 2>/dev/null | grep '^ *uuid' | awk '{print $3}' | tr -d '"' || true)
 
   if [[ -n "$EXISTING_CLOUD_UUID" ]]; then
     log "[*] Found NSX Cloud in Terraform state. Checking Avi API for current health..."
     
-    # Get a quick session token
+    # THE FIX: Added '|| true' so curl doesn't kill the script if Avi drops the connection
     curl -s -k -X POST "https://${AVI_IP}/login" \
       -H "Content-Type: application/json" \
       -d "{\"username\": \"${AVI_USER}\", \"password\": \"${AVI_PASS}\"}" \
-      -c /tmp/avi_cookies_preflight.txt > /dev/null
+      -c /tmp/avi_cookies_preflight.txt > /dev/null || true
 
-    PREFLIGHT_CSRF=$(grep csrftoken /tmp/avi_cookies_preflight.txt 2>/dev/null | awk '{print $7}')
+    # THE FIX: Added '|| true' so grep doesn't kill the script if the token isn't found
+    PREFLIGHT_CSRF=$(grep csrftoken /tmp/avi_cookies_preflight.txt 2>/dev/null | awk '{print $7}' || true)
     
     if [[ -n "$PREFLIGHT_CSRF" ]]; then
+      # THE FIX: Added '|| true' to the status check
       CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${EXISTING_CLOUD_UUID}/status" \
         -H "X-CSRFToken: ${PREFLIGHT_CSRF}" \
         -H "X-Avi-Version: ${AVI_VERSION}" \
         -H "Referer: https://${AVI_IP}/" \
-        -b /tmp/avi_cookies_preflight.txt)
+        -b /tmp/avi_cookies_preflight.txt || true)
 
-      STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null)
+      STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || true)
       rm -f /tmp/avi_cookies_preflight.txt
 
       if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
@@ -389,7 +391,7 @@ step8_nsx_cloud(){
         log "[-] Cloud exists but is in state '$STATE'. Proceeding with Terraform apply..."
       fi
     else
-      log "[-] Could not authenticate to Avi for pre-flight check. Proceeding..."
+      log "[-] Could not authenticate to Avi for pre-flight check. Proceeding with Terraform apply..."
       rm -f /tmp/avi_cookies_preflight.txt
     fi
   else
