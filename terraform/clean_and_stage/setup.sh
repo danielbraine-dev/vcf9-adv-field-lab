@@ -347,13 +347,12 @@ step7_avi_base_config(){
 step8_nsx_cloud(){
   log "[8] NSXCloud Setup & DNS Virtual Service…"
   
-  # THE FIX: Aggressively strip quotes, carriage returns, and newlines from TF vars
+  # Extract IP and Password, but hardcode the admin user and drop the version requirement
   AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
-  AVI_USER=$(read_tfvar avi_admin_user | tr -d '"\r\n')
+  AVI_USER="admin"
   AVI_PASS=$(read_tfvar avi_admin_password | tr -d '"\r\n')
-  AVI_VERSION=$(read_tfvar avi_version | tr -d '"\r\n')
 
-  # THE FIX: Use jq to safely encode the JSON payload so special characters don't break it
+  # Use jq to safely encode the JSON payload so special characters in the password don't break it
   LOGIN_PAYLOAD=$(jq -n --arg username "$AVI_USER" --arg password "$AVI_PASS" '{username: $username, password: $password}')
 
   # ==========================================
@@ -375,9 +374,9 @@ step8_nsx_cloud(){
       PREFLIGHT_CSRF=$(grep csrftoken "$PREFLIGHT_COOKIE" 2>/dev/null | awk '{print $7}' || true)
       
       if [[ -n "$PREFLIGHT_CSRF" ]]; then
+        # Removed the X-Avi-Version header here
         CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${EXISTING_CLOUD_UUID}/status" \
           -H "X-CSRFToken: ${PREFLIGHT_CSRF}" \
-          -H "X-Avi-Version: ${AVI_VERSION}" \
           -H "Referer: https://${AVI_IP}/" \
           -b "$PREFLIGHT_COOKIE" || true)
 
@@ -397,7 +396,6 @@ step8_nsx_cloud(){
       fi
     else
       log "[-] Pre-flight Avi login failed (HTTP $LOGIN_STATUS). Proceeding with Terraform apply..."
-      log "    (Debug) IP: $AVI_IP | User: $AVI_USER"
     fi
     
     rm -f "$PREFLIGHT_COOKIE"
@@ -477,9 +475,9 @@ step8_nsx_cloud(){
   log "(This includes vCenter/NSX syncing and SE image generation. Typically 5-10 minutes.)"
 
   for ((i=1; i<=40; i++)); do
+    # Removed the X-Avi-Version header here as well
     CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${CLOUD_UUID}/status" \
       -H "X-CSRFToken: ${CSRF_TOKEN}" \
-      -H "X-Avi-Version: ${AVI_VERSION}" \
       -H "Referer: https://${AVI_IP}/" \
       -b "$VAL_COOKIE" || true)
 
