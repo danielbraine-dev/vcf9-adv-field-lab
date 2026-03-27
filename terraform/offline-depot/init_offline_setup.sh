@@ -31,14 +31,7 @@ step1_install_tools() {
 }
 
 step2_dns_fix() {
-  echo "[2] DNS fix…"
-  if [[ -x "${ROOT_DIR}/scripts/dns_fix.sh" ]]; then
-    log "Applying DNS fix…"
-    chmod +x "${ROOT_DIR}/scripts/dns_fix.sh"
-    "${ROOT_DIR}/scripts/dns_fix.sh" || warn "dns_fix.sh reported a warning."
-  else
-    warn "dns_fix.sh not found; skipping DNS fix."
-  fi
+  echo "[2] DNS fix…no longer needed"
   pause
 }
 
