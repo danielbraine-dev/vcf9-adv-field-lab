@@ -356,44 +356,47 @@ step8_nsx_cloud(){
   # ==========================================
   # PRE-FLIGHT CHECK: Is the cloud already healthy?
   # ==========================================
-  # Try to grab the UUID from state silently. 
   EXISTING_CLOUD_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_cloud.nsx_cloud 2>/dev/null | grep '^ *uuid' | awk '{print $3}' | tr -d '"' || true)
 
   if [[ -n "$EXISTING_CLOUD_UUID" ]]; then
     log "[*] Found NSX Cloud in Terraform state. Checking Avi API for current health..."
     
-    # THE FIX: Added '|| true' so curl doesn't kill the script if Avi drops the connection
-    curl -s -k -X POST "https://${AVI_IP}/login" \
+    PREFLIGHT_COOKIE=$(mktemp /tmp/avi_preflight_XXXXXX.txt)
+    
+    LOGIN_STATUS=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "https://${AVI_IP}/login" \
       -H "Content-Type: application/json" \
       -d "{\"username\": \"${AVI_USER}\", \"password\": \"${AVI_PASS}\"}" \
-      -c /tmp/avi_cookies_preflight.txt > /dev/null || true
+      -c "$PREFLIGHT_COOKIE" || echo "000")
 
-    # THE FIX: Added '|| true' so grep doesn't kill the script if the token isn't found
-    PREFLIGHT_CSRF=$(grep csrftoken /tmp/avi_cookies_preflight.txt 2>/dev/null | awk '{print $7}' || true)
-    
-    if [[ -n "$PREFLIGHT_CSRF" ]]; then
-      # THE FIX: Added '|| true' to the status check
-      CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${EXISTING_CLOUD_UUID}/status" \
-        -H "X-CSRFToken: ${PREFLIGHT_CSRF}" \
-        -H "X-Avi-Version: ${AVI_VERSION}" \
-        -H "Referer: https://${AVI_IP}/" \
-        -b /tmp/avi_cookies_preflight.txt || true)
+    if [[ "$LOGIN_STATUS" == "200" || "$LOGIN_STATUS" == "204" ]]; then
+      PREFLIGHT_CSRF=$(grep csrftoken "$PREFLIGHT_COOKIE" 2>/dev/null | awk '{print $7}' || true)
+      
+      if [[ -n "$PREFLIGHT_CSRF" ]]; then
+        CLOUD_STATUS=$(curl -s -k -X GET "https://${AVI_IP}/api/cloud/${EXISTING_CLOUD_UUID}/status" \
+          -H "X-CSRFToken: ${PREFLIGHT_CSRF}" \
+          -H "X-Avi-Version: ${AVI_VERSION}" \
+          -H "Referer: https://${AVI_IP}/" \
+          -b "$PREFLIGHT_COOKIE" || true)
 
-      STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || true)
-      rm -f /tmp/avi_cookies_preflight.txt
-
-      if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
-        log "[+] NSX Cloud is already deployed and fully operational! (State: $STATE)"
-        log "[+] Skipping Step 8."
-        pause
-        return 0
+        STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || true)
+        
+        if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
+          log "[+] NSX Cloud is already deployed and fully operational! (State: $STATE)"
+          log "[+] Skipping Step 8."
+          rm -f "$PREFLIGHT_COOKIE"
+          pause
+          return 0
+        else
+          log "[-] Cloud exists but is in state '$STATE'. Proceeding with Terraform apply..."
+        fi
       else
-        log "[-] Cloud exists but is in state '$STATE'. Proceeding with Terraform apply..."
+        log "[-] Authenticated, but could not extract CSRF token. Proceeding..."
       fi
     else
-      log "[-] Could not authenticate to Avi for pre-flight check. Proceeding with Terraform apply..."
-      rm -f /tmp/avi_cookies_preflight.txt
+      log "[-] Pre-flight Avi login failed (HTTP $LOGIN_STATUS). Proceeding with Terraform apply..."
     fi
+    
+    rm -f "$PREFLIGHT_COOKIE"
   else
     log "[*] NSX Cloud not found in local state. Beginning deployment..."
   fi
@@ -401,21 +404,17 @@ step8_nsx_cloud(){
   # ==========================================
   # PHASE 1: TERRAFORM CREATION
   # ==========================================
-  # Pass 1: Build the Cloud shell, vCenter, IPAM, and DNS. 
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=avi_cloud.nsx_cloud \
     -target=avi_vcenterserver.wld01_vc
   
-  # Pass 2: Build the Service Engine Group
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target=avi_serviceenginegroup.avi_lab_se_group
 
-  # Extract SE Group UUID
   SE_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_serviceenginegroup.avi_lab_se_group | grep '^ *uuid' | awk '{print $3}' | tr -d '"')
   [[ -z "$SE_UUID" ]] && { error "[-] Failed to extract SE Group UUID!"; exit 1; }
 
   log "Stitching SE Group UUID ($SE_UUID) back into the NSX Cloud..."
-  # Pass 3: Apply the Cloud with SE Group attached
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="se_group_uuid=${SE_UUID}" \
     -target=avi_cloud.nsx_cloud
@@ -424,19 +423,16 @@ step8_nsx_cloud(){
   sleep 15
 
   log "Deploying Delegated DNS Virtual Service..."
-  # Pass 4: Deploy VS VIP and Virtual Service
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="se_group_uuid=${SE_UUID}" \
     -target=data.avi_vrfcontext.t1_se_services \
     -target=avi_vsvip.dns_vip \
     -target=avi_virtualservice.delegated_dns
 
-  # Extract DNS VS UUID
   DNS_VS_UUID=$(terraform -chdir="${ROOT_DIR}" state show avi_virtualservice.delegated_dns | grep '^ *uuid' | awk '{print $3}' | tr -d '"')
   [[ -z "$DNS_VS_UUID" ]] && { error "[-] Failed to extract DNS VS UUID!"; exit 1; }
 
   log "Attaching Delegated DNS to System Configuration..."
-  # Pass 5: Update System Config with the new DNS VS
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -var="se_group_uuid=${SE_UUID}" \
     -var="dns_vs_uuid=${DNS_VS_UUID}" \
@@ -452,15 +448,24 @@ step8_nsx_cloud(){
 
   log "Authenticating to Avi Controller at ${AVI_IP}..."
   
-  curl -s -k -X POST "https://${AVI_IP}/login" \
+  VAL_COOKIE=$(mktemp /tmp/avi_val_XXXXXX.txt)
+  
+  VAL_LOGIN=$(curl -s -k -o /dev/null -w "%{http_code}" -X POST "https://${AVI_IP}/login" \
     -H "Content-Type: application/json" \
     -d "{\"username\": \"${AVI_USER}\", \"password\": \"${AVI_PASS}\"}" \
-    -c /tmp/avi_cookies.txt > /dev/null
+    -c "$VAL_COOKIE" || echo "000")
 
-  CSRF_TOKEN=$(grep csrftoken /tmp/avi_cookies.txt | awk '{print $7}')
+  if [[ "$VAL_LOGIN" != "200" && "$VAL_LOGIN" != "204" ]]; then
+    error "[-] FATAL: Failed to authenticate to Avi Controller (HTTP $VAL_LOGIN). Cannot verify Cloud status."
+    rm -f "$VAL_COOKIE"
+    exit 1
+  fi
+
+  CSRF_TOKEN=$(grep csrftoken "$VAL_COOKIE" 2>/dev/null | awk '{print $7}' || true)
   
   if [[ -z "$CSRF_TOKEN" ]]; then
-    error "[-] Failed to authenticate to Avi Controller. Could not retrieve CSRF token."
+    error "[-] FATAL: Authenticated to Avi, but could not retrieve CSRF token from $VAL_COOKIE."
+    rm -f "$VAL_COOKIE"
     exit 1
   fi
 
@@ -472,9 +477,9 @@ step8_nsx_cloud(){
       -H "X-CSRFToken: ${CSRF_TOKEN}" \
       -H "X-Avi-Version: ${AVI_VERSION}" \
       -H "Referer: https://${AVI_IP}/" \
-      -b /tmp/avi_cookies.txt)
+      -b "$VAL_COOKIE" || true)
 
-    STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null)
+    STATE=$(echo "$CLOUD_STATUS" | jq -r '.state' 2>/dev/null || true)
     
     if [[ "$STATE" == "CLOUD_STATE_PLACED" || "$STATE" == "CLOUD_STATE_READY" || "$STATE" == "CLOUD_STATE_OPERATIONAL" ]]; then
       printf "\n"
@@ -484,7 +489,7 @@ step8_nsx_cloud(){
       printf "\n"
       error "[-] NSX Cloud creation failed! (State: $STATE)"
       error "    Avi API Response: $CLOUD_STATUS"
-      rm -f /tmp/avi_cookies.txt
+      rm -f "$VAL_COOKIE"
       exit 1
     else
       printf "."
@@ -494,12 +499,12 @@ step8_nsx_cloud(){
     if [[ $i -eq 40 ]]; then
       printf "\n"
       error "[-] Timeout waiting for NSX Cloud to become operational. Last State: $STATE"
-      rm -f /tmp/avi_cookies.txt
+      rm -f "$VAL_COOKIE"
       exit 1
     fi
   done
   
-  rm -f /tmp/avi_cookies.txt
+  rm -f "$VAL_COOKIE"
 
   log "[+] Step 8 Complete! NSX Cloud Built and System DNS Delegated."
   pause
