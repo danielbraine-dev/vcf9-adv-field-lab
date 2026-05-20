@@ -1,0 +1,5 @@
+Lab SSH Key gen:
+
+ssh-keygen -t ed25519 -C "ephemeral-lab" -f ~/.ssh/id_ed25519 -N "" cat ~/.ssh/id_ed25519.pub #Copy/Paste public key to GitHub/Settings/Keys ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+Bring the TWS Sim down, and upload to Harbor: cd ~/Downloads && git clone github@github.com:danielbraine-dev/BDAP2.0.git && cd BDAP2.0/tactical-sim && docker login harbor.lb.site-a.vcf.lab -u admin -p 'VMware123!VMware123!' && docker buildx build -t harbor.lb.site-a.vcf.lab/bdap/tws:v1.0 --push .
