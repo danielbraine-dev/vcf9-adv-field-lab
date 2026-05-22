@@ -916,7 +916,7 @@ if __name__ == "__main__":
         # --- REGION & TENANT LOOKUPS ---
         region_urn = get_region_id(token, REGION_NAME)
         
-        #create_tenant_org_base(token)
+        create_tenant_org_base(token)
         org_urn = get_org_id(token, ORG_NAME)
         
         # In a VCF lab, the Tier-0 is usually named based on the workload domain
