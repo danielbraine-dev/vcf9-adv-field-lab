@@ -30,6 +30,9 @@ echo 'complete -o default -F __start_kubectl k' >> ~/.bashrc
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 ~/.fzf/install --all
 
+#carvel tools
+curl -L https://carvel.dev/install.sh | bash
+
 # vim tidy-up (optional)
 sudo apt -y remove vim-common || true
 sudo apt clean
