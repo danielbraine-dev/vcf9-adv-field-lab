@@ -741,6 +741,10 @@ EOF
   sed -i "s|image:.*|image: ${TARGET_IMAGE}|g" "${ROOT_DIR}/openldap-vsphere-pod.yaml"
 
   log "[+] Step 11 Complete! Setup is deeply integrated and self-contained."
+
+  # --- 7. IMPORT HARBOR CERT TO DEV MACHINE ---
+  echo -n | openssl s_client -showcerts -connect harbor.lb.site-a.vcf.lab:443 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee /usr/local/share/ca-certificates/harbor.crt > /dev/null
+  sudo update-ca-certificates
   pause
 }
 
