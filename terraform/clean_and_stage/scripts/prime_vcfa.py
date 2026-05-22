@@ -911,19 +911,19 @@ if __name__ == "__main__":
             sys.exit(1)
             
         # Step 1: Define Region
-        #TEMPcreate_vcf_region(token, nsx_urn, supervisor_urn)
+        create_vcf_region(token, nsx_urn, supervisor_urn)
         
         # --- REGION & TENANT LOOKUPS ---
         region_urn = get_region_id(token, REGION_NAME)
         
-        #TEMPcreate_tenant_org_base(token)
+        #create_tenant_org_base(token)
         org_urn = get_org_id(token, ORG_NAME)
         
         # In a VCF lab, the Tier-0 is usually named based on the workload domain
         gw_urn = get_provider_gateway_id(token, PROVIDER_GATEWAY_NAME)
         
         if org_urn and region_urn and gw_urn:
-            '''# Step 2: Network Tenancy & Binding
+            # Step 2: Network Tenancy & Binding
             configure_org_networking_tenancy(token, org_urn)
             configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
@@ -971,7 +971,7 @@ if __name__ == "__main__":
             clean_vcfa_fqdn = VCFA_URL.replace("https://", "")
             configure_and_sync_ldap(clean_vcfa_fqdn, token, org_urn, ldap_ip, "VMware123!")
             import_org_groups(clean_vcfa_fqdn, token, org_urn)
-            '''
+            
             tenant_token = get_tenant_token(VCFA_URL.replace("https://", ""), "cloud-org-a_admin", "VMware123!VMware123!", "Cloud-Org-A")
             
             if tenant_token:
