@@ -166,48 +166,136 @@ step4_create_nsx_objects(){
 }
 
 step5_deploy_avi(){
-  log "[5] Deploying Avi Controller via govc..."
+  log "[5] Deploying Avi Load Balancer via VCF Operations (v9.1)..."
 
   if [[ -f "${ROOT_DIR}/scripts/add_dns_record.sh" ]]; then
     log "Injecting DNS Records for Avi components..."
     bash "${ROOT_DIR}/scripts/add_dns_record.sh" || warn "Failed to add DNS records."
   fi
 
-  # 1. Apply Terraform to build the Resource Pool & Content Library
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target='vsphere_resource_pool.avi' \
-    -target='vsphere_content_library.avi_se_cl'
+  # ==========================================
+  # 1. AUTHENTICATE TO VCF OPERATIONS
+  # ==========================================
+  log "Authenticating to VCF Operations API..."
+  VCF_OPS_IP=$(read_tfvar vcf_ops_ip | tr -d '"\r\n')
+  VCF_USER="administrator@vsphere.local" # Adjust if you use a different service account
+  VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n')
 
-  # 2. Locate the OVA
-  FINAL_OVA_PATH=$(ls -1 "${ROOT_DIR}"/*.ova 2>/dev/null | head -n1)
-  [[ -z "$FINAL_OVA_PATH" ]] && { error "No OVA found!"; exit 1; }
+  # Safely encode the auth payload
+  AUTH_PAYLOAD=$(jq -n --arg username "$VCF_USER" --arg password "$VCF_PASS" '{username: $username, password: $password}')
 
-  # 3. Set vCenter Auth (Ensure these match your lab)
-  export GOVC_URL="vc-wld01-a.site-a.vcf.lab"
-  export GOVC_USERNAME="administrator@wld.sso"
-  export GOVC_PASSWORD="VMware123!VMware123!"
-  export GOVC_INSECURE=1
-
-  log "Importing OVA natively to vCenter via govc..."
+  AUTH_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/tokens" \
+    -H "Content-Type: application/json" \
+    -d "$AUTH_PAYLOAD")
   
-  # 4. Deploy via govc
-  govc import.ova \
-    -options="${ROOT_DIR}/avi_vapp_options.json" \
-    -dc="dc-a" \
-    -ds="vsan-wld01-01a" \
-    -pool="cluster-wld01-01a/Resources/Avi-Controller" \
-    -name="avi-controller01" \
-    "${FINAL_OVA_PATH}"
+  TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.accessToken' 2>/dev/null)
+  [[ -z "$TOKEN" || "$TOKEN" == "null" ]] && { error "[-] FATAL: Failed to authenticate to VCF Operations."; exit 1; }
 
-  log "Powering on Avi Controller..."
-  govc vm.power -on "avi-controller01"
+  # ==========================================
+  # 2. BINARY MANAGEMENT (VCF 9.1 Depot)
+  # ==========================================
+  log "Triggering NSX_ALB Binary Download via VCF Operations Binary Management..."
+  AVI_VERSION="32.1.1" # Update this to the exact version required by your VCF 9.1 BOM
 
-  # 5. Wait for API
-  log "Waiting for Avi API at https://10.1.1.200..."
+  DOWNLOAD_PAYLOAD=$(jq -n --arg pt "NSX_ALB" --arg ver "$AVI_VERSION" '{productType: $pt, version: $ver}')
+
+  # Request VCF Operations to pull the binary from the connected depot
+  curl -s -k -o /dev/null -X POST "https://${VCF_OPS_IP}/v1/bundles/requests" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$DOWNLOAD_PAYLOAD" || true
+
+  # Give VCF Operations a moment to register the binary (if it's not already cached locally)
+  log "Waiting 60 seconds to ensure binary is locally available in the VCF Depot..."
+  sleep 60
+
+  # ==========================================
+  # 3. LOCATE TARGET WORKLOAD DOMAIN
+  # ==========================================
+  log "Fetching Workload Domain ID..."
+  DOMAIN_NAME="wld01" # Change this if your domain is named differently
+  
+  WLD_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/domains" \
+    -H "Authorization: Bearer $TOKEN" | jq -r --arg dn "$DOMAIN_NAME" '.elements[]? | select(.name==$dn) | .id')
+
+  [[ -z "$WLD_ID" ]] && { error "[-] FATAL: Could not find workload domain '$DOMAIN_NAME'"; exit 1; }
+
+  # ==========================================
+  # 4. SUBMIT DEPLOYMENT SPECIFICATION
+  # ==========================================
+  log "Submitting Avi Deployment Spec to VCF Operations..."
+  
+  # VCF Operations handles the vCenter placement and initial OVA configuration natively!
+  DEPLOY_PAYLOAD=$(jq -n \
+    --arg cluster "cluster-wld01-01a" \
+    --arg network "segment-mgmt" \
+    --arg fqdn "avi-controller01.site-a.vcf.lab" \
+    --arg ip "10.1.1.200" \
+    --arg gw "10.1.1.1" \
+    --arg mask "255.255.255.0" \
+    --arg pw "$VCF_PASS" \
+    '{
+      clusterName: $cluster,
+      networkName: $network,
+      controllerFqdn: $fqdn,
+      controllerIp: $ip,
+      gateway: $gw,
+      subnetMask: $mask,
+      adminPassword: $pw,
+      size: "ESSENTIALS"
+    }')
+
+  # Note: Check your specific VCF 9.1 API schema; the path is generally /v1/domains/{id}/nsx-alb/controllers
+  DEPLOY_TASK_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/domains/${WLD_ID}/nsx-alb/controllers" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$DEPLOY_PAYLOAD")
+
+  TASK_ID=$(echo "$DEPLOY_TASK_RESPONSE" | jq -r '.id' 2>/dev/null)
+  
+  if [[ -z "$TASK_ID" || "$TASK_ID" == "null" ]]; then
+    error "[-] FATAL: Failed to trigger Avi deployment in VCF Operations."
+    error "    Response: $DEPLOY_TASK_RESPONSE"
+    exit 1
+  fi
+  
+  # ==========================================
+  # 5. WAIT FOR DEPLOYMENT TASK TO COMPLETE
+  # ==========================================
+  log "Waiting for VCF Operations to deploy and configure Avi (Task: $TASK_ID)..."
+  log "(This replaces the govc import and takes roughly 10-15 minutes.)"
+
+  for ((i=1; i<=60; i++)); do
+    TASK_STATUS=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/tasks/${TASK_ID}" \
+      -H "Authorization: Bearer $TOKEN" | jq -r '.status')
+    
+    if [[ "$TASK_STATUS" == "Successful" ]]; then
+      printf "\n"
+      log "[+] Avi Controller deployed successfully via VCF Operations!"
+      break
+    elif [[ "$TASK_STATUS" == "Failed" || "$TASK_STATUS" == "Error" ]]; then
+      printf "\n"
+      error "[-] FATAL: Avi deployment failed in VCF Operations. Check the UI for Task ID $TASK_ID."
+      exit 1
+    else
+      printf "."
+      sleep 30
+    fi
+    
+    if [[ $i -eq 60 ]]; then
+      printf "\n"
+      error "[-] Timeout waiting for VCF Operations task to complete."
+      exit 1
+    fi
+  done
+
+  # Verify the Avi API is actually online before moving to Step 6
+  log "Waiting for Avi API at https://10.1.1.200 to fully initialize..."
   until curl -sk --max-time 5 "https://10.1.1.200/api/initial-data" >/dev/null; do
     printf "."
     sleep 20
   done
+  
   log -e "\n[+] Avi Controller is responding. Ready for Step 6."
   pause
 }
