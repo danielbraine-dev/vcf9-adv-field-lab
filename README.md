@@ -10,7 +10,7 @@ Commands:
    sudo apt update -y && \
    sudo apt install git -y && \
    cd ~/Downloads && \
-   git clone https://github.com/danielbraine-dev/vcf9-adv-field-lab.git && \
+   git clone --branch 9.1 --single-branch https://github.com/danielbraine-dev/vcf9-adv-field-lab && \
    cd vcf9-adv-field-lab/terraform/clean_and_stage && \
    chmod +x setup.sh && \
    ./setup.sh
