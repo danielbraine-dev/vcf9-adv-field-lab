@@ -14,8 +14,8 @@ PROVIDER_PASS = "VMware123!VMware123!"
 
 # VCFA Tenant
 TENANT_URL = "https://auto-a.site-a.vcf.lab"
-TENANT_ORG = "all-apps"
-TENANT_USER = "all-apps-admin"
+TENANT_ORG = "Acme-East-A"
+TENANT_USER = "acme-east-a"
 TENANT_PASS = "VMware123!VMware123!"
 
 # vCenter
@@ -208,7 +208,7 @@ def main():
 
     # 5. Delete Region
     print("--- Step 5: Deleting Region ---")
-    region_name = "us-west-region"
+    region_name = "us-east-a"
     region_list_url = f"{PROVIDER_URL}/cloudapi/vcf/regions"
     region_id, _ = get_resource_id(region_list_url, cloudapi_provider_headers, region_name)
     if region_id:
