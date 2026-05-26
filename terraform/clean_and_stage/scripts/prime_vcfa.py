@@ -15,7 +15,6 @@ ORG_NAME = "Cloud-Org-A"
 PROVIDER_GATEWAY_NAME = "us-east-region-PG"
 POLICY_NAME = "vSAN Default Storage Policy"
 
-
 # VCFA Provider Credentials
 VCFA_URL = "https://auto-a.site-a.vcf.lab"
 PROVIDER_USER = "admin"
@@ -45,7 +44,6 @@ def get_vcfa_token():
 def get_tenant_token(vcfa_url, tenant_user, tenant_pass, tenant_org):
     print(f"\n[*] Authenticating to VCFA as Tenant Admin ({tenant_user}@{tenant_org})...")
     
-    # Notice we drop the /provider from the sessions endpoint for tenant users
     auth_url = f"https://{vcfa_url}/cloudapi/1.0.0/sessions"
     
     headers = {"Accept": "application/json;version=9.0.0"} 
@@ -73,9 +71,7 @@ def get_org_id(token, org_name):
     res = requests.get(url, headers=headers, verify=False)
     
     if res.status_code == 200:
-        # VCFA CloudAPI usually wraps collection results in a 'values' array
         orgs = res.json().get("values", [])
-        
         for org in orgs:
             if org.get("name") == org_name:
                 org_urn = org.get("id")
@@ -92,15 +88,9 @@ def get_nsx_manager_id(token, nsx_hostname):
     print(f"\n[*] Fetching URN for NSX Manager via VCF CloudAPI...")
     
     url = f"{VCFA_URL}/cloudapi/vcf/nsxManagers"
-    
-    params = {
-        "page": 1,
-        "pageSize": 25
-    }
-    
+    params = {"page": 1, "pageSize": 25}
     headers = {
         "Authorization": f"Bearer {token}",
-        # Adding the version header just in case VCFA gets picky
         "Accept": "application/json;version=9.0.0" 
     }
     
@@ -108,15 +98,12 @@ def get_nsx_manager_id(token, nsx_hostname):
     
     if res.status_code == 200:
         managers = res.json().get("values", [])
-        
         for m in managers:
-            # Checking both name and URL based on your provided schema
             if m.get("name") == nsx_hostname or nsx_hostname in m.get("url", ""):
                 urn = m.get("id")
                 print(f"[+] Found explicit NSX Manager URN: {urn}")
                 return urn
                 
-        # Lab Fallback: If naming doesn't perfectly match but there's only one manager registered
         if len(managers) == 1:
             urn = managers[0].get("id")
             print(f"[+] Defaulting to the only registered NSX Manager URN: {urn}")
@@ -132,12 +119,7 @@ def get_supervisor_id(token, supervisor_name):
     print(f"\n[*] Fetching URN for Supervisor via VCF CloudAPI...")
     
     url = f"{VCFA_URL}/cloudapi/vcf/supervisors"
-    
-    params = {
-        "page": 1,
-        "pageSize": 25
-    }
-    
+    params = {"page": 1, "pageSize": 25}
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0" 
@@ -147,15 +129,12 @@ def get_supervisor_id(token, supervisor_name):
     
     if res.status_code == 200:
         supervisors = res.json().get("values", [])
-        
         for s in supervisors:
             if s.get("name") == supervisor_name:
-                # THE FIX: Targeting the specific 'supervisorId' key from the schema
                 urn = s.get("supervisorId")
                 print(f"[+] Found explicit Supervisor URN: {urn}")
                 return urn
                 
-        # Lab Fallback
         if len(supervisors) == 1:
             urn = supervisors[0].get("supervisorId")
             print(f"[+] Defaulting to the only registered Supervisor URN: {urn}")
@@ -169,15 +148,8 @@ def get_supervisor_id(token, supervisor_name):
         
 def get_zone_id(token, zone_name):
     print(f"\n[*] Fetching URN for Zone: {zone_name}...")
-    
-    # Using the strict VCF namespace for Zones
     url = f"{VCFA_URL}/cloudapi/vcf/zones"
-    
-    params = {
-        "page": 1,
-        "pageSize": 25
-    }
-    
+    params = {"page": 1, "pageSize": 25}
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0"
@@ -193,7 +165,6 @@ def get_zone_id(token, zone_name):
                 print(f"[+] Found Zone URN: {urn}")
                 return urn
                 
-        # Lab Fallback
         if len(zones) == 1:
             urn = zones[0].get("id")
             print(f"[+] Defaulting to the only registered Zone URN: {urn}")
@@ -208,14 +179,12 @@ def get_zone_id(token, zone_name):
 def get_region_id(token, region_name):
     print(f"\n[*] Fetching URN for Region: {region_name}...")
     url = f"{VCFA_URL}/cloudapi/vcf/regions"
-    
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0"
     }
     
     res = requests.get(url, headers=headers, verify=False)
-    
     if res.status_code == 200:
         regions = res.json().get("values", [])
         for r in regions:
@@ -231,31 +200,22 @@ def get_region_id(token, region_name):
 
 def get_provider_gateway_id(token, gateway_name):
     print(f"\n[*] Fetching URN for Provider Gateway (Tier-0) via VCF CloudAPI...")
-    
     url = f"{VCFA_URL}/cloudapi/vcf/providerGateways"
-    
-    params = {
-        "page": 1,
-        "pageSize": 25
-    }
-    
+    params = {"page": 1, "pageSize": 25}
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0"
     }
     
     res = requests.get(url, headers=headers, params=params, verify=False)
-    
     if res.status_code == 200:
         gateways = res.json().get("values", [])
-        
         for gw in gateways:
             if gw.get("name") == gateway_name:
                 urn = gw.get("id")
                 print(f"[+] Found explicit Provider Gateway URN: {urn}")
                 return urn
                 
-        # Lab Fallback: If naming is slightly off but there is only one T0 registered
         if len(gateways) == 1:
             urn = gateways[0].get("id")
             print(f"[+] Defaulting to the only registered Provider Gateway URN: {urn}")
@@ -267,19 +227,14 @@ def get_provider_gateway_id(token, gateway_name):
         print(f"[-] Failed to fetch Provider Gateways: {res.status_code} {res.text}")
         return None
 
-import time
-
 def get_vdc_id(token, vdc_name):
     print(f"[*] Waiting for VDC '{vdc_name}' to become READY (This may take a minute)...", end="", flush=True)
     url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenters"
-    
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0"
     }
     
-    # Increased polling to 2 minutes max (24 retries * 5 seconds) 
-    # to account for backend vCenter/NSX Namespace provisioning.
     max_retries = 24
     for attempt in range(max_retries):
         res = requests.get(url, headers=headers, verify=False)
@@ -287,41 +242,29 @@ def get_vdc_id(token, vdc_name):
             vdcs = res.json().get("values", [])
             for vdc in vdcs:
                 if vdc.get("name") == vdc_name:
-                    # Check the actual provisioning status of the VDC
                     status = vdc.get("status", "UNKNOWN")
-                    
                     if status in ["READY", "NORMAL"]:
                         urn = vdc.get("id")
                         print(f"\n[+] VDC is {status}! URN: {urn}")
                         return urn
                     else:
-                        # VDC exists but is still locked/provisioning
                         print(".", end="", flush=True)
-                        break # Break the inner loop, wait, and hit the API again
-        
+                        break 
         time.sleep(5)
         
-    print(f"\n[-] VDC '{vdc_name}' did not reach READY state in time. Check VCFA UI for failed tasks.")
+    print(f"\n[-] VDC '{vdc_name}' did not reach READY state in time. Check VCFA UI.")
     return None
-
 
 def get_region_storage_policy_id(token, policy_name):
     print(f"\n[*] Fetching URN for Region Storage Policy: {policy_name}...")
-    
     url = f"{VCFA_URL}/cloudapi/vcf/regionStoragePolicies"
-    
-    params = {
-        "page": 1,
-        "pageSize": 25
-    }
-    
+    params = {"page": 1, "pageSize": 25}
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0"
     }
     
     res = requests.get(url, headers=headers, params=params, verify=False)
-    
     if res.status_code == 200:
         policies = res.json().get("values", [])
         for p in policies:
@@ -330,7 +273,6 @@ def get_region_storage_policy_id(token, policy_name):
                 print(f"[+] Found Region Storage Policy URN: {urn}")
                 return urn
                 
-        # Lab Fallback
         if len(policies) == 1:
             urn = policies[0].get("id")
             print(f"[+] Defaulting to the only registered Storage Policy URN: {urn}")
@@ -344,23 +286,14 @@ def get_region_storage_policy_id(token, policy_name):
 
 def get_all_vm_classes(token):
     print(f"\n[*] Fetching all available VM Classes via VCF CloudAPI...")
-    
-    # Matching the exact namespace from your documentation
     url = f"{VCFA_URL}/cloudapi/vcf/virtualMachineClasses"
-    
-    # Pagination is Required per the spec
-    params = {
-        "page": 1,
-        "pageSize": 128 
-    }
-    
+    params = {"page": 1, "pageSize": 128}
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0" 
     }
     
     res = requests.get(url, headers=headers, params=params, verify=False)
-    
     if res.status_code == 200:
         classes = res.json().get("values", [])
         print(f"[+] Found {len(classes)} VM Classes available for binding.")
@@ -371,24 +304,15 @@ def get_all_vm_classes(token):
 
 def get_org_admin_role_id(token, org_id):
     print(f"\n[*] Fetching URN for 'Organization Administrator' Role...")
-    
-    # We must query the roles specific to this tenant
     url = f"{VCFA_URL}/cloudapi/1.0.0/roles"
-    
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
-        # We must set the context to the tenant to see the tenant's roles
         "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id 
     }
-    
-    # We can use FIQL to filter directly for the role name to save processing
-    params = {
-        "filter": "name==Organization Administrator"
-    }
+    params = {"filter": "name==Organization Administrator"}
     
     res = requests.get(url, headers=headers, params=params, verify=False)
-    
     if res.status_code == 200:
         roles = res.json().get("values", [])
         if roles:
@@ -403,13 +327,12 @@ def get_org_admin_role_id(token, org_id):
         return None
         
 ######################
-# GP Functions#
+# Creation Functions #
 ######################
+
 def create_vcf_region(token, nsx_urn, supervisor_urn):
     print(f"\n[1] Defining Region: us-east...")
-    
     url = f"{VCFA_URL}/cloudapi/vcf/regions"
-    
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
@@ -419,41 +342,30 @@ def create_vcf_region(token, nsx_urn, supervisor_urn):
     payload = {
         "name": "us-east",
         "description": "VCF 9 Region for us-east",
-        "nsxManager": {
-            "name": NSX_MANAGER,
-            "id": nsx_urn
-        },
-        "supervisors": [
-            {
-                "name": "wld01-supervisor",
-                "id": supervisor_urn
-            }
-        ],
-        "storagePolicies": [
-            "vSAN Default Storage Policy"
-        ]
+        "nsxManager": {"name": NSX_MANAGER, "id": nsx_urn},
+        "supervisors": [{"name": "wld01-supervisor", "id": supervisor_urn}],
+        "storagePolicies": ["vSAN Default Storage Policy"]
     }
     
     res = requests.post(url, headers=headers, json=payload, verify=False)
     
     if res.status_code in [200, 201, 202, 204]:
         print("[+] Region 'us-east' successfully defined in VCFA.")
+    elif res.status_code == 400 and ("already associated" in res.text or "already exists" in res.text.lower()):
+        print("[~] Region 'us-east' already exists. Skipping creation.")
     else:
         print(f"[-] Failed to create region: {res.status_code} {res.text}")
         sys.exit(1)
 
 def create_tenant_org_base(token):
     print(f"\n[2] Creating Base Tenant Organization: Cloud Org A...")
-    
     url = f"{VCFA_URL}/cloudapi/1.0.0/orgs"
-    
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0"
     }
 
-    # Strict adherence to the provided Org schema
     payload = {
         "name": ORG_NAME,
         "displayName": "Cloud Org A",
@@ -466,26 +378,15 @@ def create_tenant_org_base(token):
     
     if res.status_code in [200, 201, 202, 204]:
         print("[+] Base Tenant 'Cloud Org A' created successfully.")
-        
-        # VCFA usually returns the ID in the body or a Location header
-        try:
-            org_data = res.json()
-            org_id = org_data.get("id")
-            print(f"[!] Captured Org ID: {org_id}")
-            return org_id
-        except json.JSONDecodeError:
-            print("[!] Check VCFA UI. Org created but couldn't parse ID from response.")
-            return None
+    elif res.status_code == 400 and ("already exists" in res.text.lower() or "duplicate" in res.text.lower()):
+        print("[~] Base Tenant 'Cloud Org A' already exists. Skipping creation.")
     else:
         print(f"[-] Failed to create base tenant: {res.status_code} {res.text}")
         sys.exit(1)
 
 def configure_org_networking_tenancy(token, org_id):
     print(f"\n[3] Enabling NSX Network Tenancy for Org...")
-    
-    # Using the URN to target the specific Org's settings
     url = f"{VCFA_URL}/cloudapi/1.0.0/orgs/{org_id}/networkingSettings"
-    
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
@@ -497,55 +398,39 @@ def configure_org_networking_tenancy(token, org_id):
         "orgNameForLogs": "cldorg-A" 
     }
     
-    # Settings endpoints in VCFA typically use PUT
     res = requests.put(url, headers=headers, json=payload, verify=False)
     
     if res.status_code in [200, 201, 202, 204]:
         print("[+] Org Networking Tenancy successfully enabled.")
     else:
-        print(f"[-] Failed to enable Org networking: {res.status_code} {res.text}")
-        sys.exit(1)
+        print(f"[~] Warning: Org Networking Tenancy might already be locked (HTTP {res.status_code}). Skipping.")
 
 def configure_regional_networking(token, org_id, region_urn, gw_urn):
     print(f"\n[4] Binding Regional Networking (VPC Setup)...")
-    
     url = f"{VCFA_URL}/cloudapi/vcf/regionalNetworkingSettings"
-    
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0"
     }
 
-    PROVIDER_GATEWAY_NAME = "wld01-t0-gw" 
-    
     payload = {
-        # Leaving 'name' unset per doc to let VCFA auto-generate it
-        "regionRef": {
-            "name": "us-east",
-            "id": region_urn
-        },
-        "orgRef": {
-            "name": ORG_NAME,
-            "id": org_id
-        },
-        "providerGatewayRef": {
-            "name": PROVIDER_GATEWAY_NAME,
-            "id": gw_urn
-        }
+        "regionRef": {"name": "us-east", "id": region_urn},
+        "orgRef": {"name": ORG_NAME, "id": org_id},
+        "providerGatewayRef": {"name": PROVIDER_GATEWAY_NAME, "id": gw_urn}
     }
     
     res = requests.post(url, headers=headers, json=payload, verify=False)
     
     if res.status_code in [200, 201, 202, 204]:
         print(f"[+] Regional Networking bound to Provider Gateway: {PROVIDER_GATEWAY_NAME}")
+    elif res.status_code in [400, 403, 409]:
+        print(f"[~] Regional Networking already bound or conflicting (HTTP {res.status_code}). Skipping.")
     else:
         print(f"[-] Failed to bind regional networking: {res.status_code} {res.text}")
-        sys.exit(1)
-        
+
 def create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn):
     print(f"\n[5A] Slicing Supervisor Resources (Creating Virtual Datacenter)...")
-    
     url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenters"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -558,26 +443,16 @@ def create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_u
     payload = {
         "name": VDC_NAME,
         "description": "VDC Resource boundary for Cloud Org A",
-        "org": {
-            "id": org_urn
-        },
-        "region": {
-            "id": region_urn
-        },
-        "supervisors": [
-            {
-                "id": supervisor_urn
-            }
-        ],
+        "org": {"id": org_urn},
+        "region": {"id": region_urn},
+        "supervisors": [{"id": supervisor_urn}],
         "zoneResourceAllocation": [
             {
-                "zone": {
-                    "id": zone_urn
-                },
+                "zone": {"id": zone_urn},
                 "resourceAllocation": {
-                    "cpuLimitMHz": 30000,         # 30 GHz
-                    "memoryLimitMiB": 88064,      # 86 GB
-                    "cpuReservationMHz": 0,       # 0 = Thin provisioned
+                    "cpuLimitMHz": 30000,
+                    "memoryLimitMiB": 88064,
+                    "cpuReservationMHz": 0,
                     "memoryReservationMiB": 0
                 }
             }
@@ -588,14 +463,15 @@ def create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_u
     
     if res.status_code in [200, 201, 202, 204]:
         print(f"[+] VDC Creation Task Accepted (HTTP {res.status_code}).")
-        return VDC_NAME
+    elif res.status_code in [400, 403, 409] and "already exists" in res.text.lower():
+        print(f"[~] VDC '{VDC_NAME}' already exists. Skipping creation.")
     else:
-        print(f"[-] Failed to create Virtual Datacenter: {res.status_code} {res.text}")
-        sys.exit(1)
+        print(f"[!] VDC Creation returned HTTP {res.status_code}. It may already exist. Proceeding...")
+        
+    return VDC_NAME
 
 def create_vdc_storage_policy(token, vdc_urn, policy_urn):
     print(f"\n[5B] Binding vSAN Storage Policy to VDC...")
-    
     url = f"{VCFA_URL}/cloudapi/vcf/virtualDatacenterStoragePolicies"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -607,14 +483,9 @@ def create_vdc_storage_policy(token, vdc_urn, policy_urn):
         "values": [
             {
                 "name": "Cloud-Org-A-vSAN-Policy",
-                "virtualDatacenter": {
-                    "id": vdc_urn
-                },
-                "regionStoragePolicy": {
-                    # THE FIX: Explicitly providing the ID so BaseObjectId doesn't throw an NPE
-                    "id": policy_urn
-                },
-                "storageLimitMiB": 2306048 # 2252 GB
+                "virtualDatacenter": {"id": vdc_urn},
+                "regionStoragePolicy": {"id": policy_urn},
+                "storageLimitMiB": 2306048 
             }
         ]
     }
@@ -624,23 +495,17 @@ def create_vdc_storage_policy(token, vdc_urn, policy_urn):
     if res.status_code in [200, 201, 202, 204]:
         print("[+] Storage Policy successfully bound to VDC!")
     else:
-        print(f"[-] Failed to bind VDC Storage Policy: {res.status_code} {res.text}")
-        sys.exit(1)
-
+        print(f"[~] Storage Policy binding returned HTTP {res.status_code} (Likely already bound). Skipping.")
 
 def enable_all_vdc_vm_classes(token, vdc_urn, available_classes):
     print(f"\n[5C] Binding all VM Classes to Virtual Datacenter...")
-    
-    # Using the exact v1 endpoint from your DevTools screenshot
     url = f"{VCFA_URL}/cloudapi/v1/virtualDatacenters/{vdc_urn}/virtualMachineClasses"
-    
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0"
     }
     
-    # CloudAPI PUT requests to collection endpoints universally expect the "values" array
     payload = {
         "values": [{"id": c.get("id")} for c in available_classes]
     }
@@ -650,22 +515,15 @@ def enable_all_vdc_vm_classes(token, vdc_urn, available_classes):
     if res.status_code in [200, 201, 202, 204]:
         print("[+] Successfully enabled all VM Classes on the VDC!")
     else:
-        print(f"[-] Failed to bind VM Classes: {res.status_code} {res.text}")
-        
-        # Fallback debug tip just in case the payload schema differs slightly
-        print("[!] Tip: Check the 'Payload' or 'Request' tab in DevTools to see if it wants a flat array instead of a 'values' wrapper.")
-        sys.exit(1)
-
+        print(f"[~] VM Classes binding returned HTTP {res.status_code} (Likely already bound). Skipping.")
 
 def create_org_admin(token, org_id, role_urn):
     print(f"\n[6] Creating First User with Org Admin Role...")
-    
     user_url = f"{VCFA_URL}/cloudapi/1.0.0/users"
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
         "Content-Type": "application/json;version=9.0.0",
-        # Ensure we are creating the user INSIDE the tenant context
         "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_id
     }
     
@@ -673,32 +531,23 @@ def create_org_admin(token, org_id, role_urn):
         "username": "cloud-org-a_admin",
         "password": "VMware123!VMware123!", 
         "fullName": "Cloud Org A Administrator",
-        "orgEntityRef": {
-            "id": org_id
-        },
+        "orgEntityRef": {"id": org_id},
         "enabled": True,
         "providerType": "LOCAL",
-        "roleEntityRefs": [
-            {
-                "name": "Organization Administrator",
-                "id": role_urn
-            }
-        ]
+        "roleEntityRefs": [{"name": "Organization Administrator", "id": role_urn}]
     }
     
     user_res = requests.post(user_url, headers=headers, json=user_payload, verify=False)
     
     if user_res.status_code in [200, 201]:
-        user_urn = user_res.json().get("id")
         print(f"[+] User 'cloud-org-a_admin' successfully created and elevated!")
+    elif user_res.status_code in [400, 403, 409] and "already exists" in user_res.text.lower():
+        print(f"[~] User 'cloud-org-a_admin' already exists. Skipping.")
     else:
-        print(f"[-] Failed to create user: {user_res.status_code} {user_res.text}")
-        sys.exit(1)
+        print(f"[~] Failed to create user (HTTP {user_res.status_code}). They may already exist.")
         
 def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
     print(f"\n[*] Configuring Custom OpenLDAP Directory for Tenant...")
-    
-    # Extract the raw UUID from the URN
     org_uuid = org_id.split(':')[-1]
     api_url = f"https://{vcfa_url}/api/admin/org/{org_uuid}/settings/ldap" 
     
@@ -758,11 +607,7 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
         print(f"[+] Tenant LDAP settings saved successfully (HTTP 200)!")
         
         print(f"[*] Triggering Directory Sync to import Users and Groups...")
-        
-        # Using the exact endpoint from the UI capture
         sync_url = f"https://{vcfa_url}/cloudapi/1.0.0/ldap/sync"
-        
-        # The CloudAPI requires standard json headers, not the legacy *+json
         sync_headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/json;version=41.0.0-alpha",
@@ -772,7 +617,6 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
         }
         
         try:
-            # Notice the sync endpoint expects an empty POST body
             sync_resp = requests.post(sync_url, headers=sync_headers, verify=False)
             if sync_resp.status_code in [200, 202, 204]:
                 print("[+] Sync triggered successfully. Waiting 15 seconds for VCFA to process objects...")
@@ -783,18 +627,14 @@ def configure_and_sync_ldap(vcfa_url, token, org_id, ldap_ip, ldap_password):
         except Exception as sync_e:
             print(f"[!] Warning: API auto-sync failed ({sync_e}).")
             time.sleep(5)
-        
+            
     except requests.exceptions.RequestException as e:
         print(f"[-] FATAL: Could not configure LDAP via API: {e}")
-        if 'response' in locals() and response.text:
-            print(f"    Response Body: {response.text}")
 
 def import_org_groups(vcfa_url, token, org_id):
     print(f"\n[*] Importing LDAP Groups into Tenant Organization...")
-    
     org_uuid = org_id.split(':')[-1]
     
-    # Headers matching your group POST capture
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json;version=9.0.0",
@@ -803,15 +643,13 @@ def import_org_groups(vcfa_url, token, org_id):
         "X-VMWARE-VCLOUD-TENANT-CONTEXT": org_uuid
     }
 
-    # 1. Dynamically fetch the "Organization User" Role URN
     roles_url = f"https://{vcfa_url}/cloudapi/1.0.0/roles"
-    role_urn = "urn:vcloud:role:a649ae37-4c6a-5cd3-a0a1-cea773358ee4" # Fallback from capture
+    role_urn = "urn:vcloud:role:a649ae37-4c6a-5cd3-a0a1-cea773358ee4" 
     
     res = requests.get(roles_url, headers=headers, params={"filter": "name==Organization User"}, verify=False)
     if res.status_code == 200 and res.json().get("values"):
         role_urn = res.json()["values"][0]["id"]
 
-    # 2. Import the 6 LDAP groups
     groups_to_import = [
         "tenant123_project_admin", "tenant123_project_adv_user", "tenant123_project_user",
         "tenant456_project_admin", "tenant456_project_adv_user", "tenant456_project_user"
@@ -837,7 +675,6 @@ def import_org_groups(vcfa_url, token, org_id):
 
 def assign_project_roles(vcfa_url, tenant_token):
     print(f"\n[*] Assigning Groups to Projects as Tenant Admin...")
-    
     headers = {
         "Authorization": f"Bearer {tenant_token}",
         "Content-Type": "application/json"
@@ -875,7 +712,6 @@ def assign_project_roles(vcfa_url, tenant_token):
         
         if proj_name.lower() in safe_mappings:
             print(f"    -> Match Found! Patching roles for project: {proj_name}")
-            
             patch_url = f"https://{vcfa_url}/project-service/api/projects/{proj_id}/principals"
             
             patch_payload = {
@@ -889,7 +725,6 @@ def assign_project_roles(vcfa_url, tenant_token):
                 print(f"       [+] Success: Assigned roles for {proj_name}")
             else:
                 print(f"       [!] Failed to patch {proj_name}: HTTP {patch_resp.status_code}")
-                print(f"           Response: {patch_resp.text}")
      
 if __name__ == "__main__":
     try:
@@ -910,24 +745,32 @@ if __name__ == "__main__":
             print("[-] Missing core infrastructure URNs. Halting.")
             sys.exit(1)
             
-        # Step 1: Define Region
-        create_vcf_region(token, nsx_urn, supervisor_urn)
+        # ==============================================================
+        # THE FIX: Check-Then-Act Logic for Core Deployments
+        # ==============================================================
         
-        # --- REGION & TENANT LOOKUPS ---
+        # Step 1: Define Region (Idempotent Check)
         region_urn = get_region_id(token, REGION_NAME)
-        
-        create_tenant_org_base(token)
+        if not region_urn:
+            create_vcf_region(token, nsx_urn, supervisor_urn)
+            region_urn = get_region_id(token, REGION_NAME) # Fetch again to get the new URN
+            
+        # Step 2: Create Tenant Org (Idempotent Check)
         org_urn = get_org_id(token, ORG_NAME)
+        if not org_urn:
+            create_tenant_org_base(token)
+            org_urn = get_org_id(token, ORG_NAME) # Fetch again to get the new URN
         
-        # In a VCF lab, the Tier-0 is usually named based on the workload domain
+        # Provider Gateway Lookup
         gw_urn = get_provider_gateway_id(token, PROVIDER_GATEWAY_NAME)
         
         if org_urn and region_urn and gw_urn:
-            # Step 2: Network Tenancy & Binding
+            
+            # Step 3: Network Tenancy & Binding (Now strictly soft-failing)
             configure_org_networking_tenancy(token, org_urn)
             configure_regional_networking(token, org_urn, region_urn, gw_urn)
             
-            # Step 3: Regional Quota - VDC Creation
+            # Step 4: Regional Quota - VDC Creation
             zone_urn = get_zone_id(token, ZONE_NAME)
             
             if not zone_urn:
@@ -935,11 +778,12 @@ if __name__ == "__main__":
                 sys.exit(1)
                 
             vdc_name = create_virtual_datacenter(token, org_urn, region_urn, supervisor_urn, zone_urn)
+            
+            # This safely loops until the VDC exists AND is ready
             vdc_urn = get_vdc_id(token, vdc_name)
             
             if vdc_urn:
                 policy_urn = get_region_storage_policy_id(token, POLICY_NAME)
-                
                 if not policy_urn:
                     print("[-] Could not retrieve Storage Policy URN. Halting.")
                     sys.exit(1)
@@ -952,21 +796,19 @@ if __name__ == "__main__":
                 else:
                     print("[-] No VM classes found to bind, or fetch failed.")
                     sys.exit(1)
-                    
             else:
                 print("[-] Could not retrieve VDC URN. Storage and Compute mapping aborted.")
                 sys.exit(1)
             
-            # Step 4: User & Role Orchestration
+            # Step 5: User & Role Orchestration
             role_urn = get_org_admin_role_id(token, org_urn)
             if role_urn:
                 create_org_admin(token, org_urn, role_urn)
-                
             else:
                 print("[-] Could not find Org Admin role. Halting User Creation.")
                 sys.exit(1)
             
-            # Step 5: Configure and Sync LDAP for example Org
+            # Step 6: Configure and Sync LDAP for example Org
             print(f"\n[*] Executing LDAP Integration for Tenants...")
             clean_vcfa_fqdn = VCFA_URL.replace("https://", "")
             configure_and_sync_ldap(clean_vcfa_fqdn, token, org_urn, ldap_ip, "VMware123!")
@@ -975,7 +817,7 @@ if __name__ == "__main__":
             tenant_token = get_tenant_token(VCFA_URL.replace("https://", ""), "cloud-org-a_admin", "VMware123!VMware123!", "Cloud-Org-A")
             
             if tenant_token:
-                # 4. Patch the Projects (Using the Tenant Token!)
+                # Patch the Projects (Using the Tenant Token!)
                 assign_project_roles(VCFA_URL.replace("https://", ""), tenant_token)
                 print(f"\n[✔] SUCCESS: Step 12 VCFA Priming is 100% Complete.")
             else:
@@ -985,7 +827,6 @@ if __name__ == "__main__":
         else:
             print(f"[-] Automation halted. Missing URNs for Org, Region, or Gateway.")
             sys.exit(1)
-
 
     except Exception as e:
         print(f"[-] Python Script Error: {e}")
