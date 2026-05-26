@@ -181,7 +181,7 @@ def main():
 
     # 3. Regional Networking
     print("--- Step 3: Deleting Regional Networking Config ---")
-    net_name = "all-appsus-west-region"
+    net_name = "distributed-vlan-connection-wld-a"
     net_list_url = f"{PROVIDER_URL}/cloudapi/vcf/regionalNetworkingSettings"
     net_id, _ = get_resource_id(net_list_url, cloudapi_provider_headers, net_name)
     if net_id:
