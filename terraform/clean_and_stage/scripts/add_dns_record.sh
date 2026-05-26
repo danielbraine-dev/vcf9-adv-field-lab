@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ==========================================
 # Variables
-DNS_HOST="10.1.10.129"
-DNS_ROOT_PASS='VMware123!VMware123!'   # Update if your lab uses a different password
+# ==========================================
+TECH_URL="http://technitium.vcf.lab:5380"  # Update to https://technitium.vcf.lab if SSL is enabled
+TECH_USER="admin"
+TECH_PASS='VMware123!VMware123!'                    # Update if your lab uses a different password
+
 AVI_FQDN="avi-controller01.site-a.vcf.lab"
 AVI_IP="10.1.1.200"
 
-# Ensure sshpass is installed
-if ! command -v sshpass >/dev/null 2>&1; then
-  if command -v apt-get >/dev/null 2>&1; then
-    sudo apt-get update -y && sudo apt-get install -y sshpass
-  else
-    echo "sshpass not found and apt-get not available" >&2
-    exit 1
-  fi
-fi
+LB_ZONE="lb.site-a.vcf.lab"
+LB_FORWARDER_IP="10.4.100.2"
+
+echo "[*] Connecting to Technitium DNS API at ${TECH_URL}..."
 
 # Disable xtrace to hide passwords if running in debug mode
 XTRACE_OFF=0
@@ -24,62 +23,76 @@ if [[ "${TRACE:-0}" == "1" ]]; then
   XTRACE_OFF=1
 fi
 
-echo "Connecting to K8s DNS node (${DNS_HOST}) to update dnsmasq..."
+# ==========================================
+# 1. Authenticate to Technitium API
+# ==========================================
+# We use --data-urlencode for the password in case it contains special characters like '!'
+LOGIN_RESP=$(curl -s -k -X POST "${TECH_URL}/api/user/login" \
+  -d "user=${TECH_USER}" \
+  --data-urlencode "pass=${TECH_PASS}")
 
-# Execute standard bash commands over SSH instead of PowerShell
-sshpass -p "$DNS_ROOT_PASS" \
-  ssh -o StrictHostKeyChecking=no \
-      -o UserKnownHostsFile=/dev/null \
-      -o PreferredAuthentications=password \
-      -o PubkeyAuthentication=no \
-      root@"${DNS_HOST}" \
-      env AVI_IP="${AVI_IP}" AVI_FQDN="${AVI_FQDN}" bash -s <<'EOF'
-set -euo pipefail
+LOGIN_STATUS=$(echo "$LOGIN_RESP" | jq -r '.status' 2>/dev/null || echo "failed")
 
-cd /holodeck-runtime/dnsmasq
-FILE="dnsmasq_configmap.yaml"
-
-if [[ ! -f "$FILE" ]]; then
-    echo "Error: $FILE not found on the remote host!"
+if [[ "$LOGIN_STATUS" != "ok" ]]; then
+    echo "[-] FATAL: Failed to authenticate to Technitium DNS."
+    echo "    Response: $LOGIN_RESP"
     exit 1
 fi
 
-echo "Modifying $FILE..."
+# Extract the API Token for subsequent requests
+TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token')
+echo "  [+] Successfully authenticated to Technitium."
 
-# 1. Update dnsmasq.conf section (Idempotent check)
-if ! grep -q "server=/lb.site-a.vcf.lab/10.4.100.2" "$FILE"; then
-    # Use sed to append the lines immediately after 'dnsmasq.conf: |' 
-    # The \x20 adds exactly 4 spaces to maintain YAML indentation
-    sed -i '/dnsmasq\.conf:[[:space:]]*|/a \    server=/lb.site-a.vcf.lab/10.4.100.2\n    local=/lb.site-a.vcf.lab/' "$FILE"
-    echo "  -> Added lb.site-a.vcf.lab forwarders to dnsmasq.conf"
+# ==========================================
+# 2. Add Conditional Forwarder (Forwarder Zone)
+# ==========================================
+# This replaces the dnsmasq 'server=/lb.site-a.vcf.lab/10.4.100.2' logic
+echo "[*] Configuring Conditional Forwarder for ${LB_ZONE} -> ${LB_FORWARDER_IP}..."
+
+FWD_RESP=$(curl -s -k -X POST "${TECH_URL}/api/zones/create" \
+  -d "token=${TOKEN}" \
+  -d "zone=${LB_ZONE}" \
+  -d "type=Forwarder" \
+  -d "forwarder=${LB_FORWARDER_IP}")
+
+FWD_STATUS=$(echo "$FWD_RESP" | jq -r '.status')
+FWD_ERR=$(echo "$FWD_RESP" | jq -r '.errorMessage')
+
+if [[ "$FWD_STATUS" == "ok" ]]; then
+    echo "  [+] Success: Forwarder zone created."
+elif [[ "$FWD_STATUS" == "error" && "$FWD_ERR" == *"already exists"* ]]; then
+    echo "  [~] Forwarder zone already exists. Skipping."
 else
-    echo "  -> Forwarders already exist in dnsmasq.conf. Skipping."
+    echo "  [-] Warning: Failed to create forwarder zone. Response: $FWD_RESP"
 fi
 
-# 2. Update hosts section (Idempotent check)
-if ! grep -q "$AVI_FQDN" "$FILE"; then
-    # Use sed to append the IP and FQDN immediately after 'hosts: |'
-    sed -i "/hosts:[[:space:]]*|/a \    ${AVI_IP} ${AVI_FQDN}" "$FILE"
-    echo "  -> Added ${AVI_FQDN} to hosts list"
+# ==========================================
+# 3. Add A Record for Avi Controller
+# ==========================================
+# This replaces adding the host to the dnsmasq hosts file
+echo "[*] Configuring A Record for ${AVI_FQDN} -> ${AVI_IP}..."
+
+A_REC_RESP=$(curl -s -k -X POST "${TECH_URL}/api/zones/records/add" \
+  -d "token=${TOKEN}" \
+  -d "domain=${AVI_FQDN}" \
+  -d "type=A" \
+  -d "ipv4Address=${AVI_IP}")
+
+A_REC_STATUS=$(echo "$A_REC_RESP" | jq -r '.status')
+A_REC_ERR=$(echo "$A_REC_RESP" | jq -r '.errorMessage')
+
+if [[ "$A_REC_STATUS" == "ok" ]]; then
+    echo "  [+] Success: A Record created."
+elif [[ "$A_REC_STATUS" == "error" && "$A_REC_ERR" == *"already exists"* ]]; then
+    echo "  [~] A Record already exists. Skipping."
 else
-    echo "  -> ${AVI_FQDN} already exists in hosts list. Skipping."
+    echo "  [-] Warning: Failed to create A record. Response: $A_REC_RESP"
 fi
 
-# 3. Apply the ConfigMap
-echo "Applying new ConfigMap to the cluster..."
-kubectl apply -f "$FILE"
-
-# 4. Find and delete the dnsmasq pod to force a reload
-POD_NAME=$(kubectl get pods -n default | grep dnsmasq | awk '{print $1}' | head -n 1)
-
-if [[ -n "$POD_NAME" ]]; then
-    echo "Deleting pod $POD_NAME to load new config..."
-    kubectl delete pod "$POD_NAME" -n default
-    echo "DNS update complete!"
-else
-    echo "Warning: Could not find a running dnsmasq pod to restart."
-fi
-EOF
+# ==========================================
+# 4. Logout / Invalidate Token
+# ==========================================
+curl -s -k -X POST "${TECH_URL}/api/user/logout" -d "token=${TOKEN}" >/dev/null
 
 # Re-enable xtrace if we turned it off
 if [[ "$XTRACE_OFF" -eq 1 ]]; then set -x; fi
