@@ -179,17 +179,26 @@ def main():
     else:
         print("--- Step 2: Skipping Deployments & Namespace (Tenant Org already deleted) ---\n")
 
-    # 3. Regional Networking
+    # ==========================================
+    # THE FIX: Dynamic Regional Networking Lookup
+    # ==========================================
     print("--- Step 3: Deleting Regional Networking Config ---")
-    net_name = "distributed-vlan-connection-wld-a"
     net_list_url = f"{PROVIDER_URL}/cloudapi/vcf/regionalNetworkingSettings"
-    net_id, _ = get_resource_id(net_list_url, cloudapi_provider_headers, net_name)
-    if net_id:
-        print(f"[*] Found Regional Networking '{net_name}'. Deleting...")
-        requests.delete(f"{net_list_url}/{net_id}", headers=cloudapi_provider_headers, verify=False)
-        wait_for_deletion_by_list(net_list_url, cloudapi_provider_headers, net_name, "Regional Networking")
+    net_resp = requests.get(net_list_url, headers=cloudapi_provider_headers, verify=False)
+    net_resp.raise_for_status()
+    
+    # Iterate through all configs and find the one bound to our Tenant Org
+    found_nets = [net for net in net_resp.json().get("values", []) if net.get("orgRef", {}).get("name") == TENANT_ORG]
+    
+    if found_nets:
+        for net in found_nets:
+            target_net_id = net.get("id")
+            target_net_name = net.get("name")
+            print(f"[*] Found Regional Networking '{target_net_name}' bound to Org '{TENANT_ORG}'. Deleting...")
+            requests.delete(f"{net_list_url}/{target_net_id}", headers=cloudapi_provider_headers, verify=False)
+            wait_for_deletion_by_list(net_list_url, cloudapi_provider_headers, target_net_name, "Regional Networking")
     else:
-        print(f"[+] Regional Networking '{net_name}' not found. Already deleted. Skipping.\n")
+        print(f"[+] Regional Networking for Org '{TENANT_ORG}' not found. Already deleted. Skipping.\n")
 
     # 4. Disable and Delete Tenant Org (Implicitly cleans up Quotas)
     print("--- Step 4: Disabling and Deleting Tenant Org ---")
