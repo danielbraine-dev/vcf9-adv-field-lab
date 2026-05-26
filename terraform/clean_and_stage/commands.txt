@@ -31,7 +31,9 @@ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 ~/.fzf/install --all
 
 #carvel tools
-curl -L https://carvel.dev/install.sh | sudo bash
+curl -sL https://carvel.dev/install.sh -o /tmp/install_carvel.sh
+sudo bash /tmp/install_carvel.sh
+sudo rm -f /tmp/install_carvel.sh
 sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq
 
 # vim tidy-up (optional)
