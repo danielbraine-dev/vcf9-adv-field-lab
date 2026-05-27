@@ -361,20 +361,32 @@ step5_deploy_avi(){
 step6_init_avi(){
   log "[6] Initializing Avi Controller System Configuration (Zero-Touch)..."
 
-  AVI_IP=$(read_tfvar avi_mgmt_ip)
-  AVI_PASS=$(read_tfvar avi_admin_password)
-  DOMAIN=$(read_tfvar avi_domain_search)
-  AVI_VERSION="31.2.2" 
+  AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
+  AVI_PASS=$(read_tfvar avi_admin_password | tr -d '"\r\n')
+  DOMAIN=$(read_tfvar avi_domain_search | tr -d '"\r\n')
+  
+  # UPDATE 1: Must match the OVA version we deployed in Step 5!
+  AVI_VERSION="32.1.1" 
   
   DNS_IP=$(grep 'avi_dns_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
   NTP_IP=$(grep 'avi_ntp_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
 
-  log "Authenticating with Avi API at ${AVI_IP}..."
-  curl -sk -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
-    -d "username=admin&password=${AVI_PASS}" > /dev/null
+  # UPDATE 2: Do a basic GET request to prime the CSRF cookie
+  log "Fetching initial CSRF token from https://${AVI_IP}..."
+  curl -sk -c "${ROOT_DIR}/avi_cookies.txt" "https://${AVI_IP}/" > /dev/null
 
   CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
-  [[ -z "$CSRF_TOKEN" ]] && { error "Failed to get CSRF token. Is the VM booted?"; exit 1; }
+  [[ -z "$CSRF_TOKEN" ]] && { error "Failed to get initial CSRF token. Is the VM fully booted?"; exit 1; }
+
+  log "Authenticating with Avi API..."
+  # UPDATE 3: Pass the primed CSRF token into the login POST request
+  curl -sk -b "${ROOT_DIR}/avi_cookies.txt" -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
+    -H "X-CSRFToken: ${CSRF_TOKEN}" \
+    -H "Referer: https://${AVI_IP}/" \
+    -d "username=admin&password=${AVI_PASS}" > /dev/null
+
+  # Re-read the CSRF token in case the backend rotated it upon successful login
+  CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
 
   # 1. BYPASS USER SETUP
   log "Bypassing initial Admin Setup screen..."
@@ -387,7 +399,7 @@ step6_init_avi(){
     "https://${AVI_IP}/api/useraccount")
 
   if [[ "$HTTP_SETUP" == "200" || "$HTTP_SETUP" == "201" ]]; then
-      log "[+] Admin account finalized!"
+      log "  [+] Admin account finalized!"
   else
       error "[-] Failed to set password. HTTP: $HTTP_SETUP"
       exit 1
@@ -415,9 +427,9 @@ step6_init_avi(){
     "https://${AVI_IP}/api/backupconfiguration/${BACKUP_UUID}")
 
   if [[ "$HTTP_BACKUP" == "200" || "$HTTP_BACKUP" == "201" ]]; then
-    log "[+] Backup Configuration (Passphrase) applied successfully!"
+    log "  [+] Backup Configuration (Passphrase) applied successfully!"
   else
-    warn "[-] Failed to set Backup Passphrase. HTTP: $HTTP_BACKUP"
+    warn "  [-] Failed to set Backup Passphrase. HTTP: $HTTP_BACKUP"
   fi
 
   # 3. SET SYSTEM CONFIGURATION & COMPLETE WORKFLOW
@@ -447,7 +459,7 @@ step6_init_avi(){
     "https://${AVI_IP}/api/systemconfiguration")
 
   if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then
-    log "[+] Avi Controller System Configuration applied successfully!"
+    log "  [+] Avi Controller System Configuration applied successfully!"
   else
     error "[-] Failed to apply configuration. HTTP Status: $HTTP_STATUS"
     exit 1
