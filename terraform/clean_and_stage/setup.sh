@@ -371,12 +371,19 @@ step6_init_avi(){
   DNS_IP=$(grep 'avi_dns_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
   NTP_IP=$(grep 'avi_ntp_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
 
-  # UPDATE 2: Do a basic GET request to prime the CSRF cookie
-  log "Fetching initial CSRF token from https://${AVI_IP}..."
-  curl -sk -c "${ROOT_DIR}/avi_cookies.txt" "https://${AVI_IP}/" > /dev/null
+  # UPDATE 2: Prime the CSRF cookie using a known API endpoint and follow redirects (-L)
+  log "Fetching initial CSRF token from https://${AVI_IP}/api/initial-data..."
+  curl -skL -c "${ROOT_DIR}/avi_cookies.txt" "https://${AVI_IP}/api/initial-data" > /dev/null
 
   CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
-  [[ -z "$CSRF_TOKEN" ]] && { error "Failed to get initial CSRF token. Is the VM fully booted?"; exit 1; }
+  
+  # Diagnostic trap: If it fails, print the cookie file so we can see what Avi is actually doing!
+  if [[ -z "$CSRF_TOKEN" ]]; then 
+      error "[-] Failed to get initial CSRF token. Printing cookie jar contents:"
+      cat "${ROOT_DIR}/avi_cookies.txt"
+      exit 1
+  fi
+  log "  [+] CSRF Token acquired!"
 
   log "Authenticating with Avi API..."
   # UPDATE 3: Pass the primed CSRF token into the login POST request
