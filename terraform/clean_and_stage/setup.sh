@@ -197,9 +197,9 @@ step5_deploy_avi(){
   # 2. AUTHENTICATE TO VCF OPERATIONS (SDDC Manager)
   # ==========================================
   log "Authenticating to SDDC Manager API..."
-  VCF_OPS_IP=$(read_tfvar vcf_sddc_manager_ip | tr -d '"\r\n' || true)
-  VCF_USER=$(read_tfvar vcf_sddc_manager_user | tr -d '"\r\n' || true)
-  VCF_PASS=$(read_tfvar vcf_sddc_manager_password | tr -d '"\r\n' || true)
+  VCF_OPS_IP=$(read_tfvar vcf_ops_ip | tr -d '"\r\n' || true)
+  VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n' || true)
+  VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n' || true)
 
   AUTH_PAYLOAD=$(jq -n --arg username "$VCF_USER" --arg password "$VCF_PASS" '{username: $username, password: $password}')
   AUTH_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/tokens" -H "Content-Type: application/json" -d "$AUTH_PAYLOAD" || echo "failed")
@@ -220,25 +220,46 @@ step5_deploy_avi(){
   [[ -z "$BUNDLE_ID" || "$BUNDLE_ID" == "null" ]] && { error "[-] FATAL: Could not find ALB bundle starting with $AVI_VERSION"; exit 1; }
   log "  [+] Found NSX_ALB Bundle ID: $BUNDLE_ID"
 
-  # Check if it's already downloaded, if not, trigger it
   DL_STATUS=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}" -H "Authorization: Bearer $TOKEN" | jq -r '.downloadStatus' 2>/dev/null)
   
   if [[ "$DL_STATUS" != "SUCCESSFUL" ]]; then
       log "Triggering VCF bundle download from Broadcom..."
-      curl -s -k -o /dev/null -X POST "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}?action=download" \
-        -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"
+      
+      # THE FIX: Capture the trigger response to see if the Depot rejects it!
+      TRIG_RESP=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}?action=download" \
+        -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json")
+      
+      # Check if SDDC Manager threw a JSON error (like missing credentials)
+      ERR_MSG=$(echo "$TRIG_RESP" | jq -r '.message // empty' 2>/dev/null || true)
+      if [[ -n "$ERR_MSG" ]]; then
+          warn "  [!] SDDC Manager API Warning: $ERR_MSG"
+          warn "  [!] Make sure your lab has valid Depot credentials entered in SDDC Manager!"
+      fi
         
       log "Waiting for SDDC Manager to download the bundle (This may take a few minutes)..."
       for ((i=1; i<=60; i++)); do
-          DL_STATUS=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}" -H "Authorization: Bearer $TOKEN" | jq -r '.downloadStatus' 2>/dev/null)
+          DL_STATUS=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}" -H "Authorization: Bearer $TOKEN" | jq -r '.downloadStatus' 2>/dev/null || true)
+          
           if [[ "$DL_STATUS" == "SUCCESSFUL" ]]; then
               printf "\n"
               log "  [+] Bundle fully downloaded!"
               break
+          elif [[ "$DL_STATUS" == "FAILED" || "$DL_STATUS" == "ERROR" ]]; then
+              printf "\n"
+              error "[-] FATAL: SDDC Manager reported download status as $DL_STATUS."
+              exit 1
           fi
+          
           printf "."
           sleep 10
       done
+      
+      # THE FIX: Hard stop if we escaped the loop and it's still not successful
+      if [[ "$DL_STATUS" != "SUCCESSFUL" ]]; then
+          printf "\n"
+          error "[-] FATAL: Download timed out or failed to start. Current status: $DL_STATUS"
+          exit 1
+      fi
   else
       log "  [+] Bundle is already downloaded in SDDC Manager depot."
   fi
@@ -248,19 +269,19 @@ step5_deploy_avi(){
   # ==========================================
   log "Extracting OVA from SDDC Manager appliance via SCP..."
   VCF_SSH_USER="vcf"
-  VCF_SSH_PASS="VMware123!VMware123!" # Change this if your lab uses a different SSH password
+  VCF_SSH_PASS="VMware123!" # Change this if your lab uses a different SSH password
 
-  # Find the exact path of the OVA inside the SDDC Manager NFS mount
-  OVA_REMOTE_PATH=$(sshpass -p "$VCF_SSH_PASS" ssh -o StrictHostKeyChecking=no ${VCF_SSH_USER}@${VCF_OPS_IP} \
-    "find /nfs/vmware/vcf/nfs-mount/bundle -type f -name '*.ova' | grep ${BUNDLE_ID} | head -n 1")
+  # THE FIX: Use quiet flags to suppress the 'Welcome to VMware' banner and ignore permission denied errors
+  OVA_REMOTE_PATH=$(sshpass -p "$VCF_SSH_PASS" ssh -q -o LogLevel=QUIET -o StrictHostKeyChecking=no ${VCF_SSH_USER}@${VCF_OPS_IP} \
+    "find /nfs/vmware/vcf/nfs-mount/bundle -type f -name '*.ova' 2>/dev/null | grep ${BUNDLE_ID} | head -n 1")
 
-  [[ -z "$OVA_REMOTE_PATH" ]] && { error "[-] FATAL: Could not locate the OVA file on SDDC Manager."; exit 1; }
+  [[ -z "$OVA_REMOTE_PATH" ]] && { error "[-] FATAL: Could not locate the OVA file on SDDC Manager. Ensure the download actually finished!"; exit 1; }
   
   log "  [+] Found remote OVA at: $OVA_REMOTE_PATH"
   log "  [*] Transferring OVA to jumpbox..."
   
   FINAL_OVA_PATH="${ROOT_DIR}/avi-controller-dynamic.ova"
-  sshpass -p "$VCF_SSH_PASS" scp -o StrictHostKeyChecking=no ${VCF_SSH_USER}@${VCF_OPS_IP}:"${OVA_REMOTE_PATH}" "$FINAL_OVA_PATH"
+  sshpass -p "$VCF_SSH_PASS" scp -q -o StrictHostKeyChecking=no ${VCF_SSH_USER}@${VCF_OPS_IP}:"${OVA_REMOTE_PATH}" "$FINAL_OVA_PATH"
   
   [[ ! -f "$FINAL_OVA_PATH" ]] && { error "[-] FATAL: SCP transfer failed. No OVA found on jumpbox."; exit 1; }
 
@@ -269,7 +290,6 @@ step5_deploy_avi(){
   # ==========================================
   log "Importing OVA natively to vCenter via govc..."
   
-  # Read all govc targets dynamically from terraform.tfvars
   export GOVC_URL=$(read_tfvar vsphere_server | tr -d '"\r\n')
   export GOVC_USERNAME=$(read_tfvar vsphere_user | tr -d '"\r\n')
   export GOVC_PASSWORD=$(read_tfvar vsphere_password | tr -d '"\r\n')
@@ -303,12 +323,11 @@ step5_deploy_avi(){
   
   log -e "\n[+] Avi Controller is responding. Ready for Step 6."
   
-  # Optional: Clean up the massive 4GB OVA from your jumpbox to save space
+  # Clean up the massive 4GB OVA from your jumpbox to save space
   rm -f "$FINAL_OVA_PATH"
   
   pause
 }
-
 step6_init_avi(){
   log "[6] Initializing Avi Controller System Configuration (Zero-Touch)..."
 
