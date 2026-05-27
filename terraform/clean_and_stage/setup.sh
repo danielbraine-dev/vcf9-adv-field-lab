@@ -189,9 +189,9 @@ step5_deploy_avi(){
   # 1. AUTHENTICATE TO VCF OPERATIONS (SDDC Manager)
   # ==========================================
   log "Authenticating to VCF Operations API..."
-  VCF_OPS_IP=$(read_tfvar vcf_ops_ip | tr -d '"\r\n' || true)
-  VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n' || true)
-  VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n' || true)
+  VCF_OPS_IP=$(read_tfvar vcf_sddc_manager_ip | tr -d '"\r\n' || true)
+  VCF_USER=$(read_tfvar vcf_sddc_manager_user | tr -d '"\r\n' || true)
+  VCF_PASS=$(read_tfvar vcf_sddc_manager_password | tr -d '"\r\n' || true)
 
   if [[ -z "$VCF_OPS_IP" || -z "$VCF_PASS" ]]; then
       error "[-] FATAL: Could not read VCF Operations IP or Password from tfvars."
