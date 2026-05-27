@@ -116,7 +116,7 @@ step3_tf_init() {
     vcfa_token       = ""
 
     # ---- VCF Operations ----
-    vcf_ops_op       = "10.1.1.30"
+    vcf_ops_ip       = "10.1.1.30"
     vcf_ops_user     = "admin"
     vcf_ops_password = "VMware123!VMware123!"
     
