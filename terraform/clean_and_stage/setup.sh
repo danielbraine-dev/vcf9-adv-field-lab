@@ -197,9 +197,9 @@ step5_deploy_avi(){
   # 2. AUTHENTICATE TO VCF OPERATIONS (SDDC Manager)
   # ==========================================
   log "Authenticating to SDDC Manager API..."
-  VCF_OPS_IP=$(read_tfvar vcf_ops_ip | tr -d '"\r\n' || true)
-  VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n' || true)
-  VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n' || true)
+  VCF_OPS_IP=$(read_tfvar vcf_sddc_manager_ip | tr -d '"\r\n' || true)
+  VCF_USER=$(read_tfvar vcf_sddc_manager_user | tr -d '"\r\n' || true)
+  VCF_PASS=$(read_tfvar vcf_sddc_manager_password | tr -d '"\r\n' || true)
 
   AUTH_PAYLOAD=$(jq -n --arg username "$VCF_USER" --arg password "$VCF_PASS" '{username: $username, password: $password}')
   AUTH_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/tokens" -H "Content-Type: application/json" -d "$AUTH_PAYLOAD" || echo "failed")
