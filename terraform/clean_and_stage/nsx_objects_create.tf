@@ -11,7 +11,7 @@ resource "nsxt_vpc_connectivity_profile" "avi_profile" {
   }
   
   # Wired exactly to your VCF 9 Transit Gateway path
-  transit_gateway_path = "/orgs/default/projects/transit-gateways/default"
+  transit_gateway_path = "/orgs/default/projects/default/transit-gateways/default"
 }
 
 # 2. The Shared Services VPC
