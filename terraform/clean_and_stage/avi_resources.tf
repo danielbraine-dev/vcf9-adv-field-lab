@@ -168,7 +168,6 @@ resource "avi_systemconfiguration" "this" {
     enable_clickjacking_protection = true
     enable_http                    = true
     enable_https                   = true
-    password_strength_check        = true
     redirect_to_https              = true
     sslprofile_ref                 = "/api/sslprofile?name=System-Standard-Portal"
     
