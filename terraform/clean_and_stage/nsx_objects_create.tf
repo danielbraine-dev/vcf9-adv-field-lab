@@ -21,7 +21,6 @@ resource "nsxt_vpc" "shared_services" {
 resource "nsxt_vpc_subnet" "se_mgmt" {
   display_name = "SE-mgmt"
   
-  # FIX 1: vpc_id must be inside the context block
   context {
     project_id = data.nsxt_policy_project.default.id
     vpc_id     = nsxt_vpc.shared_services.id
@@ -29,14 +28,11 @@ resource "nsxt_vpc_subnet" "se_mgmt" {
   
   access_mode  = "PUBLIC" 
   
-  # FIX 2: Define the static gateway IP directly as a list
+  # NSX IPAM will automatically calculate the DHCP range based on this /25
   ip_addresses = ["10.4.100.254/25"]
   
-  # FIX 3: DNS and DHCP ranges are natively handled here now
   dhcp_config {
-    mode         = "DHCP_SERVER"
-    dns_servers  = ["10.1.1.1"]
-    dhcp_ranges  = ["10.4.100.130-10.4.100.160"]
+    mode = "DHCP_SERVER"
   }
 }
 
@@ -51,11 +47,10 @@ resource "nsxt_vpc_subnet" "se_data_vip" {
   
   access_mode  = "PUBLIC"
   
+  # NSX IPAM will automatically calculate the DHCP range based on this /25
   ip_addresses = ["10.4.100.126/25"]
   
   dhcp_config {
-    mode         = "DHCP_SERVER"
-    dns_servers  = ["10.1.1.1"]
-    dhcp_ranges  = ["10.4.100.5-10.4.100.60"]
+    mode = "DHCP_SERVER"
   }
 }
