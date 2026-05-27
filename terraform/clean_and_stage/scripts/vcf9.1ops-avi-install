@@ -1,1 +1,171 @@
 
+step5_deploy_avi(){
+  log "[5] Deploying Avi Load Balancer via VCF Operations (v9.1)..."
+
+  if [[ -f "${ROOT_DIR}/scripts/add_dns_record.sh" ]]; then
+    log "Injecting DNS Records for Avi components..."
+    bash "${ROOT_DIR}/scripts/add_dns_record.sh" || warn "Failed to add DNS records."
+  fi
+
+  # ==========================================
+  # 1. AUTHENTICATE TO VCF OPERATIONS (SDDC Manager)
+  # ==========================================
+  log "Authenticating to VCF Operations API..."
+  VCF_OPS_IP=$(read_tfvar vcf_sddc_manager_ip | tr -d '"\r\n' || true)
+  VCF_USER=$(read_tfvar vcf_sddc_manager_user | tr -d '"\r\n' || true)
+  VCF_PASS=$(read_tfvar vcf_sddc_manager_password | tr -d '"\r\n' || true)
+
+  if [[ -z "$VCF_OPS_IP" || -z "$VCF_PASS" ]]; then
+      error "[-] FATAL: Could not read VCF Operations IP or Password from tfvars."
+      exit 1
+  fi
+
+  AUTH_PAYLOAD=$(jq -n --arg username "$VCF_USER" --arg password "$VCF_PASS" '{username: $username, password: $password}')
+
+  AUTH_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/tokens" \
+    -H "Content-Type: application/json" \
+    -d "$AUTH_PAYLOAD" || echo "failed")
+  
+  TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.accessToken' 2>/dev/null || true)
+  [[ -z "$TOKEN" || "$TOKEN" == "null" ]] && { error "[-] FATAL: Failed to authenticate to VCF Operations."; exit 1; }
+  log "  [+] Authenticated successfully."
+
+    # ==========================================
+  # 2. BINARY MANAGEMENT (VCF 9.1 Depot)
+  # ==========================================
+  log "Querying SDDC Manager for the NSX_ALB Bundle ID..."
+  AVI_VERSION="32.1.1"
+
+  # THE FIX: Use jq's 'startswith' to match the base version while ignoring the appended build number
+  BUNDLE_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/bundles" \
+    -H "Authorization: Bearer $TOKEN" | \
+    jq -r --arg ver "$AVI_VERSION" '.elements[]? | select(.version != null) | select(.version | startswith($ver)) | .id' | head -n 1)
+
+  if [[ -n "$BUNDLE_ID" && "$BUNDLE_ID" != "null" ]]; then
+    log "  [+] Found NSX_ALB Bundle ID: $BUNDLE_ID"
+    # Optional: If you still need to trigger the download, uncomment the block below
+    # curl -s -k -o /dev/null -X POST "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}?action=download" \
+    #   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"
+  else
+    error "[-] FATAL: Could not find any NSX_ALB bundle starting with version $AVI_VERSION in the Depot API."
+    exit 1
+  fi
+
+ # ==========================================
+  # 3. LOCATE TARGET NSX CLUSTER ID
+  # ==========================================
+  log "Fetching NSX Cluster ID from SDDC Manager..."
+  
+  # Attempt 1: Extract directly from the Workload Domain's bound configuration
+  NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/domains/${WLD_ID}" \
+    -H "Authorization: Bearer $TOKEN" | \
+    jq -r '.nsxCluster.id // .nsxManager.id // .nsxConfiguration.id // .nsxConfiguration.nsxManagerId // empty' 2>/dev/null || true)
+
+  # Attempt 2: Standard VCF 5+ Endpoint
+  if [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]]; then
+      NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsx-managers" \
+        -H "Authorization: Bearer $TOKEN" | \
+        jq -r '.elements[0].id // empty' 2>/dev/null || true)
+  fi
+    
+  # Attempt 3: Legacy Endpoint
+  if [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]]; then
+      NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsxt-managers" \
+        -H "Authorization: Bearer $TOKEN" | \
+        jq -r '.elements[0].id // empty' 2>/dev/null || true)
+  fi
+
+  # Attempt 4: Ultimate Fail-safe (From your UI screenshot)
+  if [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]]; then
+      log "  [!] API lookups failed. Falling back to known Lab NSX ID..."
+      NSX_ID="546b1e8f-f3df-432b-acda-cd97135c5f22"
+  fi
+    
+  [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]] && { error "[-] FATAL: Could not find an NSX Cluster ID across any endpoint."; exit 1; }
+  log "  [+] Found NSX ID: $NSX_ID"
+
+  # ==========================================
+  # 4. SUBMIT DEPLOYMENT SPECIFICATION (API BYPASS)
+  # ==========================================
+  log "Submitting 1-Node Avi Deployment Spec to VCF Operations..."
+  
+  AVI_FQDN=$(read_tfvar avi_fqdn | tr -d '"\r\n')
+  AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
+  AVI_ADMIN_PASS=$(read_tfvar avi_admin_password | tr -d '"\r\n')
+
+  # Using exact schema from the UI capture, but forcing the 'nodes' array to 1 object
+  DEPLOY_PAYLOAD=$(jq -n \
+    --arg adminPw "$AVI_ADMIN_PASS" \
+    --arg bundle "$BUNDLE_ID" \
+    --arg fqdn "$AVI_FQDN" \
+    --arg name "avi-cluster" \
+    --arg form "SMALL" \
+    --arg ip "$AVI_IP" \
+    --arg nsx "$NSX_ID" \
+    --arg opsPw "$VCF_PASS" \
+    '{
+      adminPassword: $adminPw,
+      bundleId: $bundle,
+      clusterFqdn: $fqdn,
+      clusterName: $name,
+      formFactor: $form,
+      nodes: [
+        {
+          ipAddress: $ip
+        }
+      ],
+      nsxIds: [ $nsx ],
+      vcfopsAdminPassword: $opsPw
+    }')
+
+  DEPLOY_TASK_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/alb-clusters" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$DEPLOY_PAYLOAD")
+
+  TASK_ID=$(echo "$DEPLOY_TASK_RESPONSE" | jq -r '.id' 2>/dev/null)
+  
+  if [[ -z "$TASK_ID" || "$TASK_ID" == "null" ]]; then
+    error "[-] FATAL: Failed to trigger Avi deployment in VCF Operations."
+    error "    Response: $DEPLOY_TASK_RESPONSE"
+    exit 1
+  fi
+  
+  # ==========================================
+  # 5. WAIT FOR DEPLOYMENT TASK TO COMPLETE
+  # ==========================================
+  log "Waiting for VCF Operations to deploy and configure Avi (Task: $TASK_ID)..."
+
+  for ((i=1; i<=60; i++)); do
+    TASK_STATUS=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/tasks/${TASK_ID}" \
+      -H "Authorization: Bearer $TOKEN" | jq -r '.status')
+    
+    if [[ "$TASK_STATUS" == "Successful" ]]; then
+      printf "\n"
+      log "[+] Avi Controller deployed successfully via VCF Operations!"
+      break
+    elif [[ "$TASK_STATUS" == "Failed" || "$TASK_STATUS" == "Error" ]]; then
+      printf "\n"
+      error "[-] FATAL: Avi deployment failed in VCF Operations. Check the UI for Task ID $TASK_ID."
+      exit 1
+    else
+      printf "."
+      sleep 30
+    fi
+    
+    if [[ $i -eq 60 ]]; then
+      printf "\n"
+      error "[-] Timeout waiting for VCF Operations task to complete."
+      exit 1
+    fi
+  done
+
+  log "Waiting for Avi API at https://${AVI_IP} to fully initialize..."
+  until curl -sk --max-time 5 "https://${AVI_IP}/api/initial-data" >/dev/null; do
+    printf "."
+    sleep 20
+  done
+  
+  log -e "\n[+] Avi Controller is responding. Ready for Step 6."
+  pause
+}
