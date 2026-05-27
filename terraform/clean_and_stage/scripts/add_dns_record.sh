@@ -110,7 +110,7 @@ PTR_REC_RESP=$(curl -s -k -X POST "${TECH_URL}/api/zones/records/add" \
   -d "token=${TOKEN}" \
   -d "domain=${PTR_DOMAIN}" \
   -d "type=PTR" \
-  -d "ptrData=${AVI_FQDN}")
+  -d "ptrName=${AVI_FQDN}")
 
 PTR_REC_STATUS=$(echo "$PTR_REC_RESP" | jq -r '.status')
 PTR_REC_ERR=$(echo "$PTR_REC_RESP" | jq -r '.errorMessage')
