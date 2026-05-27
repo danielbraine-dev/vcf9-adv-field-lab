@@ -137,7 +137,7 @@ step3_tf_init() {
     avi_domain_search      = "site-a.vcf.lab"
     avi_fqdn               = "avi-controller01.site-a.vcf.lab"
     avi_admin_password     = "VMware123!VMware123!"
-    avi_target_wld         = "wld01a"
+    avi_target_wld         = "wld01-a"
     
     # ---- Supervisor enable
     sup_mgmt_ip_range      = "10.1.1.85-10.1.1.95"
