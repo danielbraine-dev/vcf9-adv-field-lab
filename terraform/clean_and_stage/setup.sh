@@ -130,7 +130,9 @@ step3_tf_init() {
     avi_dns_servers        = ["10.1.1.1"]
     avi_ntp_servers        = ["10.1.1.1"]
     avi_domain_search      = "site-a.vcf.lab"
+    avi_fqdn               = "avi-controller01.site-a.vcf.lab"
     avi_admin_password     = "VMware123!VMware123!"
+    avi_target_wld         = "wld01a"
     
     # ---- Supervisor enable
     sup_mgmt_ip_range      = "10.1.1.85-10.1.1.95"
@@ -182,7 +184,7 @@ step5_deploy_avi(){
   # 1. AUTHENTICATE TO VCF OPERATIONS
   # ==========================================
   log "Authenticating to VCF Operations API..."
-  VCF_OPS_IP=$(read_tfvar vcf_ops_ip | tr -d '"\r\n')
+  VCF_OPS_IP=$(read_tfvar vcf_ops_op | tr -d '"\r\n')
   VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n')
   VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n')
 
@@ -200,7 +202,7 @@ step5_deploy_avi(){
   # 2. BINARY MANAGEMENT (VCF 9.1 Depot)
   # ==========================================
   log "Triggering NSX_ALB Binary Download via VCF Operations Binary Management..."
-  AVI_VERSION="32.1.1" # Update this to the exact version required by your VCF 9.1 BOM
+  AVI_VERSION="32.1.1"
 
   DOWNLOAD_PAYLOAD=$(jq -n --arg pt "NSX_ALB" --arg ver "$AVI_VERSION" '{productType: $pt, version: $ver}')
 
@@ -218,7 +220,7 @@ step5_deploy_avi(){
   # 3. LOCATE TARGET WORKLOAD DOMAIN
   # ==========================================
   log "Fetching Workload Domain ID..."
-  DOMAIN_NAME="wld01" # Change this if your domain is named differently
+  DOMAIN_NAME=$(read_tfvar avi_target_wld | tr -d '"\r\n')
   
   WLD_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/domains" \
     -H "Authorization: Bearer $TOKEN" | jq -r --arg dn "$DOMAIN_NAME" '.elements[]? | select(.name==$dn) | .id')
@@ -230,15 +232,24 @@ step5_deploy_avi(){
   # ==========================================
   log "Submitting Avi Deployment Spec to VCF Operations..."
   
+  # Extract all Avi networking and placement variables dynamically from tfvars
+  AVI_CLUSTER=$(read_tfvar vsphere_cluster | tr -d '"\r\n')
+  AVI_NETWORK=$(read_tfvar avi_mgmt_pg | tr -d '"\r\n')
+  AVI_FQDN=$(read_tfvar avi_fqdn | tr -d '"\r\n')
+  AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
+  AVI_GW=$(read_tfvar avi_mgmt_gateway | tr -d '"\r\n')
+  AVI_MASK=$(read_tfvar avi_mgmt_netmask | tr -d '"\r\n')
+  AVI_ADMIN_PASS=$(read_tfvar avi_admin_password | tr -d '"\r\n')
+
   # VCF Operations handles the vCenter placement and initial OVA configuration natively!
   DEPLOY_PAYLOAD=$(jq -n \
-    --arg cluster "cluster-wld01-01a" \
-    --arg network "segment-mgmt" \
-    --arg fqdn "avi-controller01.site-a.vcf.lab" \
-    --arg ip "10.1.1.200" \
-    --arg gw "10.1.1.1" \
-    --arg mask "255.255.255.0" \
-    --arg pw "$VCF_PASS" \
+    --arg cluster "$AVI_CLUSTER" \
+    --arg network "$AVI_NETWORK" \
+    --arg fqdn "$AVI_FQDN" \
+    --arg ip "$AVI_IP" \
+    --arg gw "$AVI_GW" \
+    --arg mask "$AVI_MASK" \
+    --arg pw "$AVI_ADMIN_PASS" \
     '{
       clusterName: $cluster,
       networkName: $network,
@@ -295,8 +306,8 @@ step5_deploy_avi(){
   done
 
   # Verify the Avi API is actually online before moving to Step 6
-  log "Waiting for Avi API at https://10.1.1.200 to fully initialize..."
-  until curl -sk --max-time 5 "https://10.1.1.200/api/initial-data" >/dev/null; do
+  log "Waiting for Avi API at https://${AVI_IP} to fully initialize..."
+  until curl -sk --max-time 5 "https://${AVI_IP}/api/initial-data" >/dev/null; do
     printf "."
     sleep 20
   done
@@ -304,6 +315,7 @@ step5_deploy_avi(){
   log -e "\n[+] Avi Controller is responding. Ready for Step 6."
   pause
 }
+
 
 step6_init_avi(){
   log "[6] Initializing Avi Controller System Configuration (Zero-Touch)..."
