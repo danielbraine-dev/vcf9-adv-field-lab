@@ -138,6 +138,7 @@ step3_tf_init() {
     avi_fqdn               = "avi-controller01.site-a.vcf.lab"
     avi_admin_password     = "VMware123!VMware123!"
     avi_target_wld         = "wld01-a"
+    avi_factory_password   = "58NFaGDJm(PJH0G"
     
     # ---- Supervisor enable
     sup_mgmt_ip_range      = "10.1.1.85-10.1.1.95"
@@ -363,89 +364,102 @@ step6_init_avi(){
 
   AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
   AVI_PASS=$(read_tfvar avi_admin_password | tr -d '"\r\n')
+  AVI_FACTORY_PASS=$(read_tfvar avi_factory_password | tr -d '"\r\n')
   DOMAIN=$(read_tfvar avi_domain_search | tr -d '"\r\n')
-  
-  # UPDATE 1: Must match the OVA version we deployed in Step 5!
   AVI_VERSION="32.1.1" 
-  
+
   DNS_IP=$(grep 'avi_dns_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
   NTP_IP=$(grep 'avi_ntp_servers' "${TFVARS_FILE}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "10.1.1.1")
 
-  # UPDATE 2: Prime the CSRF cookie using a known API endpoint and follow redirects (-L)
-  log "Fetching initial CSRF token from https://${AVI_IP}/api/initial-data..."
-  curl -skL -c "${ROOT_DIR}/avi_cookies.txt" "https://${AVI_IP}/api/initial-data" > /dev/null
+  [[ -z "$AVI_FACTORY_PASS" ]] && { error "[-] FATAL: avi_factory_password missing from tfvars!"; exit 1; }
+
+  # ==========================================
+  # 1. AUTHENTICATE WITH FACTORY PASSWORD
+  # ==========================================
+  log "Authenticating with factory credentials to acquire CSRF token..."
+  rm -f "${ROOT_DIR}/avi_cookies.txt"
+
+  curl -sk -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
+    -H "Referer: https://${AVI_IP}/" \
+    -d "username=admin&password=${AVI_FACTORY_PASS}" > /dev/null
 
   CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
   
-  # Diagnostic trap: If it fails, print the cookie file so we can see what Avi is actually doing!
   if [[ -z "$CSRF_TOKEN" ]]; then 
-      error "[-] Failed to get initial CSRF token. Printing cookie jar contents:"
-      cat "${ROOT_DIR}/avi_cookies.txt"
+      error "[-] FATAL: Failed to login with factory password! The API refused to issue a CSRF token."
+      error "    Ensure your avi_factory_password in tfvars exactly matches the Broadcom default."
       exit 1
   fi
   log "  [+] CSRF Token acquired!"
 
-  log "Authenticating with Avi API..."
-  # UPDATE 3: Pass the primed CSRF token into the login POST request
+  # ==========================================
+  # 2. CHANGE FACTORY PASSWORD TO LAB PASSWORD
+  # ==========================================
+  log "Changing Admin Password from Factory Default to Lab Default..."
+  HTTP_SETUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -c "${ROOT_DIR}/avi_cookies.txt" -X PUT \
+    -H "X-CSRFToken: ${CSRF_TOKEN}" \
+    -H "X-Avi-Version: ${AVI_VERSION}" \
+    -H "Content-Type: application/json" \
+    -H "Referer: https://${AVI_IP}/" \
+    -d "{\"username\":\"admin\",\"password\":\"${AVI_PASS}\",\"old_password\":\"${AVI_FACTORY_PASS}\",\"name\":\"admin\",\"email\":\"admin@${DOMAIN}\"}" \
+    "https://${AVI_IP}/api/useraccount")
+
+  if [[ "$HTTP_SETUP" == "200" || "$HTTP_SETUP" == "201" ]]; then
+      log "  [+] Admin account password successfully updated!"
+  else
+      error "[-] Failed to set new password. HTTP: $HTTP_SETUP"
+      exit 1
+  fi
+
+  # Re-auth with the NEW lab password to ensure the session cookie is synced before continuing
   curl -sk -b "${ROOT_DIR}/avi_cookies.txt" -c "${ROOT_DIR}/avi_cookies.txt" -X POST "https://${AVI_IP}/login" \
     -H "X-CSRFToken: ${CSRF_TOKEN}" \
     -H "Referer: https://${AVI_IP}/" \
     -d "username=admin&password=${AVI_PASS}" > /dev/null
 
-  # Re-read the CSRF token in case the backend rotated it upon successful login
   CSRF_TOKEN=$(awk '/csrftoken/ {print $7}' "${ROOT_DIR}/avi_cookies.txt")
 
-  # 1. BYPASS USER SETUP
-  log "Bypassing initial Admin Setup screen..."
-  HTTP_SETUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
-    -H "X-CSRFToken: ${CSRF_TOKEN}" \
-    -H "X-Avi-Version: ${AVI_VERSION}" \
-    -H "Content-Type: application/json" \
-    -H "Referer: https://${AVI_IP}/" \
-    -d "{\"username\":\"admin\",\"password\":\"${AVI_PASS}\",\"old_password\":\"${AVI_PASS}\",\"name\":\"admin\",\"email\":\"admin@${DOMAIN}\"}" \
-    "https://${AVI_IP}/api/useraccount")
-
-  if [[ "$HTTP_SETUP" == "200" || "$HTTP_SETUP" == "201" ]]; then
-      log "  [+] Admin account finalized!"
-  else
-      error "[-] Failed to set password. HTTP: $HTTP_SETUP"
-      exit 1
-  fi
-
-  # 2. SET BACKUP PASSPHRASE
+  # ==========================================
+  # 3. SET BACKUP PASSPHRASE
+  # ==========================================
   log "Retrieving Backup Configuration..."
   curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
     -H "X-Avi-Version: ${AVI_VERSION}" \
     "https://${AVI_IP}/api/backupconfiguration" > "${ROOT_DIR}/backupconf_raw.json"
 
-  BACKUP_UUID=$(jq -r '.results[0].uuid' "${ROOT_DIR}/backupconf_raw.json")
+  BACKUP_UUID=$(jq -r '.results[0].uuid // empty' "${ROOT_DIR}/backupconf_raw.json")
+  
+  if [[ -n "$BACKUP_UUID" ]]; then
+      log "Setting Backup Passphrase..."
+      jq --arg pass "${AVI_PASS}" \
+         '.results[0] | .passphrase = $pass' \
+         "${ROOT_DIR}/backupconf_raw.json" > "${ROOT_DIR}/backupconf_updated.json"
 
-  log "Setting Backup Passphrase..."
-  jq --arg pass "${AVI_PASS}" \
-     '.results[0] | .passphrase = $pass' \
-     "${ROOT_DIR}/backupconf_raw.json" > "${ROOT_DIR}/backupconf_updated.json"
+      HTTP_BACKUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
+        -H "X-CSRFToken: ${CSRF_TOKEN}" \
+        -H "X-Avi-Version: ${AVI_VERSION}" \
+        -H "Referer: https://${AVI_IP}/" \
+        -H "Content-Type: application/json" \
+        -d @"${ROOT_DIR}/backupconf_updated.json" \
+        "https://${AVI_IP}/api/backupconfiguration/${BACKUP_UUID}")
 
-  HTTP_BACKUP=$(curl -sk -w "%{http_code}" -o /dev/null -b "${ROOT_DIR}/avi_cookies.txt" -X PUT \
-    -H "X-CSRFToken: ${CSRF_TOKEN}" \
-    -H "X-Avi-Version: ${AVI_VERSION}" \
-    -H "Referer: https://${AVI_IP}/" \
-    -H "Content-Type: application/json" \
-    -d @"${ROOT_DIR}/backupconf_updated.json" \
-    "https://${AVI_IP}/api/backupconfiguration/${BACKUP_UUID}")
-
-  if [[ "$HTTP_BACKUP" == "200" || "$HTTP_BACKUP" == "201" ]]; then
-    log "  [+] Backup Configuration (Passphrase) applied successfully!"
+      if [[ "$HTTP_BACKUP" == "200" || "$HTTP_BACKUP" == "201" ]]; then
+        log "  [+] Backup Configuration (Passphrase) applied successfully!"
+      else
+        warn "  [-] Failed to set Backup Passphrase. HTTP: $HTTP_BACKUP"
+      fi
   else
-    warn "  [-] Failed to set Backup Passphrase. HTTP: $HTTP_BACKUP"
+      warn "  [-] Could not locate backup configuration UUID. Skipping passphrase setup."
   fi
 
-  # 3. SET SYSTEM CONFIGURATION & COMPLETE WORKFLOW
+  # ==========================================
+  # 4. SET SYSTEM CONFIGURATION
+  # ==========================================
   log "Retrieving factory system configuration..."
   curl -sk -b "${ROOT_DIR}/avi_cookies.txt" \
     -H "X-Avi-Version: ${AVI_VERSION}" \
     "https://${AVI_IP}/api/systemconfiguration" > "${ROOT_DIR}/sysconf_raw.json"
 
-  # We add '.welcome_workflow_complete = true' to bypass the UI wizard entirely
   log "Injecting DNS ($DNS_IP), NTP ($NTP_IP), and bypassing Welcome wizard..."
   jq --arg dns "$DNS_IP" \
      --arg domain "$DOMAIN" \
