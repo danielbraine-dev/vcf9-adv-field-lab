@@ -234,11 +234,24 @@ step5_deploy_avi(){
   # ==========================================
   log "Fetching NSX Cluster ID from SDDC Manager..."
   
-  # Fetch the NSX internal UUID that SDDC Manager expects for the ALB binding
-  NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsx-clusters" \
+  # Attempt 1: Standard VCF 5+ Endpoint
+  NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsx-managers" \
     -H "Authorization: Bearer $TOKEN" | jq -r '.elements[0].id' 2>/dev/null)
     
-  [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]] && { error "[-] FATAL: Could not find an NSX Cluster ID."; exit 1; }
+  # Attempt 2: Legacy VCF 4.x Endpoint
+  if [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]]; then
+      NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsxt-managers" \
+        -H "Authorization: Bearer $TOKEN" | jq -r '.elements[0].id' 2>/dev/null)
+  fi
+
+  # Attempt 3: Extract directly from the Workload Domain's bound configuration
+  if [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]]; then
+      log "  [~] Endpoints empty. Extracting NSX ID directly from Domain '$DOMAIN_NAME'..."
+      NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/domains/${WLD_ID}" \
+        -H "Authorization: Bearer $TOKEN" | jq -r '.nsxCluster.id // .nsxManager.id // .nsxConfiguration.id // .nsxConfiguration.nsxManagerId' 2>/dev/null)
+  fi
+    
+  [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]] && { error "[-] FATAL: Could not find an NSX Cluster ID across any endpoint."; exit 1; }
   log "  [+] Found NSX ID: $NSX_ID"
 
   # ==========================================
