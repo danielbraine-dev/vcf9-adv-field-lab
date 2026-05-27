@@ -1,80 +1,84 @@
 ############################
-# NSX-T: Tier-1 SE-mgmt and related config
+# NSX-T: Shared Services VPC & Subnets
 ############################
 
-# DHCP server/profile used by segments (server address left blank per your model)
-resource "nsxt_policy_dhcp_server" "common_dhcp" {
-  display_name     = "common_dhcp"
-  description      = "DHCP server servicing AVI SE Segments"
-  server_addresses = ["100.96.0.1/30"]
-  edge_cluster_path = var.edge_cluster_path
+# 1. Look up the default Project (which inherently binds to the lab's TGW)
+data "nsxt_policy_project" "default" {
+  display_name = "default"
 }
 
-resource "nsxt_policy_tier1_gateway" "t1_se_services" {
-  display_name       = "t1-se-services"
-  description        = "Tier-1 for SE data"
-  edge_cluster_path  = var.edge_cluster_path
-  tier0_path         = var.t0_path
-  ha_mode            = "ACTIVE_STANDBY"
-  pool_allocation    = "ROUTING"
-
-  tag {
-    scope = var.nsx_tag_scope
-    tag   = var.nsx_tag
+# 2. VPC Service Profile (Handles DNS, NTP, and DHCP)
+resource "nsxt_vpc_service_profile" "avi_vpc_profile" {
+  display_name = "AVI-VPC-Service-Profile"
+  description  = "Service profile for the Shared Services VPC"
+  
+  context {
+    project_id = data.nsxt_policy_project.default.id
   }
-
-  route_advertisement_types = [
-    "TIER1_STATIC_ROUTES",
-    "TIER1_DNS_FORWARDER_IP",
-    "TIER1_CONNECTED",
-    "TIER1_NAT",
-    "TIER1_LB_VIP",
-    "TIER1_LB_SNAT"
-  ]
+  
+  # Enable DHCP Server config
+  dhcp_profile {
+    dhcp_config_mode = "SERVER"
+  }
+  
+  # Configure DNS Forwarder
+  dns_profile {
+    dns_forwarder_ips = ["10.1.1.1"]
+  }
+  
+  # Note: If your specific Terraform provider version supports the ntp_profile 
+  # attribute directly here, you can declare it. Otherwise, NSX inherits 
+  # the global NTP settings automatically.
 }
 
-# NSX-T: Segment SE-mgmt with segment-local DHCP
-resource "nsxt_policy_segment" "se_mgmt" {
-  display_name        = "SE-mgmt"
-  transport_zone_path = var.overlay_tz_path
-  connectivity_path   = var.wld1_t1_path
-  dhcp_config_path    = nsxt_policy_dhcp_server.common_dhcp.path
-  subnet {
-    cidr        = "10.4.100.129/25"
-    dhcp_ranges = ["10.4.100.130-10.4.100.160"]
-
-    dhcp_v4_config {
-      server_address = "10.4.100.254/25"
-      dns_servers    = ["10.1.1.1"]
-      lease_time     = 86400
-    }
+# 3. The Shared Services VPC
+resource "nsxt_vpc" "shared_services" {
+  display_name = "Shared-Services"
+  description  = "VPC hosting the Avi Load Balancer Infrastructure"
+  
+  context {
+    project_id = data.nsxt_policy_project.default.id
   }
+  
+  # Attach the Service Profile created above
+  service_profile_id = nsxt_vpc_service_profile.avi_vpc_profile.id
+  
+  # We intentionally omit the Avi LB enablement here so it doesn't conflict 
+  # with the manual Cloud creation in Step 8.
+}
 
-  tag {
-    scope = var.nsx_tag_scope
-    tag   = var.nsx_tag
+# 4. VPC Subnet: SE-mgmt
+resource "nsxt_vpc_subnet" "se_mgmt" {
+  display_name = "SE-mgmt"
+  vpc_id       = nsxt_vpc.shared_services.id
+  
+  context {
+    project_id = data.nsxt_policy_project.default.id
+  }
+  
+  access_mode  = "PUBLIC" 
+  
+  ipv4_subnet {
+    network      = "10.4.100.128/25"
+    gateway_ip   = "10.4.100.254"
+    dhcp_ranges  = ["10.4.100.130-10.4.100.160"]
   }
 }
 
-# NSX-T: Segment SE-Data_VIP with segment-local DHCP
-resource "nsxt_policy_segment" "se_data_vip" {
-  display_name        = "SE-Data_VIP"
-  transport_zone_path = var.overlay_tz_path
-  connectivity_path   = nsxt_policy_tier1_gateway.t1_se_services.path
-  dhcp_config_path    = nsxt_policy_dhcp_server.common_dhcp.path
-  subnet {
-    cidr        = "10.4.100.1/25"
-    dhcp_ranges = ["10.4.100.5-10.4.100.60"]
-
-    dhcp_v4_config {
-      server_address = "10.4.100.126/25"
-      dns_servers    = ["10.1.1.1"]
-      lease_time     = 86400
-    }
+# 5. VPC Subnet: SE-Data_VIP
+resource "nsxt_vpc_subnet" "se_data_vip" {
+  display_name = "SE-Data_VIP"
+  vpc_id       = nsxt_vpc.shared_services.id
+  
+  context {
+    project_id = data.nsxt_policy_project.default.id
   }
-
-  tag {
-    scope = var.nsx_tag_scope
-    tag   = var.nsx_tag
+  
+  access_mode  = "PUBLIC"
+  
+  ipv4_subnet {
+    network      = "10.4.100.0/25"
+    gateway_ip   = "10.4.100.126"
+    dhcp_ranges  = ["10.4.100.5-10.4.100.60"]
   }
 }
