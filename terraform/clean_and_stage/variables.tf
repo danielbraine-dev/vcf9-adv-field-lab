@@ -42,7 +42,7 @@ variable "avi_controller" {
 }
 variable "avi_version"    { 
   type = string
-  default = "31.2.2" 
+  default = "32.1.1" 
 }
 variable "ipam_provider_url" { 
   type = string
