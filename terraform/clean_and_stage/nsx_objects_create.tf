@@ -7,16 +7,21 @@ resource "nsxt_vpc" "shared_services" {
   display_name = "Shared-Services"
   description  = "VPC hosting the Avi Load Balancer Infrastructure"
   
-  # By omitting the 'context' block, NSX automatically deploys this 
-  # into the default infrastructure space and binds it to the default TGW.
+  context {
+    # Hardcode the string to bypass the failing data lookup
+    project_id = "default"
+  }
 }
 
 # 2. VPC Subnet: SE-mgmt
 resource "nsxt_vpc_subnet" "se_mgmt" {
   display_name = "SE-mgmt"
   
-  # NSX policy resources link via "path", not "id"
-  vpc_path     = nsxt_vpc.shared_services.path
+  # Both project_id and vpc_id must live inside the context block
+  context {
+    project_id = "default"
+    vpc_id     = nsxt_vpc.shared_services.id
+  }
   
   access_mode  = "Public" 
   
@@ -31,7 +36,10 @@ resource "nsxt_vpc_subnet" "se_mgmt" {
 resource "nsxt_vpc_subnet" "se_data_vip" {
   display_name = "SE-Data_VIP"
   
-  vpc_path     = nsxt_vpc.shared_services.path
+  context {
+    project_id = "default"
+    vpc_id     = nsxt_vpc.shared_services.id
+  }
   
   access_mode  = "Public"
   
