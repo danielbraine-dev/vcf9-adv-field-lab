@@ -185,27 +185,19 @@ step5_deploy_avi(){
     bash "${ROOT_DIR}/scripts/add_dns_record.sh" || warn "Failed to add DNS records."
   fi
 
- # ==========================================
-  # 1. AUTHENTICATE TO VCF OPERATIONS
+  # ==========================================
+  # 1. AUTHENTICATE TO VCF OPERATIONS (SDDC Manager)
   # ==========================================
   log "Authenticating to VCF Operations API..."
-  
-  # The || true prevents Bash from silently crashing if the variable isn't found
-  VCF_OPS_IP=$(read_tfvar vcf_sddc_manager_ip | tr -d '"\r\n' || true)
-  VCF_USER=$(read_tfvar vcf_sddc_manager_user | tr -d '"\r\n' || true)
-  VCF_PASS=$(read_tfvar vcf_sddc_manager_password | tr -d '"\r\n' || true)
+  VCF_OPS_IP=$(read_tfvar vcf_ops_ip | tr -d '"\r\n' || true)
+  VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n' || true)
+  VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n' || true)
 
-  # Check for typos from Step 3 just in case!
-  [[ -z "$VCF_OPS_IP" ]] && VCF_OPS_IP=$(read_tfvar vcf_ops_op | tr -d '"\r\n' || true)
-
-  # Fail loudly if variables are missing
   if [[ -z "$VCF_OPS_IP" || -z "$VCF_PASS" ]]; then
       error "[-] FATAL: Could not read VCF Operations IP or Password from tfvars."
-      error "    Check your terraform.tfvars file for typos or missing quotes!"
       exit 1
   fi
 
-  # Safely encode the auth payload
   AUTH_PAYLOAD=$(jq -n --arg username "$VCF_USER" --arg password "$VCF_PASS" '{username: $username, password: $password}')
 
   AUTH_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/tokens" \
@@ -213,80 +205,76 @@ step5_deploy_avi(){
     -d "$AUTH_PAYLOAD" || echo "failed")
   
   TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.accessToken' 2>/dev/null || true)
-  
-  if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
-      error "[-] FATAL: Failed to authenticate to VCF Operations."
-      error "    Response: $AUTH_RESPONSE"
-      exit 1
-  fi
-  
+  [[ -z "$TOKEN" || "$TOKEN" == "null" ]] && { error "[-] FATAL: Failed to authenticate to VCF Operations."; exit 1; }
   log "  [+] Authenticated successfully."
 
   # ==========================================
   # 2. BINARY MANAGEMENT (VCF 9.1 Depot)
   # ==========================================
-  log "Triggering NSX_ALB Binary Download via VCF Operations Binary Management..."
+  log "Querying SDDC Manager for the NSX_ALB Bundle ID..."
   AVI_VERSION="32.1.1"
 
-  DOWNLOAD_PAYLOAD=$(jq -n --arg pt "NSX_ALB" --arg ver "$AVI_VERSION" '{productType: $pt, version: $ver}')
+  BUNDLE_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/bundles" \
+    -H "Authorization: Bearer $TOKEN" | \
+    jq -r --arg ver "$AVI_VERSION" '.elements[]? | select(.version==$ver) | .id' | head -n 1)
 
-  # Request VCF Operations to pull the binary from the connected depot
-  curl -s -k -o /dev/null -X POST "https://${VCF_OPS_IP}/v1/bundles/requests" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "$DOWNLOAD_PAYLOAD" || true
-
-  # Give VCF Operations a moment to register the binary (if it's not already cached locally)
-  log "Waiting 60 seconds to ensure binary is locally available in the VCF Depot..."
-  sleep 60
+  if [[ -n "$BUNDLE_ID" && "$BUNDLE_ID" != "null" ]]; then
+    log "  [+] Found NSX_ALB Bundle ID: $BUNDLE_ID"
+    # Optional: If you still need to trigger the download, uncomment the block below
+    # curl -s -k -o /dev/null -X POST "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}?action=download" \
+    #   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"
+  else
+    error "[-] FATAL: Could not find NSX_ALB version $AVI_VERSION in the Depot API."
+    exit 1
+  fi
 
   # ==========================================
-  # 3. LOCATE TARGET WORKLOAD DOMAIN
+  # 3. LOCATE TARGET NSX CLUSTER ID
   # ==========================================
-  log "Fetching Workload Domain ID..."
-  DOMAIN_NAME=$(read_tfvar avi_target_wld | tr -d '"\r\n')
+  log "Fetching NSX Cluster ID from SDDC Manager..."
   
-  WLD_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/domains" \
-    -H "Authorization: Bearer $TOKEN" | jq -r --arg dn "$DOMAIN_NAME" '.elements[]? | select(.name==$dn) | .id')
-
-  [[ -z "$WLD_ID" ]] && { error "[-] FATAL: Could not find workload domain '$DOMAIN_NAME'"; exit 1; }
+  # Fetch the NSX internal UUID that SDDC Manager expects for the ALB binding
+  NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsx-clusters" \
+    -H "Authorization: Bearer $TOKEN" | jq -r '.elements[0].id' 2>/dev/null)
+    
+  [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]] && { error "[-] FATAL: Could not find an NSX Cluster ID."; exit 1; }
+  log "  [+] Found NSX ID: $NSX_ID"
 
   # ==========================================
-  # 4. SUBMIT DEPLOYMENT SPECIFICATION
+  # 4. SUBMIT DEPLOYMENT SPECIFICATION (API BYPASS)
   # ==========================================
-  log "Submitting Avi Deployment Spec to VCF Operations..."
+  log "Submitting 1-Node Avi Deployment Spec to VCF Operations..."
   
-  # Extract all Avi networking and placement variables dynamically from tfvars
-  AVI_CLUSTER=$(read_tfvar vsphere_cluster | tr -d '"\r\n')
-  AVI_NETWORK=$(read_tfvar avi_mgmt_pg | tr -d '"\r\n')
   AVI_FQDN=$(read_tfvar avi_fqdn | tr -d '"\r\n')
   AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
-  AVI_GW=$(read_tfvar avi_mgmt_gateway | tr -d '"\r\n')
-  AVI_MASK=$(read_tfvar avi_mgmt_netmask | tr -d '"\r\n')
   AVI_ADMIN_PASS=$(read_tfvar avi_admin_password | tr -d '"\r\n')
 
-  # VCF Operations handles the vCenter placement and initial OVA configuration natively!
+  # Using exact schema from the UI capture, but forcing the 'nodes' array to 1 object
   DEPLOY_PAYLOAD=$(jq -n \
-    --arg cluster "$AVI_CLUSTER" \
-    --arg network "$AVI_NETWORK" \
+    --arg adminPw "$AVI_ADMIN_PASS" \
+    --arg bundle "$BUNDLE_ID" \
     --arg fqdn "$AVI_FQDN" \
+    --arg name "avi-cluster" \
+    --arg form "SMALL" \
     --arg ip "$AVI_IP" \
-    --arg gw "$AVI_GW" \
-    --arg mask "$AVI_MASK" \
-    --arg pw "$AVI_ADMIN_PASS" \
+    --arg nsx "$NSX_ID" \
+    --arg opsPw "$VCF_PASS" \
     '{
-      clusterName: $cluster,
-      networkName: $network,
-      controllerFqdn: $fqdn,
-      controllerIp: $ip,
-      gateway: $gw,
-      subnetMask: $mask,
-      adminPassword: $pw,
-      size: "ESSENTIALS"
+      adminPassword: $adminPw,
+      bundleId: $bundle,
+      clusterFqdn: $fqdn,
+      clusterName: $name,
+      formFactor: $form,
+      nodes: [
+        {
+          ipAddress: $ip
+        }
+      ],
+      nsxIds: [ $nsx ],
+      vcfopsAdminPassword: $opsPw
     }')
 
-  # Note: Check your specific VCF 9.1 API schema; the path is generally /v1/domains/{id}/nsx-alb/controllers
-  DEPLOY_TASK_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/domains/${WLD_ID}/nsx-alb/controllers" \
+  DEPLOY_TASK_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/alb-clusters" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "$DEPLOY_PAYLOAD")
@@ -303,7 +291,6 @@ step5_deploy_avi(){
   # 5. WAIT FOR DEPLOYMENT TASK TO COMPLETE
   # ==========================================
   log "Waiting for VCF Operations to deploy and configure Avi (Task: $TASK_ID)..."
-  log "(This replaces the govc import and takes roughly 10-15 minutes.)"
 
   for ((i=1; i<=60; i++)); do
     TASK_STATUS=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/tasks/${TASK_ID}" \
@@ -329,7 +316,6 @@ step5_deploy_avi(){
     fi
   done
 
-  # Verify the Avi API is actually online before moving to Step 6
   log "Waiting for Avi API at https://${AVI_IP} to fully initialize..."
   until curl -sk --max-time 5 "https://${AVI_IP}/api/initial-data" >/dev/null; do
     printf "."
@@ -339,7 +325,6 @@ step5_deploy_avi(){
   log -e "\n[+] Avi Controller is responding. Ready for Step 6."
   pause
 }
-
 
 step6_init_avi(){
   log "[6] Initializing Avi Controller System Configuration (Zero-Touch)..."
