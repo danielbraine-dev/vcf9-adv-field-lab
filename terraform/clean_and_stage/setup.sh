@@ -117,9 +117,13 @@ step3_tf_init() {
 
     # ---- VCF Operations/SDDC Manager ----
     vcf_ops_ip          = "10.1.1.30"
-    vcf_sddc_manager_ip = "10.1.1.5"
     vcf_ops_user        = "admin"
     vcf_ops_password    = "VMware123!VMware123!"
+    
+    vcf_sddc_manager_ip = "10.1.1.5"
+    vcf_sddc_manager_user = "administrator@vsphere.local"
+    vcf_sddc_manager_password = "VMware123!VMware123!"
+    
     
     # ---- AVI OVA deploy ----
     avi_ova_path           = "/path/to/Controller.ova"
@@ -188,8 +192,8 @@ step5_deploy_avi(){
   
   # The || true prevents Bash from silently crashing if the variable isn't found
   VCF_OPS_IP=$(read_tfvar vcf_sddc_manager_ip | tr -d '"\r\n' || true)
-  VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n' || true)
-  VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n' || true)
+  VCF_USER=$(read_tfvar vcf_sddc_manager_user | tr -d '"\r\n' || true)
+  VCF_PASS=$(read_tfvar vcf_sddc_manager_password | tr -d '"\r\n' || true)
 
   # Check for typos from Step 3 just in case!
   [[ -z "$VCF_OPS_IP" ]] && VCF_OPS_IP=$(read_tfvar vcf_ops_op | tr -d '"\r\n' || true)
