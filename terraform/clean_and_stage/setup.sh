@@ -114,6 +114,11 @@ step3_tf_init() {
     # ---- VCFA provider ----
     vcfa_endpoint    = "https://auto-a.site-a.vcf.lab"
     vcfa_token       = ""
+
+    # ---- VCF Operations ----
+    vcf_ops_op       = "10.1.1.30"
+    vcf_ops_user     = "admin"
+    vcf_ops_password = "VMware123!VMware123!
     
     # ---- AVI OVA deploy ----
     avi_ova_path           = "/path/to/Controller.ova"
@@ -178,7 +183,7 @@ step5_deploy_avi(){
   # ==========================================
   log "Authenticating to VCF Operations API..."
   VCF_OPS_IP=$(read_tfvar vcf_ops_ip | tr -d '"\r\n')
-  VCF_USER="administrator@vsphere.local" # Adjust if you use a different service account
+  VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n')
   VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n')
 
   # Safely encode the auth payload
