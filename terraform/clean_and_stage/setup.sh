@@ -208,15 +208,16 @@ step5_deploy_avi(){
   [[ -z "$TOKEN" || "$TOKEN" == "null" ]] && { error "[-] FATAL: Failed to authenticate to VCF Operations."; exit 1; }
   log "  [+] Authenticated successfully."
 
-  # ==========================================
+    # ==========================================
   # 2. BINARY MANAGEMENT (VCF 9.1 Depot)
   # ==========================================
   log "Querying SDDC Manager for the NSX_ALB Bundle ID..."
   AVI_VERSION="32.1.1"
 
+  # THE FIX: Use jq's 'startswith' to match the base version while ignoring the appended build number
   BUNDLE_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/bundles" \
     -H "Authorization: Bearer $TOKEN" | \
-    jq -r --arg ver "$AVI_VERSION" '.elements[]? | select(.version==$ver) | .id' | head -n 1)
+    jq -r --arg ver "$AVI_VERSION" '.elements[]? | select(.version != null) | select(.version | startswith($ver)) | .id' | head -n 1)
 
   if [[ -n "$BUNDLE_ID" && "$BUNDLE_ID" != "null" ]]; then
     log "  [+] Found NSX_ALB Bundle ID: $BUNDLE_ID"
@@ -224,7 +225,7 @@ step5_deploy_avi(){
     # curl -s -k -o /dev/null -X POST "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}?action=download" \
     #   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json"
   else
-    error "[-] FATAL: Could not find NSX_ALB version $AVI_VERSION in the Depot API."
+    error "[-] FATAL: Could not find any NSX_ALB bundle starting with version $AVI_VERSION in the Depot API."
     exit 1
   fi
 
