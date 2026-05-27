@@ -180,23 +180,42 @@ step5_deploy_avi(){
     bash "${ROOT_DIR}/scripts/add_dns_record.sh" || warn "Failed to add DNS records."
   fi
 
-  # ==========================================
+ # ==========================================
   # 1. AUTHENTICATE TO VCF OPERATIONS
   # ==========================================
   log "Authenticating to VCF Operations API..."
-  VCF_OPS_IP=$(read_tfvar vcf_ops_op | tr -d '"\r\n')
-  VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n')
-  VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n')
+  
+  # The || true prevents Bash from silently crashing if the variable isn't found
+  VCF_OPS_IP=$(read_tfvar vcf_ops_ip | tr -d '"\r\n' || true)
+  VCF_USER=$(read_tfvar vcf_ops_user | tr -d '"\r\n' || true)
+  VCF_PASS=$(read_tfvar vcf_ops_password | tr -d '"\r\n' || true)
+
+  # Check for typos from Step 3 just in case!
+  [[ -z "$VCF_OPS_IP" ]] && VCF_OPS_IP=$(read_tfvar vcf_ops_op | tr -d '"\r\n' || true)
+
+  # Fail loudly if variables are missing
+  if [[ -z "$VCF_OPS_IP" || -z "$VCF_PASS" ]]; then
+      error "[-] FATAL: Could not read VCF Operations IP or Password from tfvars."
+      error "    Check your terraform.tfvars file for typos or missing quotes!"
+      exit 1
+  fi
 
   # Safely encode the auth payload
   AUTH_PAYLOAD=$(jq -n --arg username "$VCF_USER" --arg password "$VCF_PASS" '{username: $username, password: $password}')
 
   AUTH_RESPONSE=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/tokens" \
     -H "Content-Type: application/json" \
-    -d "$AUTH_PAYLOAD")
+    -d "$AUTH_PAYLOAD" || echo "failed")
   
-  TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.accessToken' 2>/dev/null)
-  [[ -z "$TOKEN" || "$TOKEN" == "null" ]] && { error "[-] FATAL: Failed to authenticate to VCF Operations."; exit 1; }
+  TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.accessToken' 2>/dev/null || true)
+  
+  if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
+      error "[-] FATAL: Failed to authenticate to VCF Operations."
+      error "    Response: $AUTH_RESPONSE"
+      exit 1
+  fi
+  
+  log "  [+] Authenticated successfully."
 
   # ==========================================
   # 2. BINARY MANAGEMENT (VCF 9.1 Depot)
