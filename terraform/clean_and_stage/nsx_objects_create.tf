@@ -26,9 +26,10 @@ resource "nsxt_vpc_service_profile" "avi_vpc_profile" {
     dns_forwarder_ips = ["10.1.1.1"]
   }
   
-  # Note: If your specific Terraform provider version supports the ntp_profile 
-  # attribute directly here, you can declare it. Otherwise, NSX inherits 
-  # the global NTP settings automatically.
+  # Configure explicitly defined NTP Servers
+  ntp_profile {
+    ntp_servers = ["10.1.1.1"]
+  }
 }
 
 # 3. The Shared Services VPC
