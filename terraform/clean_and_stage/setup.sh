@@ -118,7 +118,7 @@ step3_tf_init() {
     # ---- VCF Operations ----
     vcf_ops_op       = "10.1.1.30"
     vcf_ops_user     = "admin"
-    vcf_ops_password = "VMware123!VMware123!
+    vcf_ops_password = "VMware123!VMware123!"
     
     # ---- AVI OVA deploy ----
     avi_ova_path           = "/path/to/Controller.ova"
