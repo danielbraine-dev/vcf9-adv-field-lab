@@ -26,7 +26,7 @@ resource "nsxt_vpc_subnet" "se_mgmt" {
     vpc_id     = nsxt_vpc.shared_services.id
   }
   
-  access_mode  = "PUBLIC" 
+  access_mode  = "Public" 
   
   # NSX IPAM will automatically calculate the DHCP range based on this /25
   ip_addresses = ["10.4.100.254/25"]
@@ -45,7 +45,7 @@ resource "nsxt_vpc_subnet" "se_data_vip" {
     vpc_id     = nsxt_vpc.shared_services.id
   }
   
-  access_mode  = "PUBLIC"
+  access_mode  = "Public"
   
   # NSX IPAM will automatically calculate the DHCP range based on this /25
   ip_addresses = ["10.4.100.126/25"]
