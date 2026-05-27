@@ -4,7 +4,7 @@ terraform {
   required_providers {
     nsxt = {
       source  = "vmware/nsxt"
-      version = ">= 3.10.0"
+      version = ">= 3.12.0"
     }
     avi = {
       source  = "vmware/avi"
