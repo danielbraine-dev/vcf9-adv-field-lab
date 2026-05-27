@@ -289,7 +289,7 @@ step5_deploy_avi(){
   # ==========================================
   # 5. DEPLOY VIA GOVC (Dynamic)
   # ==========================================
-  log "Importing OVA natively to vCenter via govc..."
+  log "Generating dynamic vApp properties for Avi Controller..."
   
   export GOVC_URL=$(read_tfvar vsphere_server | tr -d '"\r\n')
   export GOVC_USERNAME=$(read_tfvar vsphere_user | tr -d '"\r\n')
@@ -300,14 +300,41 @@ step5_deploy_avi(){
   GOVC_DS=$(read_tfvar vsphere_datastore | tr -d '"\r\n')
   GOVC_CLUSTER=$(read_tfvar vsphere_cluster | tr -d '"\r\n')
   GOVC_VM_NAME=$(read_tfvar avi_vm_name | tr -d '"\r\n')
+  AVI_NETWORK=$(read_tfvar avi_mgmt_pg | tr -d '"\r\n')
+  
   AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
+  AVI_MASK=$(read_tfvar avi_mgmt_netmask | tr -d '"\r\n')
+  AVI_GW=$(read_tfvar avi_mgmt_gateway | tr -d '"\r\n')
+  AVI_FQDN=$(read_tfvar avi_fqdn | tr -d '"\r\n')
 
+  # 1. Ask govc to extract the exact property schema from the OVA itself
+  govc import.spec "${FINAL_OVA_PATH}" | jq \
+    --arg ip "$AVI_IP" \
+    --arg mask "$AVI_MASK" \
+    --arg gw "$AVI_GW" \
+    --arg fqdn "$AVI_FQDN" \
+    --arg net "$AVI_NETWORK" \
+    '
+    .Name = "avi-controller01" |
+    .NetworkMapping[0].Network = $net |
+    .PropertyMapping |= map(
+      if .Key == "avi.mgmt-ip.CONTROLLER" then .Value = $ip
+      elif .Key == "avi.mgmt-mask.CONTROLLER" then .Value = $mask
+      elif .Key == "avi.default-gw.CONTROLLER" then .Value = $gw
+      elif .Key == "avi.hostname.CONTROLLER" then .Value = $fqdn
+      elif .Key == "avi.sysadmin-public-key.CONTROLLER" then .Value = ""
+      else .
+      end
+    )
+    ' > "${ROOT_DIR}/dynamic_vapp_options.json"
+
+  log "Importing OVA natively to vCenter via govc..."
+  
   govc import.ova \
-    -options="${ROOT_DIR}/avi_vapp_options.json" \
+    -options="${ROOT_DIR}/dynamic_vapp_options.json" \
     -dc="${GOVC_DC}" \
     -ds="${GOVC_DS}" \
     -pool="${GOVC_CLUSTER}/Resources/Avi-Controller" \
-    -name="${GOVC_VM_NAME}" \
     "${FINAL_OVA_PATH}"
 
   log "Powering on Avi Controller..."
