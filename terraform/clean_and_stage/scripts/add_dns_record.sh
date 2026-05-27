@@ -90,6 +90,40 @@ else
 fi
 
 # ==========================================
+# 3b. Add PTR (Reverse Lookup) Record
+# ==========================================
+echo "[*] Configuring PTR Record for ${AVI_IP} -> ${AVI_FQDN}..."
+
+# 1. Parse the IP to build the standard .in-addr.arpa zone and domain
+IFS='.' read -r i1 i2 i3 i4 <<< "$AVI_IP"
+REV_ZONE="${i3}.${i2}.${i1}.in-addr.arpa"
+PTR_DOMAIN="${i4}.${REV_ZONE}"
+
+# 2. Ensure the Reverse Zone exists in Technitium (Creates a Primary Zone)
+REV_ZONE_RESP=$(curl -s -k -X POST "${TECH_URL}/api/zones/create" \
+  -d "token=${TOKEN}" \
+  -d "zone=${REV_ZONE}" \
+  -d "type=Primary")
+
+# 3. Inject the PTR Record
+PTR_REC_RESP=$(curl -s -k -X POST "${TECH_URL}/api/zones/records/add" \
+  -d "token=${TOKEN}" \
+  -d "domain=${PTR_DOMAIN}" \
+  -d "type=PTR" \
+  -d "ptrData=${AVI_FQDN}")
+
+PTR_REC_STATUS=$(echo "$PTR_REC_RESP" | jq -r '.status')
+PTR_REC_ERR=$(echo "$PTR_REC_RESP" | jq -r '.errorMessage')
+
+if [[ "$PTR_REC_STATUS" == "ok" ]]; then
+    echo "  [+] Success: PTR Record created."
+elif [[ "$PTR_REC_STATUS" == "error" && "$PTR_REC_ERR" == *"already exists"* ]]; then
+    echo "  [~] PTR Record already exists. Skipping."
+else
+    echo "  [-] Warning: Failed to create PTR record. Response: $PTR_REC_RESP"
+fi
+
+# ==========================================
 # 4. Logout / Invalidate Token
 # ==========================================
 curl -s -k -X POST "${TECH_URL}/api/user/logout" -d "token=${TOKEN}" >/dev/null
