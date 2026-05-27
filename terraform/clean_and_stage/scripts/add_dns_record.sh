@@ -76,7 +76,7 @@ A_REC_RESP=$(curl -s -k -X POST "${TECH_URL}/api/zones/records/add" \
   -d "token=${TOKEN}" \
   -d "domain=${AVI_FQDN}" \
   -d "type=A" \
-  -d "ipv4Address=${AVI_IP}")
+  -d "ipAddress=${AVI_IP}")
 
 A_REC_STATUS=$(echo "$A_REC_RESP" | jq -r '.status')
 A_REC_ERR=$(echo "$A_REC_RESP" | jq -r '.errorMessage')
