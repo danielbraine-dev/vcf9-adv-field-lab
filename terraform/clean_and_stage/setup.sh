@@ -229,26 +229,34 @@ step5_deploy_avi(){
     exit 1
   fi
 
-  # ==========================================
+ # ==========================================
   # 3. LOCATE TARGET NSX CLUSTER ID
   # ==========================================
   log "Fetching NSX Cluster ID from SDDC Manager..."
   
-  # Attempt 1: Standard VCF 5+ Endpoint
-  NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsx-managers" \
-    -H "Authorization: Bearer $TOKEN" | jq -r '.elements[0].id' 2>/dev/null)
+  # Attempt 1: Extract directly from the Workload Domain's bound configuration
+  NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/domains/${WLD_ID}" \
+    -H "Authorization: Bearer $TOKEN" | \
+    jq -r '.nsxCluster.id // .nsxManager.id // .nsxConfiguration.id // .nsxConfiguration.nsxManagerId // empty' 2>/dev/null || true)
+
+  # Attempt 2: Standard VCF 5+ Endpoint
+  if [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]]; then
+      NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsx-managers" \
+        -H "Authorization: Bearer $TOKEN" | \
+        jq -r '.elements[0].id // empty' 2>/dev/null || true)
+  fi
     
-  # Attempt 2: Legacy VCF 4.x Endpoint
+  # Attempt 3: Legacy Endpoint
   if [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]]; then
       NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/nsxt-managers" \
-        -H "Authorization: Bearer $TOKEN" | jq -r '.elements[0].id' 2>/dev/null)
+        -H "Authorization: Bearer $TOKEN" | \
+        jq -r '.elements[0].id // empty' 2>/dev/null || true)
   fi
 
-  # Attempt 3: Extract directly from the Workload Domain's bound configuration
+  # Attempt 4: Ultimate Fail-safe (From your UI screenshot)
   if [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]]; then
-      log "  [~] Endpoints empty. Extracting NSX ID directly from Domain '$DOMAIN_NAME'..."
-      NSX_ID=$(curl -s -k -X GET "https://${VCF_OPS_IP}/v1/domains/${WLD_ID}" \
-        -H "Authorization: Bearer $TOKEN" | jq -r '.nsxCluster.id // .nsxManager.id // .nsxConfiguration.id // .nsxConfiguration.nsxManagerId' 2>/dev/null)
+      log "  [!] API lookups failed. Falling back to known Lab NSX ID..."
+      NSX_ID="546b1e8f-f3df-432b-acda-cd97135c5f22"
   fi
     
   [[ -z "$NSX_ID" || "$NSX_ID" == "null" ]] && { error "[-] FATAL: Could not find an NSX Cluster ID across any endpoint."; exit 1; }
