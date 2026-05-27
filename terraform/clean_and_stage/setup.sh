@@ -225,9 +225,11 @@ step5_deploy_avi(){
   if [[ "$DL_STATUS" != "SUCCESSFUL" ]]; then
       log "Triggering VCF bundle download from Broadcom..."
       
-      # THE FIX: Capture the trigger response to see if the Depot rejects it!
-      TRIG_RESP=$(curl -s -k -X POST "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}?action=download" \
-        -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json")
+      # THE FIX: VCF requires a PATCH request to officially trigger a bundle download
+      TRIG_RESP=$(curl -s -k -X PATCH "https://${VCF_OPS_IP}/v1/bundles/${BUNDLE_ID}" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{ "bundleDownloadSpec": { "downloadNow": true } }')
       
       # Check if SDDC Manager threw a JSON error (like missing credentials)
       ERR_MSG=$(echo "$TRIG_RESP" | jq -r '.message // empty' 2>/dev/null || true)
@@ -254,7 +256,7 @@ step5_deploy_avi(){
           sleep 10
       done
       
-      # THE FIX: Hard stop if we escaped the loop and it's still not successful
+      # Hard stop if we escaped the loop and it's still not successful
       if [[ "$DL_STATUS" != "SUCCESSFUL" ]]; then
           printf "\n"
           error "[-] FATAL: Download timed out or failed to start. Current status: $DL_STATUS"
@@ -271,7 +273,6 @@ step5_deploy_avi(){
   VCF_SSH_USER="vcf"
   VCF_SSH_PASS="VMware123!" # Change this if your lab uses a different SSH password
 
-  # THE FIX: Use quiet flags to suppress the 'Welcome to VMware' banner and ignore permission denied errors
   OVA_REMOTE_PATH=$(sshpass -p "$VCF_SSH_PASS" ssh -q -o LogLevel=QUIET -o StrictHostKeyChecking=no ${VCF_SSH_USER}@${VCF_OPS_IP} \
     "find /nfs/vmware/vcf/nfs-mount/bundle -type f -name '*.ova' 2>/dev/null | grep ${BUNDLE_ID} | head -n 1")
 
@@ -328,6 +329,8 @@ step5_deploy_avi(){
   
   pause
 }
+
+
 step6_init_avi(){
   log "[6] Initializing Avi Controller System Configuration (Zero-Touch)..."
 
