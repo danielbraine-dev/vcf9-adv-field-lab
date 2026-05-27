@@ -217,6 +217,28 @@ data "nsxt_policy_tier1_gateway" "t1_data" {
 data "nsxt_policy_segment" "seg_data" {
   display_name = "SE-Data_VIP"
 }
+
+data "nsxt_vpc_subnet" "se_mgmt_lookup" {
+  display_name = "SE-mgmt"
+  context {
+    project_id = "default"
+    vpc_id     = "ss-vpc"
+  }
+}
+
+data "nsxt_vpc_subnet" "se_data_vip_lookup" {
+  display_name = "SE-Data_VIP"
+  context {
+    project_id = "default"
+    vpc_id     = "ss-vpc"
+  }
+}
+
+data "avi_vrfcontext" "t1_se_services" {
+  # Avi typically maps the VPC router VRF to the VPC's display name
+  # (If this fails during plan, change to "ss-vpc" based on how your Avi version parses it)
+  name = "Shared-Services" 
+}
 #########################################################
 # NSX-T Cloud Configuration
 #########################################################
@@ -246,29 +268,18 @@ resource "avi_cloud" "nsx_cloud" {
     nsxt_credentials_ref = avi_cloudconnectoruser.nsx_admin.id
     vpc_mode             = true
 
-    # Management Network Setup
+    # Map Management to the data lookup
     management_network_config {
-      tz_type        = "OVERLAY"
-      transport_zone = data.nsxt_policy_transport_zone.overlay_tz.path
-      overlay_segment {
-        tier1_lr_id = data.nsxt_policy_tier1_gateway.t1_mgmt.path
-        segment_id  = data.nsxt_policy_segment.seg_mgmt.path
-      }
+      tz_type        = "overlay"
+      transport_zone = var.overlay_tz_path 
+      vlan_segment   = data.nsxt_vpc_subnet.se_mgmt_lookup.path
     }
 
-    # Data Network Setup
+    # Map Data to the data lookup
     data_network_config {
-      tz_type        = "OVERLAY"
-      transport_zone = data.nsxt_policy_transport_zone.overlay_tz.path
-      tier1_segment_config {
-        segment_config_mode = "TIER1_SEGMENT_MANUAL"
-        manual {
-          tier1_lrs {
-            tier1_lr_id = data.nsxt_policy_tier1_gateway.t1_data.path
-            segment_id  = data.nsxt_policy_segment.seg_data.path
-          }
-        }
-      }
+      tz_type        = "overlay"
+      transport_zone = var.overlay_tz_path
+      vlan_segment   = data.nsxt_vpc_subnet.se_data_vip_lookup.path
     }
   }
 }
