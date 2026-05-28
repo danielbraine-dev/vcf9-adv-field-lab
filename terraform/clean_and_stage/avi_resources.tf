@@ -293,6 +293,7 @@ resource "avi_cloud" "nsx_cloud" {
       }
     }
 }
+}
 
 #########################################################
 # vCenter Server Configuration
