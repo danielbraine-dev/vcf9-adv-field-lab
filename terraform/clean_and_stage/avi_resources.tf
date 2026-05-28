@@ -373,7 +373,8 @@ resource "avi_virtualservice" "delegated_dns" {
 
 # 5. Output the Floating IP for your Upstream DNS config!
 output "delegated_dns_external_ip" {
-  value       = avi_vsvip.dns_vip.vip[0].floating_ip[0].addr
+  # Convert the unordered set into a list so we can extract the first address
+  value       = tolist(avi_vsvip.dns_vip.vip[0].floating_ip)[0].addr
   description = "The External NAT IP. Point your upstream DNS Forwarder to this address!"
 }
 
