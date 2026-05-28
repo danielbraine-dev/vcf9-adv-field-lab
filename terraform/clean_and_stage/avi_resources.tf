@@ -260,9 +260,11 @@ resource "avi_cloud" "nsx_cloud" {
   }
 
   nsxt_configuration {
-    nsxt_url             = "nsx-wld01-a.site-a.vcf.lab"
-    nsxt_credentials_ref = avi_cloudconnectoruser.nsx_admin.id
-    vpc_mode             = true
+    nsxt_url                 = "nsx-wld01-a.site-a.vcf.lab"
+    nsxt_credentials_ref     = avi_cloudconnectoruser.nsx_admin.id
+    vpc_mode                 = true
+    onboard_avi_into_nsx     = true
+    auto_import_nsx_projects = true
 
     # Map Management to the data lookup
     management_network_config {
