@@ -319,18 +319,22 @@ resource "avi_serviceenginegroup" "avi_lab_se_group" {
 # Delegated DNS Virtual Service Configuration
 #########################################################
 
-# Data lookup for the VRF Context (Automatically synced from NSX-T by Avi)
+# 1. Look up the VPC VRF Context
 data "avi_vrfcontext" "t1_se_services" {
-  name       = "t1-se-services"
+  # Change this to "ss-vpc" if Avi discovers the ID instead of the display name
+  name       = "Shared-Services" 
   cloud_ref  = avi_cloud.nsx_cloud.id
   depends_on = [avi_cloud.nsx_cloud]
 }
-data "avi_vrfcontext" "t1_se_services" {
-  # Avi typically maps the VPC router VRF to the VPC's display name
-  # (If this fails during plan, change to "ss-vpc" based on how your Avi version parses it)
-  name = "Shared-Services" 
+
+# 2. Look up the Avi Network (Synced from the NSX VPC Subnet)
+data "avi_network" "vip_net" {
+  name       = "SE-Data_VIP"
+  cloud_ref  = avi_cloud.nsx_cloud.id
+  depends_on = [avi_cloud.nsx_cloud]
 }
 
+# 3. The VIP (Now auto-allocating Private IP + Floating IP)
 resource "avi_vsvip" "dns_vip" {
   name            = "delegate-dns-vip"
   cloud_ref       = avi_cloud.nsx_cloud.id
@@ -338,13 +342,18 @@ resource "avi_vsvip" "dns_vip" {
   
   vip {
     vip_id = "1"
-    ip_address {
-      type = "V4"
-      addr = "10.4.100.2"
-    }
+    
+    # Let Avi grab a valid private IP from the SE-Data_VIP segment automatically
+    auto_allocate_ip          = true
+    network_ref               = data.avi_network.vip_net.id
+    
+    # MAGIC: This tells the NSX Cloud connector to generate a 1:1 DNAT rule
+    # using the Default VPC Connectivity Profile's External IP Block!
+    auto_allocate_floating_ip = true
   }
 }
 
+# 4. The Virtual Service
 resource "avi_virtualservice" "delegated_dns" {
   name                    = "delegated-dns"
   cloud_ref               = avi_cloud.nsx_cloud.id
@@ -360,6 +369,12 @@ resource "avi_virtualservice" "delegated_dns" {
     port           = 53
     port_range_end = 53
   }
+}
+
+# 5. Output the Floating IP for your Upstream DNS config!
+output "delegated_dns_external_ip" {
+  value       = avi_vsvip.dns_vip.vip[0].floating_ip[0].addr
+  description = "The External NAT IP. Point your upstream DNS Forwarder to this address!"
 }
 
 ##########################################################################
