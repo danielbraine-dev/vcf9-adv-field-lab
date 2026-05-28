@@ -270,14 +270,14 @@ resource "avi_cloud" "nsx_cloud" {
     management_network_config {
       tz_type        = "overlay"
       transport_zone = var.overlay_tz_path 
-      vlan_segment   = data.nsxt_vpc_subnet.se_mgmt_lookup.path
+      vlan_segments  = [data.nsxt_vpc_subnet.se_mgmt_lookup.path]
     }
 
     # Map Data to the data lookup
     data_network_config {
       tz_type        = "overlay"
       transport_zone = var.overlay_tz_path
-      vlan_segment   = data.nsxt_vpc_subnet.se_data_vip_lookup.path
+      vlan_segments  = [data.nsxt_vpc_subnet.se_data_vip_lookup.path]
     }
   }
 }
