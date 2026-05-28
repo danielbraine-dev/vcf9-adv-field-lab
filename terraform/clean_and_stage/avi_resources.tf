@@ -272,6 +272,7 @@ resource "avi_cloud" "nsx_cloud" {
       transport_zone = var.overlay_tz_path 
       
       overlay_segment {
+        tier1_lr_id = "/orgs/default/projects/default/vpcs/ss-vpc"
         segment_id  = data.nsxt_vpc_subnet.se_mgmt_lookup.path
       }
     }
