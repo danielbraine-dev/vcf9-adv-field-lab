@@ -8,10 +8,10 @@ resource "nsxt_vpc" "shared_services" {
   display_name = "Shared-Services"
   description  = "VPC hosting shared services"
   
-  # The explicit Private IP Block for this VPC
+  # Explicit Private IP Block for this VPC
   private_ips  = ["10.4.100.0/24"]
   
-  # Stops NSX from auto-generating that random 100.64.x.x Services Subnet!
+  # Bypasses the random 100.64.x.x Services Subnet
   load_balancer_vpc_endpoint {
     enabled = false
   }
@@ -26,6 +26,7 @@ resource "nsxt_vpc_attachment" "tgw_attach" {
   display_name             = "avi-vpc-tgw-attachment"
   parent_path              = nsxt_vpc.shared_services.path
   
+  # Wired directly to the Default profile 
   vpc_connectivity_profile = "/orgs/default/projects/default/vpc-connectivity-profiles/default"
 }
 
@@ -39,8 +40,6 @@ resource "nsxt_vpc_subnet" "se_mgmt" {
   }
   
   access_mode      = "Private" 
-  
-  # FIXED: 128 is the power of 2 representing a /25 CIDR
   ipv4_subnet_size = 128
   
   dhcp_config {
@@ -60,8 +59,6 @@ resource "nsxt_vpc_subnet" "se_data_vip" {
   }
   
   access_mode      = "Private"
-  
-  # FIXED: 128 is the power of 2 representing a /25 CIDR
   ipv4_subnet_size = 128
   
   dhcp_config {
