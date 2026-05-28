@@ -234,11 +234,7 @@ data "nsxt_vpc_subnet" "se_data_vip_lookup" {
   }
 }
 
-data "avi_vrfcontext" "t1_se_services" {
-  # Avi typically maps the VPC router VRF to the VPC's display name
-  # (If this fails during plan, change to "ss-vpc" based on how your Avi version parses it)
-  name = "Shared-Services" 
-}
+
 #########################################################
 # NSX-T Cloud Configuration
 #########################################################
@@ -326,6 +322,11 @@ data "avi_vrfcontext" "t1_se_services" {
   name       = "t1-se-services"
   cloud_ref  = avi_cloud.nsx_cloud.id
   depends_on = [avi_cloud.nsx_cloud]
+}
+data "avi_vrfcontext" "t1_se_services" {
+  # Avi typically maps the VPC router VRF to the VPC's display name
+  # (If this fails during plan, change to "ss-vpc" based on how your Avi version parses it)
+  name = "Shared-Services" 
 }
 
 resource "avi_vsvip" "dns_vip" {
