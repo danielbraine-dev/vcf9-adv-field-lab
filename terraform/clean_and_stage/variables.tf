@@ -127,7 +127,7 @@ variable "edge_cluster_path" {
 variable "overlay_tz_path" {
   description = "Policy path to the Overlay Transport Zone"
   type        = string
-  default     = "/infra/sites/default/enforcement-points/default/transport-zones/25b6ebaf-41ba-4f72-b018-cff34a7a0e03"
+  default     = "/infra/sites/default/enforcement-points/default/transport-zones/3aba1acf-bb1b-4c4c-8621-4cd443aab857"
 }
 
 variable "transport_zone_name" {
