@@ -171,8 +171,8 @@ step4_create_nsx_objects(){
   log "[4] Applying NSX/vSphere creation stack…"
   
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target='nsxt_vpc_service_profile.avi_vpc_profile' \
     -target='nsxt_vpc.shared_services' \
+    -target='nsxt_vpc_attachment.tgw_attach' \
     -target='nsxt_vpc_subnet.se_mgmt' \
     -target='nsxt_vpc_subnet.se_data_vip' \
     -target='vsphere_content_library.avi_se_cl'
