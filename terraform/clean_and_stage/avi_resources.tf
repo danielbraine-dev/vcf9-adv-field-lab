@@ -271,9 +271,7 @@ resource "avi_cloud" "nsx_cloud" {
       tz_type        = "OVERLAY"
       transport_zone = var.overlay_tz_path 
       
-      # NEW: Use overlay_segment instead of vlan_segment
       overlay_segment {
-        tier1_lr_id = "/orgs/default/projects/default/vpcs/ss-vpc"
         segment_id  = data.nsxt_vpc_subnet.se_mgmt_lookup.path
       }
     }
