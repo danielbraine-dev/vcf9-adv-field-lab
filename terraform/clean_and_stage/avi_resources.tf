@@ -283,16 +283,15 @@ resource "avi_cloud" "nsx_cloud" {
       tz_type        = "OVERLAY"
       transport_zone = var.overlay_tz_path
       
-      # NEW: Use tier1_segment_config instead of vlan_segments
       tier1_segment_config {
-        segment_mode = "TIER1_SEGMENT_MANUAL"
         manual {
-          tier1_lr_id = "/orgs/default/projects/default/vpcs/ss-vpc"
-          segment_id  = data.nsxt_vpc_subnet.se_data_vip_lookup.path
+          tier1_lrs {
+            tier1_lr_id = "/orgs/default/projects/default/vpcs/ss-vpc"
+            segment_id  = data.nsxt_vpc_subnet.se_data_vip_lookup.path
+          }
         }
       }
     }
-  }
 }
 
 #########################################################
