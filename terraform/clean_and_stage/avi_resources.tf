@@ -340,15 +340,13 @@ resource "avi_vsvip" "dns_vip" {
   cloud_ref       = avi_cloud.nsx_cloud.id
   vrf_context_ref = data.avi_vrfcontext.t1_se_services.id
   
+  # NEW: Tell Avi exactly which NSX VPC Router will host the Floating IP NAT!
+  tier1_lr        = "/orgs/default/projects/default/vpcs/ss-vpc"
+  
   vip {
     vip_id = "1"
-    
-    # Let Avi grab a valid private IP from the SE-Data_VIP segment automatically
     auto_allocate_ip          = true
     network_ref               = data.avi_network.vip_net.id
-    
-    # MAGIC: This tells the NSX Cloud connector to generate a 1:1 DNAT rule
-    # using the Default VPC Connectivity Profile's External IP Block!
     auto_allocate_floating_ip = true
   }
 }
