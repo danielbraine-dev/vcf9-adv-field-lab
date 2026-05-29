@@ -179,14 +179,14 @@ step4_prep_for_avi(){
   log "Injecting Single-Node Avi Feature Flag into SDDC Manager..."
   
   sshpass -p "$SDDC_PASS" ssh -o StrictHostKeyChecking=no ${SDDC_USER}@${SDDC_MGR_IP} << EOF
-    # 1. Write the feature flag natively as the VCF user
+    # 1. Update feature properties natively as 'vcf' (no root needed!)
     grep -q 'vgl-41078' /home/vcf/feature.properties || echo 'feature.vcf.vgl-41078.alb.single.node.cluster=true' >> /home/vcf/feature.properties
     
-    # 2. Use sudo -S to feed the password via standard input and bypass the TTY restriction
-    echo "$SDDC_PASS" | sudo -S sh -c "echo 'y' | /opt/vmware/vcf/operationsmanager/scripts/cli/sddcmanager_restart_services.sh"
+    # 2. Pipe the password to sudo (-S), followed by 'y' for the script's confirmation prompt!
+    echo -e "${SDDC_PASS}\ny\n" | sudo -S /opt/vmware/vcf/operationsmanager/scripts/cli/sddcmanager_restart_services.sh
 EOF
 
-  log "Waiting for SDDC Manager services to restart (approx 2-3 minutes)..."
+  log "Waiting 3 minutes for SDDC Manager API to stabilize after restart..."
   sleep 180
     
   pause
