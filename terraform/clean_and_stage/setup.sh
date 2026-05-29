@@ -167,9 +167,25 @@ EOF
   pause
 }
 
-step4_create_nsx_objects(){
-  log "[4] Applying NSX/vSphere creation stack…"
+step4_prep_for_avi(){
+  log "[4] Adding AVI CL, AVI feature flag, and SE Mgmt dvPg…"
+
+  log "Injecting Single-Node Avi Feature Flag into SDDC Manager..."
   
+  SDDC_MGR_IP="10.1.1.5"
+  SDDC_USER="vcf"
+  SDDC_PASS="VMware123!VMware123!"
+  
+  # Inject the feature flag and restart services
+  sshpass -p "$SDDC_PASS" ssh -o StrictHostKeyChecking=no ${SDDC_USER}@${SDDC_MGR_IP} << 'EOF'
+    su - root -c "echo 'feature.vcf.vgl-41078.alb.single.node.cluster=true' >> /home/vcf/feature.properties"
+    su - root -c "chown vcf:vcf /home/vcf/feature.properties"
+    su - root -c "echo 'y' | /opt/vmware/vcf/operationsmanager/scripts/cli/sddcmanager_restart_services.sh"
+EOF
+
+  log "Waiting for SDDC Manager services to restart (approx 2-3 minutes)..."
+  sleep 180
+}
   terraform -chdir="${ROOT_DIR}" apply -auto-approve \
     -target='nsxt_vpc.shared_services' \
     -target='nsxt_vpc_attachment.tgw_attach' \
@@ -1123,7 +1139,7 @@ do_step() {
     1) step1_install_tools_verify_vcfa;;
     2) step2_teardown_environment;;
     3) step3_tf_init;;
-    4) step4_create_nsx_objects;;
+    4) step4_prep_for_avi;;
     5) step5_deploy_avi;;
     6) step6_init_avi;;
     7) step7_avi_base_config;;
