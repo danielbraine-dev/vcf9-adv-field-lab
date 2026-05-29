@@ -4,18 +4,18 @@ set -euo pipefail
 # ==========================================
 # Variables
 # ==========================================
-SDDC_MGR_IP="10.1.1.X"             # Update with your SDDC Manager IP
+SDDC_MGR_IP="10.1.1.5"             
 SDDC_USER="administrator@vsphere.local"
-SDDC_PASS="YourVcfPassword"        # Update with your SSO Password
+SDDC_PASS="VMware123!VMware123!"        
 
-DOMAIN_NAME="wld01"                # The VCF Domain to deploy Avi into
+DOMAIN_NAME="wld01-a"                
 
-AVI_VERSION="32.1.1-24544104"      # Must EXACTLY match the bundle version uploaded to SDDC Manager
-AVI_ADMIN_PASS="VMware1!VMware1!"  # Password for the Avi admin account
+AVI_VERSION="32.1.1.25377988"      
+AVI_ADMIN_PASS="VMware123!VMware123!"  
 AVI_FQDN="avi-controller01.site-a.vcf.lab"
 AVI_IP="10.1.1.200"
 
-MGMT_NETWORK_NAME="sfo-m01-cl01-vds01-pg-mgmt" # Update to the exact vCenter Port Group name for Management
+MGMT_NETWORK_NAME="mgmt-vds01-wld01-01a" 
 MGMT_SUBNET_MASK="255.255.255.0"
 MGMT_GATEWAY="10.1.1.1"
 
