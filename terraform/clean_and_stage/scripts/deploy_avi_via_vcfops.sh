@@ -8,7 +8,7 @@ SDDC_MGR_IP="10.1.1.5"
 SDDC_USER="administrator@vsphere.local"
 SDDC_PASS="VMware123!VMware123!"        
 
-DOMAIN_NAME="wld01-a"                
+DOMAIN_NAME="mgmt-a"                
 
 AVI_VERSION="32.1.1.25377988"      
 AVI_ADMIN_PASS="VMware123!VMware123!"  
