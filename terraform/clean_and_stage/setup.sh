@@ -168,7 +168,7 @@ EOF
 }
 
 step4_prep_for_avi(){
-  log "[4] Adding AVI CL, AVI feature flag, SE Mgmt dvPg"
+  log "[4] Adding AVI feature flag"
 
   log "Injecting Single-Node Avi Feature Flag into SDDC Manager..."
   
@@ -498,6 +498,13 @@ step7_avi_base_config(){
 
 step8_nsx_cloud(){
   log "[8] NSXCloud Setup & DNS Virtual Service…"
+
+  terraform -chdir="${ROOT_DIR}" init -upgrade
+
+  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
+    -target=avi_ipamdnsproviderprofile.avi_ipam \
+    -target=avi_ipamdnsproviderprofile.avi_dns \
+    -target=nsxt_policy_segment.se_mgmt_vlan15
   
   AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
   AVI_USER="admin"
