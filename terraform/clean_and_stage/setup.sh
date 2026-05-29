@@ -177,13 +177,42 @@ step4_prep_for_avi(){
   SDDC_PASS="VMware123!VMware123!"
   
   log "Injecting Single-Node Avi Feature Flag into SDDC Manager..."
-  
-  sshpass -p "$SDDC_PASS" ssh -o StrictHostKeyChecking=no ${SDDC_USER}@${SDDC_MGR_IP} << EOF
-    # 1. Update feature properties natively as 'vcf' (no root needed!)
-    grep -q 'vgl-41078' /home/vcf/feature.properties || echo 'feature.vcf.vgl-41078.alb.single.node.cluster=true' >> /home/vcf/feature.properties
+
+  # Use expect to simulate a real terminal and bypass the TTY/sudoers restrictions
+  expect << EOF
+    # Disable strict timeout for the service restart process
+    set timeout 300
     
-    # 2. Pipe the password to sudo (-S), followed by 'y' for the script's confirmation prompt!
-    echo -e "${SDDC_PASS}\ny\n" | sudo -S /opt/vmware/vcf/operationsmanager/scripts/cli/sddcmanager_restart_services.sh
+    spawn ssh -o StrictHostKeyChecking=no ${SDDC_USER}@${SDDC_MGR_IP}
+    
+    # 1. Login as vcf
+    expect "*?assword:*"
+    send "$SDDC_PASS\r"
+    
+    # 2. Elevate to root
+    expect "*vcf@*"
+    send "su - root\r"
+    
+    expect "*?assword:*"
+    send "$SDDC_PASS\r"
+    
+    # 3. Inject the Feature Flag
+    expect "*root@*"
+    send "grep -q 'vgl-41078' /home/vcf/feature.properties || echo 'feature.vcf.vgl-41078.alb.single.node.cluster=true' >> /home/vcf/feature.properties\r"
+    
+    expect "*root@*"
+    send "chown vcf:vcf /home/vcf/feature.properties\r"
+    
+    # 4. Restart SDDC Manager Services
+    expect "*root@*"
+    send "echo 'y' | /opt/vmware/vcf/operationsmanager/scripts/cli/sddcmanager_restart_services.sh\r"
+    
+    # 5. Gracefully disconnect
+    expect "*root@*"
+    send "exit\r"
+    
+    expect "*vcf@*"
+    send "exit\r"
 EOF
 
   log "Waiting 3 minutes for SDDC Manager API to stabilize after restart..."
