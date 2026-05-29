@@ -185,7 +185,6 @@ EOF
 
   log "Waiting for SDDC Manager services to restart (approx 2-3 minutes)..."
   sleep 180
-}
     
   pause
 }
