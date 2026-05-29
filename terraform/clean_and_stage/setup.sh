@@ -274,82 +274,16 @@ step5_deploy_avi(){
       log "  [+] Bundle is already downloaded in SDDC Manager depot."
   fi
 
+ # ==========================================
+  # 4. INSTALL SINGLE-NODE AVI CONTROLLER
   # ==========================================
-  # 4. EXTRACT OVA FROM SDDC MANAGER
-  # ==========================================
-  log "Extracting OVA from SDDC Manager appliance via SCP..."
-  VCF_SSH_USER="vcf"
-  VCF_SSH_PASS="VMware123!" # Change this if your lab uses a different SSH password
-
-  OVA_REMOTE_PATH=$(sshpass -p "$VCF_SSH_PASS" ssh -q -o LogLevel=QUIET -o StrictHostKeyChecking=no ${VCF_SSH_USER}@${VCF_OPS_IP} \
-    "find /nfs/vmware/vcf/nfs-mount/bundle -type f -name '*.ova' 2>/dev/null | grep ${BUNDLE_ID} | head -n 1")
-
-  [[ -z "$OVA_REMOTE_PATH" ]] && { error "[-] FATAL: Could not locate the OVA file on SDDC Manager. Ensure the download actually finished!"; exit 1; }
-  
-  log "  [+] Found remote OVA at: $OVA_REMOTE_PATH"
-  log "  [*] Transferring OVA to jumpbox..."
-  
-  FINAL_OVA_PATH="${ROOT_DIR}/avi-controller-dynamic.ova"
-  sshpass -p "$VCF_SSH_PASS" scp -q -o StrictHostKeyChecking=no ${VCF_SSH_USER}@${VCF_OPS_IP}:"${OVA_REMOTE_PATH}" "$FINAL_OVA_PATH"
-  
-  [[ ! -f "$FINAL_OVA_PATH" ]] && { error "[-] FATAL: SCP transfer failed. No OVA found on jumpbox."; exit 1; }
+   if [[ -f "${ROOT_DIR}/scripts/deploy_avi_via_vcfops.sh" ]]; then
+    log "Installing single-node AVI controller..."
+    bash "${ROOT_DIR}/scripts/deploy_avi_via_vcfops.sh" || warn "Failed to install Single-node AVI Controller."
+  fi
 
   # ==========================================
-  # 5. DEPLOY VIA GOVC (Dynamic)
-  # ==========================================
-  log "Generating dynamic vApp properties for Avi Controller..."
-  
-  export GOVC_URL=$(read_tfvar vsphere_server | tr -d '"\r\n')
-  export GOVC_USERNAME=$(read_tfvar vsphere_user | tr -d '"\r\n')
-  export GOVC_PASSWORD=$(read_tfvar vsphere_password | tr -d '"\r\n')
-  export GOVC_INSECURE=1
-
-  GOVC_DC=$(read_tfvar vsphere_datacenter | tr -d '"\r\n')
-  GOVC_DS=$(read_tfvar vsphere_datastore | tr -d '"\r\n')
-  GOVC_CLUSTER=$(read_tfvar vsphere_cluster | tr -d '"\r\n')
-  GOVC_VM_NAME=$(read_tfvar avi_vm_name | tr -d '"\r\n')
-  AVI_NETWORK=$(read_tfvar avi_mgmt_pg | tr -d '"\r\n')
-  
-  AVI_IP=$(read_tfvar avi_mgmt_ip | tr -d '"\r\n')
-  AVI_MASK=$(read_tfvar avi_mgmt_netmask | tr -d '"\r\n')
-  AVI_GW=$(read_tfvar avi_mgmt_gateway | tr -d '"\r\n')
-  AVI_FQDN=$(read_tfvar avi_fqdn | tr -d '"\r\n')
-
-  # 1. Ask govc to extract the exact property schema from the OVA itself
-  govc import.spec "${FINAL_OVA_PATH}" | jq \
-    --arg ip "$AVI_IP" \
-    --arg mask "$AVI_MASK" \
-    --arg gw "$AVI_GW" \
-    --arg fqdn "$AVI_FQDN" \
-    --arg net "$AVI_NETWORK" \
-    '
-    .Name = "avi-controller01" |
-    .NetworkMapping[0].Network = $net |
-    .PropertyMapping |= map(
-      if .Key == "avi.mgmt-ip.CONTROLLER" then .Value = $ip
-      elif .Key == "avi.mgmt-mask.CONTROLLER" then .Value = $mask
-      elif .Key == "avi.default-gw.CONTROLLER" then .Value = $gw
-      elif .Key == "avi.hostname.CONTROLLER" then .Value = $fqdn
-      elif .Key == "avi.sysadmin-public-key.CONTROLLER" then .Value = ""
-      else .
-      end
-    )
-    ' > "${ROOT_DIR}/dynamic_vapp_options.json"
-
-  log "Importing OVA natively to vCenter via govc..."
-  
-  govc import.ova \
-    -options="${ROOT_DIR}/dynamic_vapp_options.json" \
-    -dc="${GOVC_DC}" \
-    -ds="${GOVC_DS}" \
-    -pool="${GOVC_CLUSTER}/Resources/Avi-Controller" \
-    "${FINAL_OVA_PATH}"
-
-  log "Powering on Avi Controller..."
-  govc vm.power -on "${GOVC_VM_NAME}"
-
-  # ==========================================
-  # 6. WAIT FOR API
+  # 5. WAIT FOR API
   # ==========================================
   log "Waiting for Avi API at https://${AVI_IP} to fully initialize..."
   until curl -sk --max-time 5 "https://${AVI_IP}/api/initial-data" >/dev/null; do
