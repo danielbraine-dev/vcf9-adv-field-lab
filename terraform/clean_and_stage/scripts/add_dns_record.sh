@@ -134,11 +134,11 @@ DHCP_RESP=$(curl -s -k -X POST "${TECH_URL}/api/dhcp/scopes/set" \
   -d "name=AVI SE Mgmt" \
   -d "networkAddress=10.1.4.0" \
   -d "subnetMask=255.255.255.128" \
-  -d "startIpAddress=10.1.4.2" \
-  -d "endIpAddress=10.1.4.50" \
+  -d "startingAddress=10.1.4.2" \
+  -d "endingAddress=10.1.4.50" \
   -d "routerAddress=10.1.4.1" \
   -d "timeServerAddresses=10.1.1.1" \
-  -d "dnsServerAddresses=10.1.1.1") 
+  -d "dnsServerAddresses=10.1.1.1")
 
 DHCP_STATUS=$(echo "$DHCP_RESP" | jq -r '.status')
 DHCP_ERR=$(echo "$DHCP_RESP" | jq -r '.errorMessage')
