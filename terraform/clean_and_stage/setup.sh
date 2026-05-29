@@ -314,7 +314,7 @@ step5_deploy_avi(){
   # ==========================================
    if [[ -f "${ROOT_DIR}/scripts/deploy_avi_via_vcfops.sh" ]]; then
     log "Installing single-node AVI controller..."
-    bash "${ROOT_DIR}/scripts/deploy_avi_via_vcfops.sh" || warn "Failed to install Single-node AVI Controller."
+    bash "${ROOT_DIR}/scripts/deploy_avi_via_vcfops.sh" || { error "[-] Failed to install Single-node AVI Controller."; exit 1; }
   fi
 
   # ==========================================
