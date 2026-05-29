@@ -266,30 +266,17 @@ resource "avi_cloud" "nsx_cloud" {
     onboard_avi_into_nsx     = true
     auto_import_nsx_projects = true
 
-    # Map Management to the Overlay Network
+    # Map Management to the VLAN Network
     management_network_config {
-      tz_type        = "OVERLAY"
-      transport_zone = var.overlay_tz_path 
-      
-      overlay_segment {
-        tier1_lr_id = "/orgs/default/projects/default/vpcs/ss-vpc"
-        segment_id  = data.nsxt_vpc_subnet.se_mgmt_lookup.path
-      }
+      tz_type        = "VLAN"
+      transport_zone = data.nsxt_policy_transport_zone.vlan_tz.path 
+      vlan_segment   = nsxt_policy_segment.se_mgmt_vlan15.path
     }
 
     # Map Data to the Overlay Network
     data_network_config {
       tz_type        = "OVERLAY"
       transport_zone = var.overlay_tz_path
-      
-      tier1_segment_config {
-        manual {
-          tier1_lrs {
-            tier1_lr_id = "/orgs/default/projects/default/vpcs/ss-vpc"
-            segment_id  = data.nsxt_vpc_subnet.se_data_vip_lookup.path
-          }
-        }
-      }
     }
 }
 }
