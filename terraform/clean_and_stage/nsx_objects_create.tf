@@ -1,3 +1,20 @@
+#########################################################
+# NSX-T: Avi SE Management VLAN Segment
+#########################################################
+
+# Look up the existing VLAN Transport Zone
+data "nsxt_policy_transport_zone" "vlan_tz" {
+  display_name = "nsx-vlan-transportzone"
+}
+
+# Create the VLAN-backed Segment for SE Management
+resource "nsxt_policy_segment" "se_mgmt_vlan15" {
+  display_name        = "wld01-a-se-mgmt-vlan15"
+  description         = "VLAN 15 segment for Avi Service Engine Management (DHCP via Technitium)"
+  transport_zone_path = data.nsxt_policy_transport_zone.vlan_tz.path
+  vlan_ids            = ["15"]
+}
+
 ############################
 # NSX-T: Shared Services VPC & Subnets
 ############################
