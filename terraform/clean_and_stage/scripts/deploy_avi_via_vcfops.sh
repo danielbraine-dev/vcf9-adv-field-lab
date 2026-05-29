@@ -15,7 +15,7 @@ AVI_ADMIN_PASS="VMware123!VMware123!"
 AVI_FQDN="avi-controller01.site-a.vcf.lab"
 AVI_IP="10.1.1.200"
 
-MGMT_NETWORK_NAME="mgmt-vds01-wld01-01a" 
+MGMT_NETWORK_NAME="mgmt-vds01-mgmt-01a" 
 MGMT_SUBNET_MASK="255.255.255.0"
 MGMT_GATEWAY="10.1.1.1"
 
