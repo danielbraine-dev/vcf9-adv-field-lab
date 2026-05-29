@@ -178,22 +178,25 @@ step4_prep_for_avi(){
   
   log "Injecting Single-Node Avi Feature Flag into SDDC Manager..."
 
-  # Use expect to simulate a real terminal and bypass the TTY/sudoers restrictions
   expect << EOF
-    # Disable strict timeout for the service restart process
     set timeout 300
     
+    # Ensure there is a space before the user!
     spawn ssh -o StrictHostKeyChecking=no ${SDDC_USER}@${SDDC_MGR_IP}
     
-    # 1. Login as vcf
-    expect "*?assword:*"
-    send "$SDDC_PASS\r"
+    # 1. Login (Handles both Password and Key-based SSH!)
+    expect {
+        "*assword:*" {
+            send "$SDDC_PASS\r"
+            exp_continue
+        }
+        "*vcf@*" {
+            send "su - root\r"
+        }
+    }
     
-    # 2. Elevate to root
-    expect "*vcf@*"
-    send "su - root\r"
-    
-    expect "*?assword:*"
+    # 2. Elevate to root (su always prompts for a password)
+    expect "*assword:*"
     send "$SDDC_PASS\r"
     
     # 3. Inject the Feature Flag
