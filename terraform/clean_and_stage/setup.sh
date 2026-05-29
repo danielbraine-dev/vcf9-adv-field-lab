@@ -168,7 +168,7 @@ EOF
 }
 
 step4_prep_for_avi(){
-  log "[4] Adding AVI CL, AVI feature flag, and SE Mgmt dvPg…"
+  log "[4] Adding AVI CL, AVI feature flag, SE Mgmt dvPg"
 
   log "Injecting Single-Node Avi Feature Flag into SDDC Manager..."
   
@@ -186,12 +186,6 @@ EOF
   log "Waiting for SDDC Manager services to restart (approx 2-3 minutes)..."
   sleep 180
 }
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target='nsxt_vpc.shared_services' \
-    -target='nsxt_vpc_attachment.tgw_attach' \
-    -target='nsxt_vpc_subnet.se_mgmt' \
-    -target='nsxt_vpc_subnet.se_data_vip' \
-    -target='vsphere_content_library.avi_se_cl'
     
   pause
 }
@@ -199,18 +193,13 @@ EOF
 step5_deploy_avi(){
   log "[5] Deploying Avi Controller via Hybrid VCF Depot + govc..."
 
+  # ==========================================
+  # 1. DNS Records for AVI NAME, DELEGATED ZONES, DHCP SCOPES
+  # ==========================================
   if [[ -f "${ROOT_DIR}/scripts/add_dns_record.sh" ]]; then
     log "Injecting DNS Records for Avi components..."
     bash "${ROOT_DIR}/scripts/add_dns_record.sh" || warn "Failed to add DNS records."
   fi
-
-  # ==========================================
-  # 1. APPLY TERRAFORM PRE-REQS
-  # ==========================================
-  log "Building Resource Pool & Content Library via Terraform..."
-  terraform -chdir="${ROOT_DIR}" apply -auto-approve \
-    -target='vsphere_resource_pool.avi' \
-    -target='vsphere_content_library.avi_se_cl'
 
   # ==========================================
   # 2. AUTHENTICATE TO VCF OPERATIONS (SDDC Manager)
