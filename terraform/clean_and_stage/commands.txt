@@ -48,3 +48,4 @@ source ~/.bashrc
 
 # make scripts executable
 sudo chmod +x ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/scripts/add_dns_record.sh
+sudo chmod +x ~/Downloads/vcf9-adv-field-lab/terraform/clean_and_stage/scripts/deploy_avi_via_vcfops.sh
