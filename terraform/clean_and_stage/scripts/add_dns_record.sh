@@ -131,7 +131,7 @@ echo "[*] Configuring DHCP Scope 'AVI SE Mgmt' (10.1.4.0/25)..."
 # Using /api/dhcp/scopes/set creates the scope if it doesn't exist, or updates it if it does
 DHCP_RESP=$(curl -s -k -X POST "${TECH_URL}/api/dhcp/scopes/set" \
   -d "token=${TOKEN}" \
-  -d "scopeName=AVI SE Mgmt" \
+  -d "name=AVI SE Mgmt" \
   -d "networkAddress=10.1.4.0" \
   -d "subnetMask=255.255.255.128" \
   -d "startIpAddress=10.1.4.2" \
