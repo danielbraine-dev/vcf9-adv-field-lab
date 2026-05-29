@@ -293,9 +293,6 @@ step5_deploy_avi(){
   
   log -e "\n[+] Avi Controller is responding. Ready for Step 6."
   
-  # Clean up the massive 4GB OVA from your jumpbox to save space
-  rm -f "$FINAL_OVA_PATH"
-  
   pause
 }
 
