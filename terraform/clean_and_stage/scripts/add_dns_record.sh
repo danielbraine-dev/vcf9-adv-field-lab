@@ -124,7 +124,35 @@ else
 fi
 
 # ==========================================
-# 4. Logout / Invalidate Token
+# 4. Add DHCP Scope for Avi SE Management
+# ==========================================
+echo "[*] Configuring DHCP Scope 'AVI SE Mgmt' (10.1.4.0/25)..."
+
+# Using /api/dhcp/scopes/set creates the scope if it doesn't exist, or updates it if it does
+DHCP_RESP=$(curl -s -k -X POST "${TECH_URL}/api/dhcp/scopes/set" \
+  -d "token=${TOKEN}" \
+  -d "scopeName=AVI SE Mgmt" \
+  -d "networkAddress=10.1.4.0" \
+  -d "subnetMask=255.255.255.128" \
+  -d "startIpAddress=10.1.4.2" \
+  -d "endIpAddress=10.1.4.50" \
+  -d "routerAddress=10.1.4.1" \
+  -d "timeServerAddresses=10.1.1.1" \
+  -d "dnsServerAddresses=10.1.1.1") 
+
+DHCP_STATUS=$(echo "$DHCP_RESP" | jq -r '.status')
+DHCP_ERR=$(echo "$DHCP_RESP" | jq -r '.errorMessage')
+
+if [[ "$DHCP_STATUS" == "ok" ]]; then
+    echo "  [+] Success: DHCP Scope created/updated."
+elif [[ "$DHCP_STATUS" == "error" && "$DHCP_ERR" == *"already exists"* ]]; then
+    echo "  [~] DHCP Scope already exists. Skipping."
+else
+    echo "  [-] Warning: Failed to configure DHCP scope. Response: $DHCP_RESP"
+fi
+
+# ==========================================
+# 5. Logout / Invalidate Token
 # ==========================================
 curl -s -k -X POST "${TECH_URL}/api/user/logout" -d "token=${TOKEN}" >/dev/null
 
