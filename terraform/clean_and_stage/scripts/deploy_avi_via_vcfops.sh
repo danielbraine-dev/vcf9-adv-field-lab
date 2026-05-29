@@ -71,7 +71,7 @@ echo "[*] Generating 1-Node Avi Deployment Specification..."
 # Note: For a 1-node deployment, the cluster IP/FQDN are safely set to the node's exact IP/FQDN
 cat <<EOF > /tmp/avi_single_node_spec.json
 {
-  "name": "wld01-nsx-alb",
+  "loadBalancerName": "wld01-nsx-alb",
   "domainId": "$DOMAIN_ID",
   "version": "$AVI_VERSION",
   "formFactor": "SMALL",
