@@ -226,7 +226,8 @@ EOF
 
 step5_deploy_avi(){
   log "[5] Deploying Avi Controller via Hybrid VCF Depot + govc..."
-
+  AVI_IP="10.1.1.200"  
+  
   # ==========================================
   # 1. DNS Records for AVI NAME, DELEGATED ZONES, DHCP SCOPES
   # ==========================================
